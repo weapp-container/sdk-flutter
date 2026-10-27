@@ -24,6 +24,19 @@
       "platform": "android",
       "sha256": "184f1a0981be2c8d9aec96c873f61d893d27fcc3d4c82e5ea3a21626ba4459ce",
       "size": 21236687
+    },
+    {
+      "arch": "universal",
+      "architectures": [
+        "arm64-device",
+        "arm64-simulator",
+        "x86_64-simulator"
+      ],
+      "component": "ios-sdk",
+      "fileName": "ios-sdk-0.1.0-preview.2-ios-universal.tar.gz",
+      "platform": "ios",
+      "sha256": "d834996d3f262d3ba57c2171e96ff44f2ebf6c1088d137ab81721fb8a05b4136",
+      "size": 65313555
     }
   ],
   "runtimeVersion": "0.1.0-preview.2",

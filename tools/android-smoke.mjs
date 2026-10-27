@@ -56,7 +56,7 @@ function machineRequest(id, method, params) {
   machine.stdin.write(`${JSON.stringify([message])}\n`);
   return untilValue(() => machineEvents.find(value => value.id === id));
 }
-function forwards() { return command(['forward', '--list']).stdout.trim().split('\n').filter(Boolean); }
+function forwards() { return command(['forward', '--list']).stdout.trim().split('\n').filter(value => value.trim().split(/\s+/)[0] === serial); }
 async function hotRestart(ready) {
   const beforeForwards = new Set(forwards());
   const flutter = option('--flutter', process.env.FLUTTER || 'flutter');

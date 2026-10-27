@@ -266,7 +266,7 @@
       "sourceSha256": "679152b38b145d933a09b2fc1c5a32a2c9e43eff755eac387ec3a22f7eba0cd0",
       "path": "tools/android-smoke.mjs",
       "sourceMode": "100644",
-      "exportedSha256": "1e4a19355ec896fa754ac3091be80408ded46511ca7ee68401ab91c1378526c5",
+      "exportedSha256": "3ed338006697f7460cba66d6269e9c37e0acc85b1c4a70e3f3f5207cd2c74db2",
       "transformed": true
     },
     {
@@ -741,7 +741,9 @@
     "Source contract checks validate the exact tracked ORIGIN inventory and file hashes while excluding separately installed ignored native dependencies",
     "Desktop preparation accepts the producer v1/ABI1 built receipt without fabricating an exitCode; explicit failed exit codes remain rejected",
     "Pin the reviewed offline macOS universal desktop SDK archive from runtime-artifacts; runtime bytes remain excluded from source history",
-    "Pin the reviewed Android universal SDK archive with raw core/libc++ byte identity preserved; runtime bytes remain excluded from source history"
+    "Pin the reviewed Android universal SDK archive with raw core/libc++ byte identity preserved; runtime bytes remain excluded from source history",
+    "Pin the reviewed iOS universal SDK archive containing the verified pending-input cancellation queue; runtime bytes remain excluded from source history",
+    "Limit Flutter hot-restart ADB forward ownership and cleanup to the explicitly selected device serial"
   ],
   "newRepository": "weapp-container/sdk-flutter",
   "sdkVersion": "0.1.0-preview.2",
@@ -764,12 +766,12 @@
     },
     {
       "path": "README.md",
-      "sha256": "abcff123c9df9cf8846a519bf2a20bebaf8ebdd10a4a2dd7deef5d20d563016a",
+      "sha256": "1557db5fded3f58ee8e96540f03778fea75ca9b643b031fabc02f2662b0d98b7",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "396abb8e97b2e3bf02773a44dffb8b8929850a76f36c1cf931aedbd60cf577a9",
+      "sha256": "0b7bae60cd3e03f0ed6e0fd45a38304b125540f636a2b02bb0fcc72155759afa",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
