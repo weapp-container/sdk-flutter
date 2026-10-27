@@ -1,0 +1,17 @@
+name: weapp_container_android
+description: Embeddable Weapp Container SDK for Flutter.
+version: 0.1.0-preview.2
+homepage: https://github.com/weapp-container/sdk-flutter
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.22.0'
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    implements: weapp_container
+    platforms:
+      android:
+        package: dev.weapp.container.flutter
+        pluginClass: WeappContainerAndroidPlugin

@@ -1,0 +1,825 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "sonofmagic/weapp-container",
+  "sourceCommit": "63c003e328ecee3e91ffe1185462a7f63ea96f0b",
+  "scope": "Public SDK wrapper sources only; no runtime source, private history, caches or native binaries.",
+  "version": "0.1.0-preview.2",
+  "files": [
+    {
+      "sourcePath": "sdk/react-native/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "examples/sdk/flutter/README.md",
+      "sourceSha256": "adce3db81159c5a4bef77072064b7330efe3d1643a96fcd21b1acf3480d1204a",
+      "path": "example/README.md",
+      "sourceMode": "100644",
+      "exportedSha256": "12e71d4e46b504174a84bcf6aa85bbbbb276d3f7d2271196a07a7fdd5d858860",
+      "transformed": true
+    },
+    {
+      "sourcePath": "examples/sdk/flutter/analysis_options.yaml",
+      "sourceSha256": "5368a04492203de7ef477e7bace0a5f62c0d687f29c149af082bf952809b0199",
+      "path": "example/analysis_options.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "5368a04492203de7ef477e7bace0a5f62c0d687f29c149af082bf952809b0199",
+      "transformed": false
+    },
+    {
+      "sourcePath": "examples/sdk/flutter/ios-ui/ConsumerUITests.swift",
+      "sourceSha256": "eb1c536b5b6058167a39eebc97391a6e17ed6b67eedc0bec1ed853facf82d101",
+      "path": "example/ios-ui/ConsumerUITests.swift",
+      "sourceMode": "100644",
+      "exportedSha256": "eb1c536b5b6058167a39eebc97391a6e17ed6b67eedc0bec1ed853facf82d101",
+      "transformed": false
+    },
+    {
+      "sourcePath": "examples/sdk/flutter/ios-ui/HostLifecycleUITests.swift",
+      "sourceSha256": "0e059761c0db9858cb9683eef3a0f1988c29f0e16556af24609a2915719ef361",
+      "path": "example/ios-ui/HostLifecycleUITests.swift",
+      "sourceMode": "100644",
+      "exportedSha256": "0e059761c0db9858cb9683eef3a0f1988c29f0e16556af24609a2915719ef361",
+      "transformed": false
+    },
+    {
+      "sourcePath": "examples/sdk/flutter/ios-ui/make-project.mjs",
+      "sourceSha256": "67a1370701c97678b83bafac3289238aebb0a1ae60c35f1c3a99d93508ba60c2",
+      "path": "example/ios-ui/make-project.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "67a1370701c97678b83bafac3289238aebb0a1ae60c35f1c3a99d93508ba60c2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "examples/sdk/flutter/lib/main.dart",
+      "sourceSha256": "11a2478834f5193f2b38bc7d909abc2d4f3b1f7aa53f4f3496045e48296b5777",
+      "path": "example/lib/main.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "11a2478834f5193f2b38bc7d909abc2d4f3b1f7aa53f4f3496045e48296b5777",
+      "transformed": false
+    },
+    {
+      "sourcePath": "examples/sdk/flutter/pubspec.yaml",
+      "sourceSha256": "2e6270cd346fc0056a886e58d52948737b06ef8e0f86802f6187a1dcc8075d99",
+      "path": "example/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "4a97b7cd5b14515b3c627a9a4d3380afba08567d24193d8a632e9bab4f53c851",
+      "transformed": true
+    },
+    {
+      "sourcePath": "examples/sdk/shared/make-fixture.mjs",
+      "sourceSha256": "01e2b37104f108fbb99fd57b907f450201200e546a0b8fac31c13e423be49c9d",
+      "path": "example/shared/make-fixture.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "e8f5c580b9aa228b8b3c8f0f11ddec03f79b427ab21ad0a7af068744ce39d7f0",
+      "transformed": true
+    },
+    {
+      "sourcePath": "examples/sdk/shared/verify-fixture.py",
+      "sourceSha256": "3ffa7b97600c810a4faeea20274357bc3407bc0e57aef2f1709d3fd69946116c",
+      "path": "example/shared/verify-fixture.py",
+      "sourceMode": "100644",
+      "exportedSha256": "3ffa7b97600c810a4faeea20274357bc3407bc0e57aef2f1709d3fd69946116c",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/README.md",
+      "sourceSha256": "f1d7d54a407faeebcc09d534b734f68f991c4e318186e9149b3f999cf9627ba1",
+      "path": "native_desktop/README.md",
+      "sourceMode": "100644",
+      "exportedSha256": "2dba0f1823d3911a337b9de81751ff70cd8566fc7ba563efded4ad22d0ba4986",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/include/registry.hpp",
+      "sourceSha256": "b8149dac4232eb7c991494a585cd15cd9caea4f508752db02591a97973351c50",
+      "path": "native_desktop/include/registry.hpp",
+      "sourceMode": "100644",
+      "exportedSha256": "4262f2cd630535ebf574a698cbbb980f86d90e39d1c1a0c8e0752f2210c23871",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/prepare.mjs",
+      "sourceSha256": "e17d5172d17cfe3c0dfbdaf3d7f72032d3b1a4244e206e630914ec0ace8d8f27",
+      "path": "native_desktop/prepare.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "92bb12a98dbe426eb44cfd70cd91bb785677ac36d01706aefe90c7ca88c9fa2a",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/src/registry.cpp",
+      "sourceSha256": "f4c00788824d6c26ab58ddfde3e6118ae7d7bc93e28d229dd82a7fd06abac571",
+      "path": "native_desktop/src/registry.cpp",
+      "sourceMode": "100644",
+      "exportedSha256": "cae208019f44efa2323ab730efd961fbbf65793a2178f8a8f8c97a5b931d1f80",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/engine_consumer.dart",
+      "sourceSha256": "282f12db66cc44b5708a388fb64174b71a4f93bff70056e1f32c658070545d87",
+      "path": "native_desktop/tests/engine_consumer.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "282f12db66cc44b5708a388fb64174b71a4f93bff70056e1f32c658070545d87",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/flutter_hot_restart.py",
+      "sourceSha256": "805c82230937a16fc9f981b728677514867e506e886de084dff06543b27e989a",
+      "path": "native_desktop/tests/flutter_hot_restart.py",
+      "sourceMode": "100644",
+      "exportedSha256": "805c82230937a16fc9f981b728677514867e506e886de084dff06543b27e989a",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/host-lifecycle.md",
+      "sourceSha256": "dd841f2c1ca13a6ea27d178763e2608ef75b40906db1a57ab9741fe520a3f8a5",
+      "path": "native_desktop/tests/host-lifecycle.md",
+      "sourceMode": "100644",
+      "exportedSha256": "7e11e0ef67afbc69a36e1c6c2a7cb12cf5ae8a9e7bf646fb641a7a62143db279",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/host-linux-input.py",
+      "sourceSha256": "48a0533451a38662ffeaee59cb666874306a3665a4421332a5fa0b453a975d28",
+      "path": "native_desktop/tests/host-linux-input.py",
+      "sourceMode": "100644",
+      "exportedSha256": "48a0533451a38662ffeaee59cb666874306a3665a4421332a5fa0b453a975d28",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/host_lifecycle_consumer.dart",
+      "sourceSha256": "bfd8107e37e8a8823a6634762b5856ca3c138fd9442955525e17b12e7ffc69ff",
+      "path": "native_desktop/tests/host_lifecycle_consumer.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "bfd8107e37e8a8823a6634762b5856ca3c138fd9442955525e17b12e7ffc69ff",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/linux_window.py",
+      "sourceSha256": "4d00407f58600861d345cdcdfdf5cda17be44ab51b1deca0b0ec18e9f77febc3",
+      "path": "native_desktop/tests/linux_window.py",
+      "sourceMode": "100644",
+      "exportedSha256": "4d00407f58600861d345cdcdfdf5cda17be44ab51b1deca0b0ec18e9f77febc3",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/macos_texture.mm",
+      "sourceSha256": "29d8e2e667b55dcb3260ae2b5e03eab79ac65861e639db306ba6badf0c1459bc",
+      "path": "native_desktop/tests/macos_texture.mm",
+      "sourceMode": "100644",
+      "exportedSha256": "29d8e2e667b55dcb3260ae2b5e03eab79ac65861e639db306ba6badf0c1459bc",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/prepare_receipts.mjs",
+      "sourceSha256": "5684891db3565c7f70490abce74a532553efe0e9d10a08aaa6453d373b9cb870",
+      "path": "native_desktop/tests/prepare_receipts.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "2dbaa688b8969b277ceba51524cade0bcd1ba00b760b950dcd7bad0017836a5e",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/public-linux-input.py",
+      "sourceSha256": "60b0468ef5cacdabf38e2dc075a6249c9dd7c0b3a42a5844e8fb1fbbc9f6443a",
+      "path": "native_desktop/tests/public-linux-input.py",
+      "sourceMode": "100644",
+      "exportedSha256": "60b0468ef5cacdabf38e2dc075a6249c9dd7c0b3a42a5844e8fb1fbbc9f6443a",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/registry_failures.cpp",
+      "sourceSha256": "6b460879ee4bbec017a345f477d4ea8b8f4b9d8815b8202936b83cb8e07deb83",
+      "path": "native_desktop/tests/registry_failures.cpp",
+      "sourceMode": "100644",
+      "exportedSha256": "242a74a79ac8f88c803d809ab5a726f04db2fe10a9665fa2976e7d0b89d78bc4",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/run-linux.mjs",
+      "sourceSha256": "035064b36b7ef14f14927807f98027f1b933345a2385b03a0f849fd7183a76ee",
+      "path": "native_desktop/tests/run-linux.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "e26f23e9c5c8d2ae0c74524cd7d78a1fa9ef83842327f2c5cb06a89a0d05ce8b",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/run-macos.mjs",
+      "sourceSha256": "4a02b16d9795cb00a53cb0ca9af8c2d761b73b1abc9a5443b5ca059e5018dda3",
+      "path": "native_desktop/tests/run-macos.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "f3b8ce2c9f1f6bb4654044bc40e856866a40541e269b8a92aa11d113ebb79857",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/tests/run-public-linux.mjs",
+      "sourceSha256": "e3c0cf76845b49336937dc04d6424af03403dda53c42a2da05aed7090655903a",
+      "path": "native_desktop/tests/run-public-linux.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "e3c0cf76845b49336937dc04d6424af03403dda53c42a2da05aed7090655903a",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/third_party/.gitattributes",
+      "sourceSha256": "e8c75d6f3b045bda1a0d9dfb6656c44276d95fa6193a01a826f2ec505fa0c706",
+      "path": "native_desktop/third_party/.gitattributes",
+      "sourceMode": "100644",
+      "exportedSha256": "e8c75d6f3b045bda1a0d9dfb6656c44276d95fa6193a01a826f2ec505fa0c706",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/third_party/nlohmann/LICENSE.MIT",
+      "sourceSha256": "86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14",
+      "path": "native_desktop/third_party/nlohmann/LICENSE.MIT",
+      "sourceMode": "100644",
+      "exportedSha256": "86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/third_party/nlohmann/SOURCE.json",
+      "sourceSha256": "39229fe031a887a0d389aeec612102291c6a57dd88a6c68471150bb4b36c54ad",
+      "path": "native_desktop/third_party/nlohmann/SOURCE.json",
+      "sourceMode": "100644",
+      "exportedSha256": "39229fe031a887a0d389aeec612102291c6a57dd88a6c68471150bb4b36c54ad",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/native_desktop/third_party/nlohmann/json.hpp",
+      "sourceSha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6",
+      "path": "native_desktop/third_party/nlohmann/json.hpp",
+      "sourceMode": "100644",
+      "exportedSha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6",
+      "transformed": false
+    },
+    {
+      "sourcePath": "scripts/sdk-flutter-android-host-smoke.mjs",
+      "sourceSha256": "6b9064ace4883512d9e101a5c966f1e9f8d09906f0474cf4604f0f4ea1ac7eab",
+      "path": "tools/android-host-smoke.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "4cb1cbf8a555a7a42138286822bf5562d3e8178d6a74ee05700e07df3747cf93",
+      "transformed": true
+    },
+    {
+      "sourcePath": "scripts/sdk-flutter-android-smoke.mjs",
+      "sourceSha256": "679152b38b145d933a09b2fc1c5a32a2c9e43eff755eac387ec3a22f7eba0cd0",
+      "path": "tools/android-smoke.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "1e4a19355ec896fa754ac3091be80408ded46511ca7ee68401ab91c1378526c5",
+      "transformed": true
+    },
+    {
+      "sourcePath": "scripts/sdk-flutter-ios-smoke.mjs",
+      "sourceSha256": "4b27482e04f32b96146e1d6fb76a463cb4edc0d967cc2c047c3891466a1d6b4c",
+      "path": "tools/ios-smoke.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "a194bfd0bcfbe5cad9f31cfac1e2da3b8d31ef3e14ed0efc788a6d41055d4a18",
+      "transformed": true
+    },
+    {
+      "sourcePath": "scripts/sdk-flutter-package-equivalence.mjs",
+      "sourceSha256": "8b58e78181d4125f6bace683f898137ba3383b0731d03ed6a3f6fc2ed0da5d15",
+      "path": "tools/package-equivalence.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "8b58e78181d4125f6bace683f898137ba3383b0731d03ed6a3f6fc2ed0da5d15",
+      "transformed": false
+    },
+    {
+      "sourcePath": "scripts/sdk-flutter-build.mjs",
+      "sourceSha256": "c961a8e9c95fcdae059f83e9c115cb55b3f97804378e48496ad4205dbed33c73",
+      "path": "tools/package.mjs",
+      "sourceMode": "100644",
+      "exportedSha256": "93e0c7518fc050a83b7b190d93a82145c4ca40894904e584b3e7000c1bb7ad31",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/.gitignore",
+      "sourceSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "path": "weapp_container/.gitignore",
+      "sourceMode": "100644",
+      "exportedSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/CHANGELOG.md",
+      "sourceSha256": "8557c2d6e6d48a5b8c920265ff05f8a85bdaeb76ec7d3b5da85d8ffddd3bc006",
+      "path": "weapp_container/CHANGELOG.md",
+      "sourceMode": "100644",
+      "exportedSha256": "b52fb52db4fb9e409f01f8307495fa9c7be34659f2048aec468ab6e1ef82b78f",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "weapp_container/LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/README.md",
+      "sourceSha256": "f234bea9c42d9b806754800193c5781f51c284227e5960ac38681dc757c4104c",
+      "path": "weapp_container/README.md",
+      "sourceMode": "100644",
+      "exportedSha256": "6597b3593033564121bd2d33389db09c1756214770ba428d4f675a9ec3622e7a",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/lib/src/controller.dart",
+      "sourceSha256": "fcf369420b0091a20714b6c1a477a1453233b3c6a2bf272896a1b4db71dd246a",
+      "path": "weapp_container/lib/src/controller.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "fcf369420b0091a20714b6c1a477a1453233b3c6a2bf272896a1b4db71dd246a",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/lib/src/view.dart",
+      "sourceSha256": "2a89b9c3192f3af14a4d0e56c7dc8ba00e147f71d1b13858edbded46ab097886",
+      "path": "weapp_container/lib/src/view.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "2a89b9c3192f3af14a4d0e56c7dc8ba00e147f71d1b13858edbded46ab097886",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/lib/weapp_container.dart",
+      "sourceSha256": "78cd250c5bcd0bef4a772516b262e0b41aff4e6ebbaf37170b4efa2a8427c36e",
+      "path": "weapp_container/lib/weapp_container.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "78cd250c5bcd0bef4a772516b262e0b41aff4e6ebbaf37170b4efa2a8427c36e",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/pubspec.yaml",
+      "sourceSha256": "c15b1260f0424d6628f218ef33407dcef51d3e3bc5a8a75e6c92ec9627794fd3",
+      "path": "weapp_container/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "a491db21a45e53b67e6ff0f94138301725e4ba007bc0390d8350ba05b4887cca",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/test/controller_test.dart",
+      "sourceSha256": "77d1b5f83f5bee38f3f9a4c06b076f1519b9f78df604a896f3845468ee0a76bd",
+      "path": "weapp_container/test/controller_test.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "77d1b5f83f5bee38f3f9a4c06b076f1519b9f78df604a896f3845468ee0a76bd",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container/test/linux_transport_test.dart",
+      "sourceSha256": "f9b07e89c802a7f5c0c3cf7713339c4b1661c8ec3c628787ee51b36d0f411912",
+      "path": "weapp_container/test/linux_transport_test.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "f9b07e89c802a7f5c0c3cf7713339c4b1661c8ec3c628787ee51b36d0f411912",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/.gitignore",
+      "sourceSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "path": "weapp_container_android/.gitignore",
+      "sourceMode": "100644",
+      "exportedSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/CHANGELOG.md",
+      "sourceSha256": "8557c2d6e6d48a5b8c920265ff05f8a85bdaeb76ec7d3b5da85d8ffddd3bc006",
+      "path": "weapp_container_android/CHANGELOG.md",
+      "sourceMode": "100644",
+      "exportedSha256": "b52fb52db4fb9e409f01f8307495fa9c7be34659f2048aec468ab6e1ef82b78f",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "weapp_container_android/LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/README.md",
+      "sourceSha256": "e3003b99e70c1e93084ec2c3473a52437d4ee8129887fa3773215043c7005e2b",
+      "path": "weapp_container_android/README.md",
+      "sourceMode": "100644",
+      "exportedSha256": "e424c48102f83c5b1b3cd6219b7b9fd045e9a177c608eb31bf8be474bffc1d8c",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/android/build.gradle",
+      "sourceSha256": "742a6a4c767d2f180d73d172cf2e437c8526c777f2c1a37782dcce69008ce67b",
+      "path": "weapp_container_android/android/build.gradle",
+      "sourceMode": "100644",
+      "exportedSha256": "dc16ddfb49041da411365dcf486fd78c5d92e6a3c6f8da2e5c847f061c53773f",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/android/src/main/AndroidManifest.xml",
+      "sourceSha256": "343d5be1ac17cdd45d1a2f2ddc616c509290e655869125a9422a96d88aa66066",
+      "path": "weapp_container_android/android/src/main/AndroidManifest.xml",
+      "sourceMode": "100644",
+      "exportedSha256": "343d5be1ac17cdd45d1a2f2ddc616c509290e655869125a9422a96d88aa66066",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
+      "sourceSha256": "e94e3af66241938932a2d91326180c1b458d376fe8dd71940b3ebbed4ab4baa5",
+      "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
+      "sourceMode": "100644",
+      "exportedSha256": "e94e3af66241938932a2d91326180c1b458d376fe8dd71940b3ebbed4ab4baa5",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/lib/weapp_container_android.dart",
+      "sourceSha256": "1c2457d2480abaa49d4116b7d5758bdc487fcdaf25439dee358a75f1dfa1205d",
+      "path": "weapp_container_android/lib/weapp_container_android.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "1c2457d2480abaa49d4116b7d5758bdc487fcdaf25439dee358a75f1dfa1205d",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_android/pubspec.yaml",
+      "sourceSha256": "e32cf75e0f4c373dc2197cf69885adf82598ca78320edf87c8c48a284199b89b",
+      "path": "weapp_container_android/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "ae28b3156eac914ff412159fa09819a61b0dae0dbcc93d12a096b37af6746a62",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/.gitignore",
+      "sourceSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "path": "weapp_container_ios/.gitignore",
+      "sourceMode": "100644",
+      "exportedSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/CHANGELOG.md",
+      "sourceSha256": "8557c2d6e6d48a5b8c920265ff05f8a85bdaeb76ec7d3b5da85d8ffddd3bc006",
+      "path": "weapp_container_ios/CHANGELOG.md",
+      "sourceMode": "100644",
+      "exportedSha256": "b52fb52db4fb9e409f01f8307495fa9c7be34659f2048aec468ab6e1ef82b78f",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "weapp_container_ios/LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/README.md",
+      "sourceSha256": "02cd0b1ebbe045ad6f8a5eef9846070498c508aaf98f13a1ef3d33869dbb8b46",
+      "path": "weapp_container_ios/README.md",
+      "sourceMode": "100644",
+      "exportedSha256": "02cd0b1ebbe045ad6f8a5eef9846070498c508aaf98f13a1ef3d33869dbb8b46",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
+      "sourceSha256": "933eb9a5c59844cd999826f1309a34cac88b306491d142cd8e96fc5be730ee16",
+      "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
+      "sourceMode": "100644",
+      "exportedSha256": "933eb9a5c59844cd999826f1309a34cac88b306491d142cd8e96fc5be730ee16",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/ios/weapp_container_ios.podspec",
+      "sourceSha256": "dff5320e5d6552ed2a368c14e54d566c621ef7bab05f26c5c82a85e95d6200c3",
+      "path": "weapp_container_ios/ios/weapp_container_ios.podspec",
+      "sourceMode": "100644",
+      "exportedSha256": "72ecbcf8e6f942a5310aebadf067d7e539b5d9fec974ef6482cf0ca76e24cc70",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/lib/weapp_container_ios.dart",
+      "sourceSha256": "1c2457d2480abaa49d4116b7d5758bdc487fcdaf25439dee358a75f1dfa1205d",
+      "path": "weapp_container_ios/lib/weapp_container_ios.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "1c2457d2480abaa49d4116b7d5758bdc487fcdaf25439dee358a75f1dfa1205d",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_ios/pubspec.yaml",
+      "sourceSha256": "c4ff9e52dc8939c35c52d359cc446aa09067410075981c9af2f91e864a7968f6",
+      "path": "weapp_container_ios/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "7875c4523346ff5036c12f2f9460bafcefb6534ad7160d1fe680808be74d15db",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_linux/.gitignore",
+      "sourceSha256": "d4a1c3c1f858f09a6ed677f418a44dd46de3c8063d992499dae08d3dacee84f7",
+      "path": "weapp_container_linux/.gitignore",
+      "sourceMode": "100644",
+      "exportedSha256": "d4a1c3c1f858f09a6ed677f418a44dd46de3c8063d992499dae08d3dacee84f7",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_linux/CHANGELOG.md",
+      "sourceSha256": "8b02a8d2afae71ee15db60a4fd2a040dc1b9b36293bd9f0cefa5a0654da8583f",
+      "path": "weapp_container_linux/CHANGELOG.md",
+      "sourceMode": "100644",
+      "exportedSha256": "e98ae3b5cbd4cfbc717a7417b589de8b5f9d9c9e5ecb29b86b276e5a9a8d772e",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_linux/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "weapp_container_linux/LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_linux/linux/CMakeLists.txt",
+      "sourceSha256": "e818affe5613144e07ab1fdff7a8005d3ed20df07285f9071c6afcbfdd889c78",
+      "path": "weapp_container_linux/linux/CMakeLists.txt",
+      "sourceMode": "100644",
+      "exportedSha256": "7057c8dda68ae1fb54d8fb4b9d370d1ea3af6455b6dbb8ed122c87897001e890",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_linux/linux/include/weapp_container_linux/weapp_container_linux_plugin.h",
+      "sourceSha256": "9f8d3620a8152af8fe5e077e75155330cf6c4ab88d48a12e6d9c2a11383878c1",
+      "path": "weapp_container_linux/linux/include/weapp_container_linux/weapp_container_linux_plugin.h",
+      "sourceMode": "100644",
+      "exportedSha256": "9f8d3620a8152af8fe5e077e75155330cf6c4ab88d48a12e6d9c2a11383878c1",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_linux/linux/weapp_container_linux_plugin.cc",
+      "sourceSha256": "f196575b7cbed48a2bcd19bc1f8412f00ebd6fa875d26cf5a93591a80b1b62da",
+      "path": "weapp_container_linux/linux/weapp_container_linux_plugin.cc",
+      "sourceMode": "100644",
+      "exportedSha256": "0f6a59baa99eb99d43f76036ae116b9fc3eb1143a87bed64f05ab879083b8731",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_linux/pubspec.yaml",
+      "sourceSha256": "8e9cb081a1e0e230a2b1d066a2dc7284769f5901a00ee28edd07ed3d746faf4e",
+      "path": "weapp_container_linux/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "ea7da689901dd893c7cc19f68bfdea52c03bc6354b1125bbcbd02afc41f0ec9e",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_macos/.gitignore",
+      "sourceSha256": "c1ea5cb588078dc657aea6a07597891779cda3ef62127cf7ff5a89b5a86548ee",
+      "path": "weapp_container_macos/.gitignore",
+      "sourceMode": "100644",
+      "exportedSha256": "c1ea5cb588078dc657aea6a07597891779cda3ef62127cf7ff5a89b5a86548ee",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_macos/CHANGELOG.md",
+      "sourceSha256": "8b02a8d2afae71ee15db60a4fd2a040dc1b9b36293bd9f0cefa5a0654da8583f",
+      "path": "weapp_container_macos/CHANGELOG.md",
+      "sourceMode": "100644",
+      "exportedSha256": "e98ae3b5cbd4cfbc717a7417b589de8b5f9d9c9e5ecb29b86b276e5a9a8d772e",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_macos/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "weapp_container_macos/LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_macos/macos/Classes/WeappContainerMacosPlugin.h",
+      "sourceSha256": "fba90f98d34ac1dc092f9c39fdcdc58393b1ff77f614a0b25d2c0d3ed886ddd9",
+      "path": "weapp_container_macos/macos/Classes/WeappContainerMacosPlugin.h",
+      "sourceMode": "100644",
+      "exportedSha256": "fba90f98d34ac1dc092f9c39fdcdc58393b1ff77f614a0b25d2c0d3ed886ddd9",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_macos/macos/Classes/WeappContainerMacosPlugin.mm",
+      "sourceSha256": "4dff85b0a2c6982adc888b9351f3857cbdf115663898772f9d436590bce3a249",
+      "path": "weapp_container_macos/macos/Classes/WeappContainerMacosPlugin.mm",
+      "sourceMode": "100644",
+      "exportedSha256": "542ff502ede96b903ed43cf034c32878d7c733b8ccc743d7b4bec40b1c49b08f",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_macos/macos/weapp_container_macos.podspec",
+      "sourceSha256": "87098526fda2d8fab6c2642aa983d473c1c1c5a504b66a4ddc65007e0a90f3c5",
+      "path": "weapp_container_macos/macos/weapp_container_macos.podspec",
+      "sourceMode": "100644",
+      "exportedSha256": "225a4aadc670c0e9388e4b3124e0ea75beb77cc81e4b8c3e2c8c2ef8c6aae330",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_macos/pubspec.yaml",
+      "sourceSha256": "31080854fad526e75b94d6d708dcc65fa940542fa43347db5acd667578f15769",
+      "path": "weapp_container_macos/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "b30ecdb860692d962462dfa0b4d5ad9c4e912cf4f49f39989ac5276c54df7ca6",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_platform_interface/.gitignore",
+      "sourceSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "path": "weapp_container_platform_interface/.gitignore",
+      "sourceMode": "100644",
+      "exportedSha256": "96a076d30ec638eb68516f8e24da8b8f46cc60111d390919a4a810b665c2c6a8",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_platform_interface/CHANGELOG.md",
+      "sourceSha256": "8557c2d6e6d48a5b8c920265ff05f8a85bdaeb76ec7d3b5da85d8ffddd3bc006",
+      "path": "weapp_container_platform_interface/CHANGELOG.md",
+      "sourceMode": "100644",
+      "exportedSha256": "b52fb52db4fb9e409f01f8307495fa9c7be34659f2048aec468ab6e1ef82b78f",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_platform_interface/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "weapp_container_platform_interface/LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_platform_interface/README.md",
+      "sourceSha256": "4b5505936726818e97ddb3b75657831cea7eb553722201d746fd0256c4dc2d9e",
+      "path": "weapp_container_platform_interface/README.md",
+      "sourceMode": "100644",
+      "exportedSha256": "4b5505936726818e97ddb3b75657831cea7eb553722201d746fd0256c4dc2d9e",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_platform_interface/lib/weapp_container_platform_interface.dart",
+      "sourceSha256": "312e2bd7969533c5e88c0228ff0b91158a9ec1fb75e2f1af2c9f8ec8b5752866",
+      "path": "weapp_container_platform_interface/lib/weapp_container_platform_interface.dart",
+      "sourceMode": "100644",
+      "exportedSha256": "312e2bd7969533c5e88c0228ff0b91158a9ec1fb75e2f1af2c9f8ec8b5752866",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_platform_interface/pubspec.yaml",
+      "sourceSha256": "80d5be4449b95d32aff3028aa9f77a52140e25612ce236f77fa9af0a951dd296",
+      "path": "weapp_container_platform_interface/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "a72bd19e560e386587d6d710c2c4d217d3f117b8acdd4d82e4332f8e1a1e548b",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_windows/.gitignore",
+      "sourceSha256": "29f1c2a98dff7075585706cf6143c270edd1fbbd84243a2768f41e57637fe707",
+      "path": "weapp_container_windows/.gitignore",
+      "sourceMode": "100644",
+      "exportedSha256": "29f1c2a98dff7075585706cf6143c270edd1fbbd84243a2768f41e57637fe707",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_windows/CHANGELOG.md",
+      "sourceSha256": "8b02a8d2afae71ee15db60a4fd2a040dc1b9b36293bd9f0cefa5a0654da8583f",
+      "path": "weapp_container_windows/CHANGELOG.md",
+      "sourceMode": "100644",
+      "exportedSha256": "e98ae3b5cbd4cfbc717a7417b589de8b5f9d9c9e5ecb29b86b276e5a9a8d772e",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_windows/LICENSE",
+      "sourceSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "path": "weapp_container_windows/LICENSE",
+      "sourceMode": "100644",
+      "exportedSha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_windows/pubspec.yaml",
+      "sourceSha256": "2edef40867980754b1019e86626efbf19d7835cfe00093413f1b29aaa7fa94c6",
+      "path": "weapp_container_windows/pubspec.yaml",
+      "sourceMode": "100644",
+      "exportedSha256": "1370a8a36234d3a4bef6c2e4811d15ec36246742be6181e9d655078a88e35f42",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_windows/windows/CMakeLists.txt",
+      "sourceSha256": "c7d94968e8ace3ffad0efc500fa36462f97cf2628b7f4d5bf129b3917f86a35e",
+      "path": "weapp_container_windows/windows/CMakeLists.txt",
+      "sourceMode": "100644",
+      "exportedSha256": "dcf85349294f7129682c4d3ae24c3cd07efa9325137d84cbd42b368770c33b8b",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_windows/windows/include/weapp_container_windows/weapp_container_windows_plugin.h",
+      "sourceSha256": "a1645c743c2e67fb39c91f24a96f3f07292aabacbd20dc29c0307cf029672f76",
+      "path": "weapp_container_windows/windows/include/weapp_container_windows/weapp_container_windows_plugin.h",
+      "sourceMode": "100644",
+      "exportedSha256": "a1645c743c2e67fb39c91f24a96f3f07292aabacbd20dc29c0307cf029672f76",
+      "transformed": false
+    },
+    {
+      "sourcePath": "sdk/flutter/weapp_container_windows/windows/weapp_container_windows_plugin.cpp",
+      "sourceSha256": "c6791c8c3e6b99259f9d32a5c2d714d5213b9772d20242684fe9c15e4ccd2de6",
+      "path": "weapp_container_windows/windows/weapp_container_windows_plugin.cpp",
+      "sourceMode": "100644",
+      "exportedSha256": "9ae9df042f22bd8282596f176ed7740ab906f441c1f2ad6a6773b238726e35ac",
+      "transformed": true
+    },
+    {
+      "sourcePath": "sdk/include/weapp_container_sdk.h",
+      "sourceSha256": "2a4761c0650c72ccd8d0a791fb66ee48888e1ce182ba99f0c92673a2c44a8e9b",
+      "path": "native_desktop/include/weapp_container_sdk.h",
+      "sourceMode": "100644",
+      "exportedSha256": "2a4761c0650c72ccd8d0a791fb66ee48888e1ce182ba99f0c92673a2c44a8e9b",
+      "transformed": false
+    }
+  ],
+  "changes": [
+    "Version bump to 0.1.0-preview.2",
+    "Repository URLs moved to weapp-container organization",
+    "Standalone artifact preparation, packaging and independent consumer adaptation"
+  ],
+  "newRepository": "weapp-container/sdk-flutter",
+  "sdkVersion": "0.1.0-preview.2",
+  "license": "Apache-2.0",
+  "generatedFiles": [
+    {
+      "path": ".github/workflows/source.yml",
+      "sha256": "8ec6397f18340096db96804721f422cc7126e4c20575bf4ea882e532b87b7f49",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "fdb3d54ca35f78c1dd452c2f45950c265c7f8d8ab23f1105ba1861c3acf9a429",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "CONTRACT.md",
+      "sha256": "8196aa203908de36d50ff7adf002ea07752a52c0b3a1723fb1f090f6a20d2af9",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "README.md",
+      "sha256": "3befadd047480df8810a49cfabfacba1c5e04a5ee8d0e6dc82572e21b22046af",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "runtime-artifacts.lock.json",
+      "sha256": "02842e796df7bfea21247b18a5d88b9b4d298401b3ec588ca0a95bcbed827b98",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "tests/source-contract.test.mjs",
+      "sha256": "52af2bd626ce7914d1db4c1d3360c8329156f3d910709a315ee42a90a51acc82",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "tools/prepare-native.mjs",
+      "sha256": "815edba3e6ea8669e00b0a0353544bba7f357e094bab5cbf20b558a9c394ee8b",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "tools/runtime-artifacts.mjs",
+      "sha256": "a00382730316f1105e685ebefbe61e0533b8da1280c548f6eb58e77f71f4a3e8",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "tools/unpack-runtime.py",
+      "sha256": "d4f49e8aa2541ca01670a4fd10330e6bc4b470cf95452b0585605bae09f76f89",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    },
+    {
+      "path": "tools/verify-native.mjs",
+      "sha256": "7e4616cd7e49f97cf63ed8979cd697922371a22c7f878b44732bfdc5a80a46cf",
+      "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
+    }
+  ],
+  "sharedCopies": [
+    {
+      "path": "tools/runtime-artifacts.mjs",
+      "from": "weapp-container/sdk-contract/tools/runtime-artifacts.mjs",
+      "sha256": "a00382730316f1105e685ebefbe61e0533b8da1280c548f6eb58e77f71f4a3e8"
+    },
+    {
+      "path": "tools/unpack-runtime.py",
+      "from": "weapp-container/sdk-contract/tools/unpack-runtime.py",
+      "sha256": "d4f49e8aa2541ca01670a4fd10330e6bc4b470cf95452b0585605bae09f76f89"
+    },
+    {
+      "path": "example/shared/make-fixture.mjs",
+      "from": "weapp-container/sdk-contract/fixtures/make-acceptance-pack.mjs",
+      "sha256": "e8f5c580b9aa228b8b3c8f0f11ddec03f79b427ab21ad0a7af068744ce39d7f0"
+    },
+    {
+      "path": "native_desktop/include/weapp_container_sdk.h",
+      "from": "weapp-container/sdk-contract/include/weapp_container_sdk.h",
+      "sha256": "2a4761c0650c72ccd8d0a791fb66ee48888e1ce182ba99f0c92673a2c44a8e9b"
+    },
+    {
+      "path": "CONTRACT.md",
+      "from": "weapp-container/sdk-contract/CONTRACT.md",
+      "sha256": "8196aa203908de36d50ff7adf002ea07752a52c0b3a1723fb1f090f6a20d2af9"
+    }
+  ],
+  "licensingBoundary": "Apache-2.0 covers approved wrapper, adapter, examples and tooling sources only. Native runtime/core sources, history, binaries, caches and credentials are excluded. The nlohmann header in Flutter retains its MIT license."
+}
