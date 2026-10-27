@@ -745,7 +745,7 @@
   "generatedFiles": [
     {
       "path": ".github/workflows/source.yml",
-      "sha256": "8ec6397f18340096db96804721f422cc7126e4c20575bf4ea882e532b87b7f49",
+      "sha256": "471588ee35ab701e967296cb5d6ae1308327ff5e307b47cd2414a688927bf0aa",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
