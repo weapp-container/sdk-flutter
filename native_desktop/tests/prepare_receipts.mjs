@@ -25,7 +25,7 @@ try {
   const receipt = {
     schemaVersion: 1, sdkVersion: '0.1.0-preview.2', platform: 'macos-universal',
     sourceCommit: 'a'.repeat(40), sourceDirty: false, status: 'verified',
-    native: [{ sdkVersion: '0.1.0-preview.2', platform: 'macos', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built', exitCode: 0 }],
+    native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: '0.1.0-preview.2', platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
     artifacts: [{ file: 'lib/libweapp_container_sdk.a', sha256 }],
   };
   const run = async (value, success) => {
@@ -45,13 +45,17 @@ try {
   await run({ ...receipt, sdkVersion: '0.1.0-dev.1' }, false);
   await run({ ...receipt, native: [{ ...receipt.native[0], sourceDirty: true }] }, false);
   await run({ ...receipt, native: [{ ...receipt.native[0], platform: 'linux' }] }, false);
+  await run({ ...receipt, native: [{ ...receipt.native[0], schemaVersion: undefined }] }, false);
+  await run({ ...receipt, native: [{ ...receipt.native[0], abiVersion: 2 }] }, false);
+  await run({ ...receipt, native: [{ ...receipt.native[0], exitCode: 1 }] }, false);
+  await run({ ...receipt, native: [{ ...receipt.native[0], exitCode: 0 }] }, true);
   await writeFile(path.join(native, 'include/weapp_container_sdk.h'), 'unreviewed ABI');
   await run(receipt, false);
   await writeFile(path.join(native, 'include/weapp_container_sdk.h'), headerBytes);
   await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), 'corrupted archive');
   await run(receipt, false);
   assert.equal(JSON.parse(await readFile(path.join(plugin, 'vendor/prepared.json'), 'utf8')).archiveSha256, sha256);
-  console.log('PASS native receipt provenance, integrity rejection, and clean restaging');
+  console.log('PASS native v1 receipt/ABI provenance, optional exit status, integrity rejection, and clean restaging');
 } finally {
   await rm(root, { recursive: true, force: true });
 }

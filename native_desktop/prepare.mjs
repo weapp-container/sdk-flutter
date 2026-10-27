@@ -19,7 +19,8 @@ if (receipt.schemaVersion !== 1 || receipt.status !== 'verified' || receipt.sdkV
 }
 if (!String(receipt.platform).startsWith(`${target}-`)) throw new Error('Native package platform does not match the requested Flutter target');
 if (!Array.isArray(receipt.native) || receipt.native.length === 0 || receipt.native.some(value =>
-  !cleanSource(value) || value.platform !== target || value.sdkVersion !== sdkVersion || value.status !== 'built' || value.exitCode !== 0)) {
+  value.schemaVersion !== 1 || value.abiVersion !== 1 || !cleanSource(value) || value.platform !== target ||
+  value.sdkVersion !== sdkVersion || value.status !== 'built' || value.exitCode !== undefined && value.exitCode !== 0)) {
   throw new Error('Every native slice must have a successful clean source receipt for this SDK version');
 }
 const archiveFile = `lib/${archive}`;

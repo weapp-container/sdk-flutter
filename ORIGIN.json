@@ -106,7 +106,7 @@
       "sourceSha256": "e17d5172d17cfe3c0dfbdaf3d7f72032d3b1a4244e206e630914ec0ace8d8f27",
       "path": "native_desktop/prepare.mjs",
       "sourceMode": "100644",
-      "exportedSha256": "92bb12a98dbe426eb44cfd70cd91bb785677ac36d01706aefe90c7ca88c9fa2a",
+      "exportedSha256": "6526e7e962501bda526f6ff17d4f77fdcc4554f14b3823117d2efe04b93cdca8",
       "transformed": true
     },
     {
@@ -178,7 +178,7 @@
       "sourceSha256": "5684891db3565c7f70490abce74a532553efe0e9d10a08aaa6453d373b9cb870",
       "path": "native_desktop/tests/prepare_receipts.mjs",
       "sourceMode": "100644",
-      "exportedSha256": "2dbaa688b8969b277ceba51524cade0bcd1ba00b760b950dcd7bad0017836a5e",
+      "exportedSha256": "5ff9d3070c2eee987306f683256516c2c3c73764f39bc4bbdf078ae9b4806018",
       "transformed": true
     },
     {
@@ -738,7 +738,8 @@
     "Version bump to 0.1.0-preview.2",
     "Repository URLs moved to weapp-container organization",
     "Standalone artifact preparation, packaging and independent consumer adaptation",
-    "Source contract checks validate the exact tracked ORIGIN inventory and file hashes while excluding separately installed ignored native dependencies"
+    "Source contract checks validate the exact tracked ORIGIN inventory and file hashes while excluding separately installed ignored native dependencies",
+    "Desktop preparation accepts the producer v1/ABI1 built receipt without fabricating an exitCode; explicit failed exit codes remain rejected"
   ],
   "newRepository": "weapp-container/sdk-flutter",
   "sdkVersion": "0.1.0-preview.2",
