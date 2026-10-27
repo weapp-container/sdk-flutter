@@ -12,6 +12,18 @@
       "platform": "macos",
       "sha256": "ff43564f713d311b183df8099881158dc688e78cc1ed7ee0597bfd2538c77f1e",
       "size": 44276573
+    },
+    {
+      "arch": "universal",
+      "architectures": [
+        "arm64-v8a",
+        "x86_64"
+      ],
+      "component": "android-sdk",
+      "fileName": "android-sdk-0.1.0-preview.2-android-universal.tar.gz",
+      "platform": "android",
+      "sha256": "184f1a0981be2c8d9aec96c873f61d893d27fcc3d4c82e5ea3a21626ba4459ce",
+      "size": 21236687
     }
   ],
   "runtimeVersion": "0.1.0-preview.2",

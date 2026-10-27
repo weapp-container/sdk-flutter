@@ -740,7 +740,8 @@
     "Standalone artifact preparation, packaging and independent consumer adaptation",
     "Source contract checks validate the exact tracked ORIGIN inventory and file hashes while excluding separately installed ignored native dependencies",
     "Desktop preparation accepts the producer v1/ABI1 built receipt without fabricating an exitCode; explicit failed exit codes remain rejected",
-    "Pin the reviewed offline macOS universal desktop SDK archive from runtime-artifacts; runtime bytes remain excluded from source history"
+    "Pin the reviewed offline macOS universal desktop SDK archive from runtime-artifacts; runtime bytes remain excluded from source history",
+    "Pin the reviewed Android universal SDK archive with raw core/libc++ byte identity preserved; runtime bytes remain excluded from source history"
   ],
   "newRepository": "weapp-container/sdk-flutter",
   "sdkVersion": "0.1.0-preview.2",
@@ -763,12 +764,12 @@
     },
     {
       "path": "README.md",
-      "sha256": "60f80b08f03a052e8001d26875e34507b92912678c978d3edc70939fe46b28a2",
+      "sha256": "abcff123c9df9cf8846a519bf2a20bebaf8ebdd10a4a2dd7deef5d20d563016a",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "6ec874589453ec852fb3b0c9d3e7ff1c18056e7565180fef71b20a99c265b716",
+      "sha256": "396abb8e97b2e3bf02773a44dffb8b8929850a76f36c1cf931aedbd60cf577a9",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
