@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -11,16 +11,35 @@ import { makeFixture } from '../example/shared/make-fixture.mjs';
 import { verifyNativeInstallation } from '../tools/verify-native.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const json = async file => JSON.parse(await readFile(join(root, file), 'utf8'));
-async function filesAt(directory, prefix = '') {
-  const files = [];
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (['.git', '.runtime', '.build', 'node_modules', '.dart_tool', 'build', 'codegen', '.gradle', '.cxx', 'Pods', '.symlinks', 'ephemeral'].includes(entry.name) || !prefix && root.endsWith('sdk-react-native') && entry.name === 'lib' || ['pubspec.lock', '.flutter-plugins-dependencies'].includes(entry.name)) continue;
-    const relative = `${prefix}${entry.name}`;
-    assert.equal(entry.isSymbolicLink(), false, relative);
-    if (entry.isDirectory()) files.push(...await filesAt(join(directory, entry.name), `${relative}/`));
-    else { assert.equal(entry.isFile(), true, relative); files.push(relative); }
-  }
-  return files.sort();
+let inventory;
+async function sourceFiles() {
+  if (inventory) return inventory;
+  inventory = (async () => {
+    const checkout = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: root, encoding: 'utf8' });
+    assert.equal(checkout.status, 0, 'Source checks require the standalone Git checkout');
+    assert.equal(await realpath(checkout.stdout.trim()), await realpath(root), 'A parent checkout cannot supply source provenance');
+    const tracked = spawnSync('git', ['ls-files', '--cached', '-z'], { cwd: root, encoding: 'utf8' });
+    assert.equal(tracked.status, 0, tracked.stderr);
+    const untracked = spawnSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { cwd: root, encoding: 'utf8' });
+    assert.equal(untracked.status, 0, untracked.stderr);
+    assert.deepEqual(untracked.stdout.split('\0').filter(Boolean), [], 'Untracked source must be reviewed before it enters the export');
+    const files = tracked.stdout.split('\0').filter(Boolean).sort();
+    const origin = await json('ORIGIN.json');
+    const entries = [...origin.files.map(entry => ({ path: entry.path, sha256: entry.exportedSha256 })), ...origin.generatedFiles];
+    assert.equal(new Set(entries.map(entry => entry.path)).size, entries.length, 'Duplicate ORIGIN source paths');
+    assert.deepEqual(files, ['ORIGIN.json', ...entries.map(entry => entry.path)].sort(), 'Tracked source must exactly match the reviewed ORIGIN allowlist');
+    const checkoutRoot = `${await realpath(root)}/`;
+    for (const file of files) {
+      assert.equal(file.startsWith('/') || file.split('/').includes('..'), false, file);
+      const absolute = join(root, file), status = await lstat(absolute);
+      assert.equal(status.isSymbolicLink(), false, file);
+      assert.equal(status.isFile(), true, file);
+      assert.ok((await realpath(absolute)).startsWith(checkoutRoot), file);
+    }
+    for (const entry of entries) assert.equal(createHash('sha256').update(await readFile(join(root, entry.path))).digest('hex'), entry.sha256, entry.path);
+    return files;
+  })();
+  return inventory;
 }
 test('artifact lock is explicit and cannot fabricate a release', async () => {
   const lock = await json('runtime-artifacts.lock.json');
@@ -31,7 +50,7 @@ test('artifact lock is explicit and cannot fabricate a release', async () => {
   if (lock.artifacts.length === 0) assert.throws(() => selectArtifact(lock, { version: lock.runtimeVersion, platform: 'android', arch: 'universal', component: 'android-sdk' }), { code: 'ERR_RUNTIME_MANIFEST' });
 });
 test('source export contains no core sources, binaries, links or build caches', async () => {
-  const files = await filesAt(root);
+  const files = await sourceFiles();
   assert.ok(files.length > 20);
   for (const file of files) {
     assert.doesNotMatch(file, /(?:^|\/)(?:crates|target|\.gradle|\.cxx|Pods|\.symlinks)(?:\/|$)/, file);
@@ -41,7 +60,7 @@ test('source export contains no core sources, binaries, links or build caches', 
   assert.match(await readFile(join(root, 'LICENSE'), 'utf8'), /Apache License/);
 });
 test('all ESM source files parse and local static imports remain within the checkout', async () => {
-  for (const file of (await filesAt(root)).filter(file => extname(file) === '.mjs')) {
+  for (const file of (await sourceFiles()).filter(file => extname(file) === '.mjs')) {
     const result = spawnSync(process.execPath, ['--check', join(root, file)], { encoding: 'utf8' });
     assert.equal(result.status, 0, `${file}: ${result.stderr}`);
     const text = await readFile(join(root, file), 'utf8');
