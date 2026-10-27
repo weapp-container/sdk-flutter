@@ -743,7 +743,8 @@
     "Pin the reviewed offline macOS universal desktop SDK archive from runtime-artifacts; runtime bytes remain excluded from source history",
     "Pin the reviewed Android universal SDK archive with raw core/libc++ byte identity preserved; runtime bytes remain excluded from source history",
     "Pin the reviewed iOS universal SDK archive containing the verified pending-input cancellation queue; runtime bytes remain excluded from source history",
-    "Limit Flutter hot-restart ADB forward ownership and cleanup to the explicitly selected device serial"
+    "Limit Flutter hot-restart ADB forward ownership and cleanup to the explicitly selected device serial",
+    "Synchronize the exact reviewed ten-asset release manifest with sdk-contract without changing any artifact bytes or identities"
   ],
   "newRepository": "weapp-container/sdk-flutter",
   "sdkVersion": "0.1.0-preview.2",
@@ -766,12 +767,12 @@
     },
     {
       "path": "README.md",
-      "sha256": "1557db5fded3f58ee8e96540f03778fea75ca9b643b031fabc02f2662b0d98b7",
+      "sha256": "3da3653922c1c1a00ecbd2493b289fcf80234736e1857074be3ef2d19c037d1d",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "0b7bae60cd3e03f0ed6e0fd45a38304b125540f636a2b02bb0fcc72155759afa",
+      "sha256": "c574d527f87160a2b28ff416dfb0f9da43e16c2989de2b83880b71e1874f3f0b",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
@@ -825,6 +826,11 @@
       "path": "CONTRACT.md",
       "from": "weapp-container/sdk-contract/CONTRACT.md",
       "sha256": "8196aa203908de36d50ff7adf002ea07752a52c0b3a1723fb1f090f6a20d2af9"
+    },
+    {
+      "path": "runtime-artifacts.lock.json",
+      "from": "weapp-container/sdk-contract/runtime-artifacts.lock.json",
+      "sha256": "c574d527f87160a2b28ff416dfb0f9da43e16c2989de2b83880b71e1874f3f0b"
     }
   ],
   "licensingBoundary": "Apache-2.0 covers approved wrapper, adapter, examples and tooling sources only. Native runtime/core sources, history, binaries, caches and credentials are excluded. The nlohmann header in Flutter retains its MIT license."
