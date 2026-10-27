@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { lstat, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve, extname } from 'node:path';
+import { dirname, join, resolve, extname, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -28,9 +28,9 @@ async function sourceFiles() {
     const entries = [...origin.files.map(entry => ({ path: entry.path, sha256: entry.exportedSha256 })), ...origin.generatedFiles];
     assert.equal(new Set(entries.map(entry => entry.path)).size, entries.length, 'Duplicate ORIGIN source paths');
     assert.deepEqual(files, ['ORIGIN.json', ...entries.map(entry => entry.path)].sort(), 'Tracked source must exactly match the reviewed ORIGIN allowlist');
-    const checkoutRoot = `${await realpath(root)}/`;
+    const checkoutRoot = `${await realpath(root)}${sep}`;
     for (const file of files) {
-      assert.equal(file.startsWith('/') || file.split('/').includes('..'), false, file);
+      assert.equal(isAbsolute(file) || file.split('/').includes('..'), false, file);
       const absolute = join(root, file), status = await lstat(absolute);
       assert.equal(status.isSymbolicLink(), false, file);
       assert.equal(status.isFile(), true, file);
@@ -67,7 +67,7 @@ test('all ESM source files parse and local static imports remain within the chec
     assert.doesNotMatch(text, /\/Users\/icebreaker|(?:\.\.\/)+(?:crates|sdk|examples)\//, file);
     for (const match of text.matchAll(/(?:from\s*|import\s*)['"](\.[^'"]+)['"]/g)) {
       const target = resolve(dirname(join(root, file)), match[1]);
-      assert.ok(target.startsWith(`${root}/`), `${file}: ${match[1]}`);
+      assert.ok(target.startsWith(`${root}${sep}`), `${file}: ${match[1]}`);
       await readFile(target);
     }
   }

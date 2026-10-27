@@ -771,7 +771,7 @@
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "0b80cbef6dd3c6e8bde37f5a9e64763672d6c8947cd3475c7094b933c742f1d9",
+      "sha256": "a62c2c921b00dee4388a75b5c8e955f5c1f8cb7ae8f6ecc295dd05cefbabe693",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
