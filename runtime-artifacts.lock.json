@@ -1,10 +1,23 @@
 {
-  "schemaVersion": 1,
-  "runtimeVersion": "0.1.0-preview.2",
   "abiVersion": 1,
+  "artifacts": [
+    {
+      "arch": "universal",
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "component": "desktop-sdk",
+      "fileName": "desktop-sdk-0.1.0-preview.2-macos-universal.tar.gz",
+      "platform": "macos",
+      "sha256": "ff43564f713d311b183df8099881158dc688e78cc1ed7ee0597bfd2538c77f1e",
+      "size": 44276573
+    }
+  ],
+  "runtimeVersion": "0.1.0-preview.2",
+  "schemaVersion": 1,
   "source": {
-    "repository": "weapp-container/runtime-artifacts",
-    "releaseTag": "runtime-v0.1.0-preview.2"
-  },
-  "artifacts": []
+    "releaseTag": "runtime-v0.1.0-preview.2",
+    "repository": "weapp-container/runtime-artifacts"
+  }
 }

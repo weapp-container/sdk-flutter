@@ -739,7 +739,8 @@
     "Repository URLs moved to weapp-container organization",
     "Standalone artifact preparation, packaging and independent consumer adaptation",
     "Source contract checks validate the exact tracked ORIGIN inventory and file hashes while excluding separately installed ignored native dependencies",
-    "Desktop preparation accepts the producer v1/ABI1 built receipt without fabricating an exitCode; explicit failed exit codes remain rejected"
+    "Desktop preparation accepts the producer v1/ABI1 built receipt without fabricating an exitCode; explicit failed exit codes remain rejected",
+    "Pin the reviewed offline macOS universal desktop SDK archive from runtime-artifacts; runtime bytes remain excluded from source history"
   ],
   "newRepository": "weapp-container/sdk-flutter",
   "sdkVersion": "0.1.0-preview.2",
@@ -762,17 +763,17 @@
     },
     {
       "path": "README.md",
-      "sha256": "3befadd047480df8810a49cfabfacba1c5e04a5ee8d0e6dc82572e21b22046af",
+      "sha256": "60f80b08f03a052e8001d26875e34507b92912678c978d3edc70939fe46b28a2",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "02842e796df7bfea21247b18a5d88b9b4d298401b3ec588ca0a95bcbed827b98",
+      "sha256": "6ec874589453ec852fb3b0c9d3e7ff1c18056e7565180fef71b20a99c265b716",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "a62c2c921b00dee4388a75b5c8e955f5c1f8cb7ae8f6ecc295dd05cefbabe693",
+      "sha256": "87bbc39ed4979ba6c7d570b74c7fa65062cad60a92d1878a69a3c0a6f8875a5c",
       "purpose": "Standalone wrapper integration, protocol documentation and validation tooling; authored during SDK split"
     },
     {

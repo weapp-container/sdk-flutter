@@ -48,6 +48,7 @@ test('artifact lock is explicit and cannot fabricate a release', async () => {
   assert.equal(lock.source.repository, 'weapp-container/runtime-artifacts');
   assert.equal(lock.source.releaseTag, 'runtime-v0.1.0-preview.2');
   if (lock.artifacts.length === 0) assert.throws(() => selectArtifact(lock, { version: lock.runtimeVersion, platform: 'android', arch: 'universal', component: 'android-sdk' }), { code: 'ERR_RUNTIME_MANIFEST' });
+  for (const entry of lock.artifacts) assert.equal(selectArtifact(lock, { version: lock.runtimeVersion, abiVersion: lock.abiVersion, platform: entry.platform, arch: entry.arch, component: entry.component }).sha256, entry.sha256);
 });
 test('source export contains no core sources, binaries, links or build caches', async () => {
   const files = await sourceFiles();
