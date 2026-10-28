@@ -4,7 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import { selectArtifact, SDK_VERSION } from './runtime-artifacts.mjs';
+import { SDK_VERSION } from './runtime-artifacts.mjs';
+import { nativeArtifactPaths } from './native-artifact-paths.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 function digest(file) {
   const hash = createHash('sha256'), buffer = Buffer.allocUnsafe(1024 * 1024), fd = openSync(file, 'r');
@@ -13,7 +14,7 @@ function digest(file) {
   return hash.digest('hex');
 }
 /** Recheck every installed byte against the exact release pin before packaging. */
-export function verifyNativeInstallation(directory, platform, manifestPath = join(root, 'runtime-artifacts.lock.json'), archiveDirectory = join(root, '.runtime/downloads')) {
+export function verifyNativeInstallation(directory, platform, manifestPath = join(root, 'runtime-artifacts.lock.json'), archiveDirectory) {
   const install = resolve(directory), status = lstatSync(install);
   if (!status.isDirectory() || status.isSymbolicLink()) throw new Error('Native SDK installation must be a regular directory');
   const receiptPath = join(install, '.runtime-install.json');
@@ -22,7 +23,8 @@ export function verifyNativeInstallation(directory, platform, manifestPath = joi
   const component = ['android', 'ios'].includes(platform) ? `${platform}-sdk` : 'desktop-sdk';
   const identity = { runtimeVersion: SDK_VERSION, abiVersion: 1, component, platform, arch: saved.identity?.arch };
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  const pin = selectArtifact(manifest, { version: SDK_VERSION, abiVersion: 1, component, platform, arch: identity.arch });
+  const paths = nativeArtifactPaths(join(root, '.runtime'), manifest, { version: SDK_VERSION, abiVersion: 1, platform, arch: identity.arch });
+  const pin = paths.pin;
   if (saved.schemaVersion !== 1 || saved.archiveSha256 !== pin.sha256 || !isDeepStrictEqual(saved.identity, identity)) throw new Error('Native SDK receipt differs from the exact release pin');
   const files = []; let bytes = 0;
   function walk(parent, prefix = '') {
@@ -38,7 +40,7 @@ export function verifyNativeInstallation(directory, platform, manifestPath = joi
   }
   walk(install); files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
   if (!files.length || !isDeepStrictEqual(files, saved.files)) throw new Error('Native installation bytes, paths or modes have changed');
-  const archive = join(archiveDirectory, pin.fileName);
+  const archive = join(archiveDirectory ?? paths.outDirectory, pin.fileName);
   if (!existsSync(archive)) throw new Error('Pinned native archive is required for package revalidation; run tools/prepare-native.mjs again');
   execFileSync(process.env.PYTHON ?? 'python3', [join(root, 'tools/unpack-runtime.py'), '--archive', archive, '--destination', install, '--sha256', pin.sha256, '--identity-json', JSON.stringify(identity)], { maxBuffer: 1024 ** 2, stdio: 'pipe' });
   return { archiveSha256: pin.sha256, identity, files: files.length };

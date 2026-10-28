@@ -39,6 +39,20 @@ node tools/prepare-native.mjs --platform linux --arch x86_64
 
 Each selected architecture must exist in the lock; a universal entry must list its actual slices. Downloads are verified and safely unpacked under ignored `.runtime/`. Platform package directories receive relocatable native installations; the desktop adapter validates native SDK receipts. Preparation does not execute a native compiler. Missing native files stop Maven/CocoaPods/CMake explicitly.
 
+Downloads and immutable installations are addressed by the validated
+`version/component/platform/architecture/SHA-256` under `.runtime/downloads/`
+and `.runtime/install/`. SDK upgrades and different reviewed pins can coexist
+even when their archive filenames match. Historical flat caches and platform
+directories are preserved and are never used as a fallback. Repeating a pin
+still revalidates its archive and installed bytes; a corrupt cache fails
+explicitly. Only after successful validation does preparation replace the
+plugin's active native/vendor directory transactionally.
+
+Packaging uses the same pinned installation and archive paths. Its default
+requires one exact SDK artifact per platform; use an explicit installed SDK
+path if a lock contains multiple architectures for that platform. An alternate
+reviewed lock can be selected with `tools/package.mjs --manifest /absolute/lock.json`.
+
 ## Packages and consumer
 
 The packages are `weapp_container`, `weapp_container_platform_interface`, and Android/iOS/macOS/Windows/Linux implementations. Relative path dependencies are entirely within this checkout. Use `weapp_container` as the application-facing package; retain all sibling packages when relocating the source tree.
@@ -65,6 +79,7 @@ The public Widget/Controller API is described in `weapp_container/README.md`. `e
 ```sh
 node --test tests/source-contract.test.mjs
 node native_desktop/tests/prepare_receipts.mjs
+node --test tests/prepare-native.test.mjs
 c++ -std=c++17 -Wall -Wextra -Werror -pthread -I native_desktop/include -I native_desktop/third_party native_desktop/tests/registry_failures.cpp native_desktop/src/registry.cpp -o /absolute/path/registry-receipts
 /absolute/path/registry-receipts
 ```

@@ -5,6 +5,8 @@ import { resolve, dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { verifyNativeInstallation } from './verify-native.mjs';
+import { nativeArtifactPaths, nativeSdkComponent } from './native-artifact-paths.mjs';
+import { SDK_VERSION } from './runtime-artifacts.mjs';
 import { makeFixture } from '../example/shared/make-fixture.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -20,7 +22,17 @@ if (!/^\d+\.\d+\.\d+$/.test(androidCmakeVersion)) throw new Error('Invalid Andro
 const targets = ['android', 'ios', 'macos', 'windows', 'linux'];
 const selected = option('--platform');
 if (selected && !targets.includes(selected)) throw new Error(`Unsupported platform ${selected}`);
-if (selected) verifyNativeInstallation(join(root, '.runtime', selected), selected);
+const manifestPath = resolve(option('--manifest', join(root, 'runtime-artifacts.lock.json')));
+function nativeInstallation(platform) {
+  const explicit = option(platform === 'android' ? '--android-maven' : `--${platform}-sdk`);
+  if (explicit) return platform === 'android' ? dirname(resolve(explicit)) : resolve(explicit);
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  const candidates = manifest.artifacts?.filter(entry => entry.component === nativeSdkComponent(platform) && entry.platform === platform) ?? [];
+  if (candidates.length !== 1) throw new Error(`Select an exact installed ${platform} SDK when its release pin is absent or ambiguous`);
+  return nativeArtifactPaths(join(root, '.runtime'), manifest,
+    { version: SDK_VERSION, abiVersion: 1, platform, arch: candidates[0].arch }).installDirectory;
+}
+if (selected) verifyNativeInstallation(nativeInstallation(selected), selected, manifestPath);
 if (selected && args.includes('--portable-consumer')) throw new Error('--portable-consumer prepares sources only; omit --platform');
 function run(command, argv, cwd = root) {
   console.log(`Running ${command} ${argv.join(' ')}`);
@@ -73,25 +85,25 @@ if (!args.includes('--skip-packages')) {
     cpSync(join(root, name), join(packages, name), { recursive: true, filter: path => !ignored.has(path.split('/').at(-1)) });
   }
   const status = {};
-  const maven = resolve(option('--android-maven', join(root, '.runtime/android/maven')));
   prepare(status, 'android', () => {
-    verifyNativeInstallation(dirname(maven), 'android');
+    const maven = join(nativeInstallation('android'), 'maven');
+    verifyNativeInstallation(dirname(maven), 'android', manifestPath);
     const source = resolve(option('--android-receipt', join(dirname(maven), 'validation.json')));
     const value = receipt(source, 'passed'); verifyFiles(maven, value.mavenArtifacts);
     cpSync(maven, join(packages, 'weapp_container_android/native/maven'), { recursive: true });
     return { source, receiptSha256: hash(source), sourceCommit: value.sourceCommit, artifactCount: value.mavenArtifacts.length };
   });
-  const ios = resolve(option('--ios-sdk', join(root, '.runtime/ios')));
   prepare(status, 'ios', () => {
-    verifyNativeInstallation(ios, 'ios');
+    const ios = nativeInstallation('ios');
+    verifyNativeInstallation(ios, 'ios', manifestPath);
     const source = join(ios, 'build.json'); const value = receipt(source, 'built'); verifyFiles(ios, value.artifacts);
     cpSync(ios, join(packages, 'weapp_container_ios/ios/vendor/WeappContainer'), { recursive: true });
     return { source, receiptSha256: hash(source), sourceCommit: value.sourceCommit, artifactCount: value.artifacts.length };
   });
   for (const target of ['macos', 'windows', 'linux']) {
-    const native = resolve(option(`--${target}-sdk`, join(root, '.runtime', target)));
     prepare(status, target, () => {
-      verifyNativeInstallation(native, target);
+      const native = nativeInstallation(target);
+      verifyNativeInstallation(native, target, manifestPath);
       const source = join(native, 'package.json'); const value = receipt(source, 'verified'); verifyFiles(native, value.artifacts);
       run(process.execPath, [join(packages, 'native_desktop/prepare.mjs'), '--target', target, '--from', native]);
       return { source, receiptSha256: hash(source), nativeSourceCommits: value.native.map(r => r.sourceCommit), artifactCount: value.artifacts.length };
