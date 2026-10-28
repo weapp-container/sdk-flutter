@@ -99,12 +99,16 @@ private:
 struct Metrics {
   Json value;
   uint32_t width = 0, height = 0;
+  double preview_x = 0, preview_y = 0;
   static Status parse(const Json &, Metrics &);
 };
 class Texture {
 public:
   virtual ~Texture() = default;
   virtual int64_t texture_id() const = 0;
+  virtual Status layout(const Metrics &) { return {}; }
+  virtual Status set_visible(bool) { return {}; }
+  virtual bool is_native_preview() const { return false; }
   virtual Status suspend(weapp_container_sdk_session *) { return {}; }
   virtual Status resume(weapp_container_sdk_session *) { return {}; }
   virtual Status present(weapp_container_sdk_session *, const Metrics &,
@@ -130,6 +134,8 @@ public:
   Registry(std::string platform, std::string storage_root, Factory, Emit,
            Schedule, Log);
   ~Registry();
+  // Optional native child preview; no CPU texture is selected when required.
+  void set_gpu_preview_factory(Factory factory) { gpu_factory_ = std::move(factory); }
   void invoke(const std::string &, const Json &, Reply);
   void tick();
   void shutdown();
@@ -155,7 +161,7 @@ private:
   };
   std::shared_ptr<Life> life_;
   std::string platform_, root_, epoch_, next_epoch_;
-  Factory factory_;
+  Factory factory_, gpu_factory_;
   Emit emit_;
   Schedule schedule_;
   Log log_;

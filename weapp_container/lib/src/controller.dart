@@ -66,14 +66,19 @@ class WeappContainerController {
     }, onError: _events.addError);
   }
   static Future<WeappContainerController> create(
-      {required String? storageKey}) async {
+      {required String? storageKey,
+      bool? gpuRequired,
+      bool? devDiagnostics}) async {
     if (storageKey != null && storageKey.trim().isEmpty)
       throw ArgumentError.value(
           storageKey, 'storageKey', 'Must be nonblank, or null for memory');
     final platform = WeappContainerPlatform.instance;
     await platform.initialize();
-    final result =
-        await platform.invoke<Map>('create', {'storageKey': storageKey});
+    final result = await platform.invoke<Map>('create', {
+      'storageKey': storageKey,
+      if (gpuRequired != null) 'gpuRequired': gpuRequired,
+      if (devDiagnostics != null) 'devDiagnostics': devDiagnostics,
+    });
     return WeappContainerController._(result!['id'] as int, platform);
   }
 
@@ -116,6 +121,24 @@ class WeappContainerController {
       'options': options
     });
   }
+
+  /// Apply a verified immutable development pack. A returned startup/frame
+  /// result is separate from the native GPU presentation receipt.
+  Future<Map<String, Object?>> applyDevPack(String packPath,
+      {String? route, Map<String, Object?> options = const {}}) async {
+    _loadRequested = true;
+    return Map<String, Object?>.from((await _invoke<Map>('applyDevPack', {
+      'packPath': packPath,
+      if (route != null) 'route': route,
+      'options': options,
+    }))!);
+  }
+
+  Future<Map<String, Object?>> devState() async =>
+      Map<String, Object?>.from((await _invoke<Map>('devState'))!);
+
+  /// Clear and flush this project's wx storage; page memory is unchanged.
+  Future<void> clearDevStorage() => _invoke<void>('clearDevStorage');
 
   Future<void> navigate(String route,
           {Map<String, Object?> query = const {}, bool replace = false}) =>

@@ -1,6 +1,6 @@
 name: weapp_container_macos
 description: macOS Metal texture implementation of WeApp Container.
-version: 0.1.0-preview.2
+version: 0.1.0-preview.3
 publish_to: none
 environment:
   sdk: '>=3.6.0 <4.0.0'

@@ -1,8 +1,17 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.2**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.3**; native ABI: **1**.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
+
+This checkout targets **0.1.0-preview.3** for Dev Player. The committed
+preview.2 lock and historical reports remain unchanged and cannot prepare this
+version. `prepare-native.mjs` requires an explicitly reviewed preview.3 lock via
+`--manifest` once real archive hashes exist. For a locally verified preview.3
+desktop installation, use `node native_desktop/prepare.mjs --target macos --from
+/absolute/preview3-desktop-sdk` before building the Player. It verifies the
+package and every native slice; this path does not claim private-release download
+or device acceptance. No old-runtime fallback is allowed.
 
 ## Prerequisites and native artifacts
 

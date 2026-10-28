@@ -46,6 +46,18 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
                                             weapp_container_sdk_buffer *b) {
   std::string op(reinterpret_cast<const char *>(operation), length);
   assert(s->owner == std::this_thread::get_id());
+  if (op == "classifyDevPack") {
+    const auto arguments = Json::parse(payload, payload + payload_length);
+    const auto path = arguments.value("packPath", "");
+    if (path == "/invalid") return response(b, nullptr, false, "ERR_INVALID_MANIFEST");
+    return response(b, {{"reloadKind", path == "/style" ? "inPlace" :
+                                     path == "/future" ? "future" : "restart"}});
+  }
+  if (op == "applyDevPack") {
+    ++s->revision;
+    s->input_enabled = !presentation_required;
+    return response(b, {{"reloadKind", "inPlace"}, {"state", {{"generation", s->generation}}}});
+  }
   if (op == "load") {
     s->ready = true; ++s->generation; ++s->revision;
     s->input_enabled = !presentation_required;
@@ -107,6 +119,7 @@ int32_t weapp_container_sdk_frame_release(const weapp_container_sdk_frame **,
 }
 struct Probe {
   int suspend_failures = 0, retire_failures = 0, live = 0;
+  int suspended = 0, resumed = 0;
   std::function<void(Status)> pending;
   bool async = false;
   struct Receipt {
@@ -118,11 +131,13 @@ struct Probe {
 };
 class TestTexture : public Texture {
 public:
-  explicit TestTexture(std::shared_ptr<Probe> p) : p_(std::move(p)) {
+  explicit TestTexture(std::shared_ptr<Probe> p, bool native = false)
+      : native_(native), p_(std::move(p)) {
     ++p_->live;
   }
   ~TestTexture() override { --p_->live; }
-  int64_t texture_id() const override { return 42; }
+  int64_t texture_id() const override { return native_ ? -1 : 42; }
+  bool is_native_preview() const override { return native_; }
   Status present(weapp_container_sdk_session *, const Metrics &,
                  PresentationStamp stamp) override {
     if (!last_stamp_ || !(*last_stamp_ == stamp)) {
@@ -131,7 +146,12 @@ public:
     }
     return {};
   }
+  Status resume(weapp_container_sdk_session *) override {
+    ++p_->resumed;
+    return {};
+  }
   Status suspend(weapp_container_sdk_session *) override {
+    ++p_->suspended;
     if (p_->suspend_failures > 0) {
       --p_->suspend_failures;
       return Status::error("ERR_GPU", "retirement fence unavailable");
@@ -150,6 +170,7 @@ public:
 
 private:
   std::optional<PresentationStamp> last_stamp_;
+  bool native_;
   std::shared_ptr<Probe> p_;
 };
 static Json call(Registry &r, const char *method, Json args,
@@ -307,12 +328,42 @@ int main() {
   consume(current); r->tick();
   assert(successful_acks == 5);
 
+  // An in-place update must not suspend or replace the native session. It
+  // revokes old texture receipts, while restart uses the ordinary load path.
+  auto before_dev = call(*r, "state", {{"id", id}});
+  auto before_suspend = probe->suspended;
+  auto before_resume = probe->resumed;
+  assert(call(*r, "classifyDevPack", {{"id", id}, {"packPath", "/style"}})["reloadKind"] == "inPlace");
+  assert(call(*r, "state", {{"id", id}}) == before_dev);
+  stale = probe->receipts.back();
+  attempts = ack_attempts;
+  auto dev = call(*r, "applyDevPack", {{"id", id}, {"packPath", "/style"}});
+  assert(dev["reloadKind"] == "inPlace");
+  assert(probe->suspended == before_suspend && probe->resumed == before_resume);
+  assert(call(*r, "state", {{"id", id}})["generation"] == before_dev["generation"]);
+  consume(stale); r->tick();
+  assert(ack_attempts == attempts);
+  current = probe->receipts.back();
+  consume(current); r->tick();
+  assert(successful_acks == 6);
+  before_dev = call(*r, "state", {{"id", id}});
+  call(*r, "applyDevPack", {{"id", id}, {"packPath", "/invalid"}}, false);
+  call(*r, "applyDevPack", {{"id", id}, {"packPath", "/future"}}, false);
+  assert(call(*r, "state", {{"id", id}}) == before_dev);
+  assert(probe->suspended == before_suspend && probe->resumed == before_resume);
+  dev = call(*r, "applyDevPack", {{"id", id}, {"packPath", "/script"}});
+  assert(dev["reloadKind"] == "restart");
+  assert(probe->suspended == before_suspend + 1 && probe->resumed == before_resume + 1);
+  assert(call(*r, "state", {{"id", id}})["generation"].get<uint64_t>() == before_dev["generation"].get<uint64_t>() + 1);
+  r->tick(); consume(probe->receipts.back()); r->tick();
+  assert(successful_acks == 7);
+
   call(*r, "navigate", {{"id", id}, {"route", "before-detach"}}); r->tick();
   stale = probe->receipts.back();
   attempts = ack_attempts;
   call(*r, "detach", {{"id", id}});
   consume(stale); r->tick();
-  assert(ack_attempts == attempts && successful_acks == 5);
+  assert(ack_attempts == attempts && successful_acks == 7);
   call(*r, "close", {{"id", id}});
 
   // Raster-only SDKs keep their established ready semantics and never receive
@@ -321,9 +372,38 @@ int main() {
   attempts = ack_attempts;
   id = create(); r->tick();
   consume(probe->receipts.back()); r->tick();
-  assert(ack_attempts == attempts && successful_acks == 5);
+  assert(ack_attempts == attempts && successful_acks == 7);
   call(*r, "close", {{"id", id}});
   r.reset();
+  assert(live_sessions == 0 && probe->live == 0);
+  // A CPU-only Flutter plugin cannot accept a GPU-required player session.
+  for (const auto* platform : {"windows", "linux"}) {
+    auto cpu = std::make_unique<Registry>(platform, "/unused",
+        [probe](Status &, std::function<void(Status)>) {
+          return std::make_shared<TestTexture>(probe);
+        }, [](Json) {}, [](std::function<bool()>) {}, [](Status) {});
+    call(*cpu, "initialize", {{"clientEpoch", "gpu-boundary"}});
+    call(*cpu, "create", {{"storageKey", nullptr}, {"gpuRequired", true}}, false);
+    auto cpu_id = call(*cpu, "create", {{"storageKey", nullptr}, {"gpuRequired", false}})["id"].get<int64_t>();
+    call(*cpu, "close", {{"id", cpu_id}});
+    cpu->set_gpu_preview_factory([probe](Status&, std::function<void(Status)>) {
+      return std::make_shared<TestTexture>(probe, true);
+    });
+    auto native_id = call(*cpu, "create", {{"storageKey", nullptr}, {"gpuRequired", true}})["id"].get<int64_t>();
+    auto native_metrics = metrics(native_id);
+    native_metrics["previewX"] = 320.0;
+    native_metrics["previewY"] = 48.0;
+    auto attached = call(*cpu, "attach", native_metrics);
+    assert(attached["textureId"] == -1 && attached["nativePreview"] == true);
+    Metrics parsed;
+    assert(Metrics::parse(native_metrics, parsed));
+    assert(parsed.preview_x == 320 && parsed.preview_y == 48);
+    assert(!parsed.value.contains("previewX") && !parsed.value.contains("previewY"));
+    call(*cpu, "load", {{"id", native_id}, {"packPath", "/native-single-session"}});
+    assert(live_sessions == 1);
+    call(*cpu, "close", {{"id", native_id}});
+    assert(live_sessions == 0);
+  }
   assert(live_sessions == 0 && probe->live == 0);
   PresentationFeedback bounded;
   auto older = bounded.submitted({1, 1}), newer = bounded.submitted({1, 2});
@@ -332,6 +412,7 @@ int main() {
   auto invalidated = bounded.submitted({1, 3});
   bounded.invalidate(); bounded.consumed(invalidated);
   assert(!bounded.take());
+  std::cout << "PASS dev reload classification, in-place receipt revocation, restart ownership, rejected GPU-only CPU plugins\n";
   std::cout << "PASS texture-consumption ACK ownership, duplicate/late/epoch "
                "rejection, ready-hook frame mutation, CPU legacy isolation\n";
   std::cout << "PASS close error settlement/retry, unregister ownership, epoch "

@@ -86,7 +86,9 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 val key = args["storageKey"] as? String
                 require(args["storageKey"] == null || key != null) { "Invalid storageKey" }
                 val id = nextId++
-                val entry = Entry(WeappContainerSession(app, key))
+                val gpuRequired = args["gpuRequired"]?.let { value -> require(value is Boolean) { "gpuRequired must be a boolean" }; value as Boolean }
+                val devDiagnostics = args["devDiagnostics"]?.let { value -> require(value is Boolean) { "devDiagnostics must be a boolean" }; value as Boolean } ?: false
+                val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics))
                 sessions[id] = entry
                 entry.session.eventListener = ContainerEventListener { emit(id, it) }
                 result.success(mapOf("id" to id)); return
@@ -110,6 +112,9 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                     })
                 }
                 "load" -> session.load(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"])))
+                "applyDevPack" -> session.applyDevPack(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"])))
+                "devState" -> session.devState()
+                "clearDevStorage" -> session.clearDevStorage()
                 "navigate" -> session.navigate(args["route"] as String, jsonObject(args["query"]), args["replace"] as? Boolean ?: false)
                 "back" -> session.back()
                 "sendMessage" -> session.sendMessage(json(args["message"]))

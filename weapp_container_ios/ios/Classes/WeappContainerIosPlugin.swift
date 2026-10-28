@@ -67,9 +67,17 @@ import UIKit
         guard epoch != nil, initializing == nil else { throw fail("Initialize client before creating sessions") }
         if call.method == "create" {
             guard args.keys.contains("storageKey") else { throw fail("storageKey must be explicit; null selects memory") }
-            let configuration: WeappContainerConfiguration
+            var configuration: WeappContainerConfiguration
             if args["storageKey"] is NSNull { configuration = .init(storage: .memoryOnly) }
             else { let key = try string(args, "storageKey"); guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw fail("Empty storage key") }; configuration = .init(storageKey: key) }
+            if let value = args["gpuRequired"] {
+                guard let required = value as? Bool, required else { throw fail("iOS native preview requires gpuRequired=true") }
+                configuration.gpuRequired = required
+            }
+            if let value = args["devDiagnostics"] {
+                guard let enabled = value as? Bool else { throw fail("devDiagnostics must be a boolean") }
+                configuration.devDiagnostics = enabled
+            }
             let id = nextID; nextID += 1
             let entry = Entry(WeappContainerSession(configuration: configuration)); entries[id] = entry
             entry.session.onEvent = { [weak self] event in self?.event(id, event) }
@@ -102,6 +110,10 @@ import UIKit
             }
         case "load":
             try await session.load(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]))
+        case "applyDevPack":
+            return codec(try await session.applyDevPack(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"])))
+        case "devState": return codec(try session.devState())
+        case "clearDevStorage": try await session.clearDevStorage()
         case "navigate": try session.navigate(route: string(args, "route"), query: object(args["query"]), replace: args["replace"] as? Bool ?? false)
         case "back": try session.back()
         case "sendMessage": try session.sendMessage(json(args["message"]))

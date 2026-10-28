@@ -1,5 +1,6 @@
 #include "include/weapp_container_linux/weapp_container_linux_plugin.h"
 #include "registry.hpp"
+#include "native_preview_texture.hpp"
 #include <filesystem>
 using namespace weapp::flutter;
 namespace {
@@ -268,6 +269,33 @@ void weapp_container_linux_plugin_register_with_registrar(
       [](Status status) {
         g_warning("WeApp Container deferred cleanup: %s: %s",
                   status.code.c_str(), status.message.c_str());
+      });
+  auto view = std::shared_ptr<GtkWidget>(
+      GTK_WIDGET(g_object_ref(fl_plugin_registrar_get_view(registrar))),
+      [](GtkWidget* value) { g_object_unref(value); });
+  plugin->registry->set_gpu_preview_factory(
+      [view](Status& status, std::function<void(Status)> errors) -> std::shared_ptr<Texture> {
+        auto* parent = gtk_widget_get_parent(view.get());
+        if (!parent || !GTK_IS_CONTAINER(parent)) {
+          status = Status::error("ERR_RENDER", "native Flutter view parent is unavailable");
+          return {};
+        }
+        GtkWidget* overlay = parent;
+        if (!GTK_IS_OVERLAY(parent)) {
+          overlay = gtk_overlay_new();
+          // Keep the FlView alive across reparenting. Its native GPU sibling
+          // occupies only the explicitly measured preview rectangle.
+          g_object_ref(view.get());
+          gtk_container_remove(GTK_CONTAINER(parent), view.get());
+          gtk_container_add(GTK_CONTAINER(overlay), view.get());
+          gtk_container_add(GTK_CONTAINER(parent), overlay);
+          g_object_unref(view.get());
+          gtk_widget_show(overlay);
+          gtk_widget_show(view.get());
+        }
+        auto owner = std::shared_ptr<void>(g_object_ref(overlay),
+            [](void* value) { g_object_unref(value); });
+        return std::make_shared<NativePreviewTexture>(std::move(owner), std::move(errors));
       });
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
   auto messenger = fl_plugin_registrar_get_messenger(registrar);

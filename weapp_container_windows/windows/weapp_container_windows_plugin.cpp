@@ -1,5 +1,6 @@
 #include "include/weapp_container_windows/weapp_container_windows_plugin.h"
 #include "registry.hpp"
+#include "native_preview_texture.hpp"
 #include <filesystem>
 #include <flutter/event_channel.h>
 #include <flutter/event_stream_handler_functions.h>
@@ -273,6 +274,19 @@ public:
           OutputDebugStringA(("WeApp Container deferred cleanup: " +
                               status.code + ": " + status.message + "\n")
                                  .c_str());
+        });
+    registry_->set_gpu_preview_factory(
+        [registrar](Status& status, std::function<void(Status)> errors) -> std::shared_ptr<Texture> {
+          auto* view = registrar->GetView();
+          auto window = view ? view->GetNativeWindow() : nullptr;
+          if (!window || !IsWindow(window)) {
+            status = Status::error("ERR_RENDER", "native Flutter window is unavailable");
+            return {};
+          }
+          // The host window owns HWND lifetime. Registry retirement destroys
+          // the preview child on this same UI thread before plugin teardown.
+          auto parent = std::shared_ptr<void>(window, [](void*) {});
+          return std::make_shared<NativePreviewTexture>(std::move(parent), std::move(errors));
         });
     methods_ = std::make_unique<flutter::MethodChannel<Value>>(
         registrar->messenger(), "dev.weapp.container/methods",

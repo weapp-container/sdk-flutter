@@ -26,6 +26,20 @@ class FakePlatform extends WeappContainerPlatform {
     if (!initialized) throw StateError("Transport used before initialization");
     requests.add((method, args));
     if (method == 'create') return {'id': ++nextId} as T;
+    if (method == 'applyDevPack')
+      return {
+        'reloadKind': 'inPlace',
+        'state': {'sessionId': 'same'}
+      } as T;
+    if (method == 'devState')
+      return {
+        'state': {'sessionId': 'same'},
+        'pages': [
+          {
+            'data': {'count': 9}
+          }
+        ]
+      } as T;
     if (method == 'attach') return {'textureId': 7} as T;
     if (method == 'detach') await detach?.future;
     if (method == 'close' && failClose)
@@ -47,6 +61,38 @@ void main() {
   tearDown(() async {
     await platform.source.close();
   });
+  test(
+      'GPU opt-in reaches the native owner and development updates preserve result identity',
+      () async {
+    final controller = await WeappContainerController.create(
+        storageKey: 'project:one', gpuRequired: true, devDiagnostics: true);
+    expect(platform.requests.last.$1, 'create');
+    expect(platform.requests.last.$2, {
+      'storageKey': 'project:one',
+      'gpuRequired': true,
+      'devDiagnostics': true
+    });
+    final result = await controller.applyDevPack('/verified/generation/2',
+        route: 'pages/home/index');
+    expect(result['reloadKind'], 'inPlace');
+    expect((result['state'] as Map)['sessionId'], 'same');
+    expect(platform.requests.last.$1, 'applyDevPack');
+    expect(platform.requests.last.$2, {
+      'id': controller.id,
+      'packPath': '/verified/generation/2',
+      'route': 'pages/home/index',
+      'options': <String, Object?>{}
+    });
+    await expectLater(
+        controller.registerHostMethod('late', (_) => null), throwsStateError);
+    final inspected = await controller.devState();
+    expect(((inspected['pages'] as List).single as Map)['data'], {'count': 9});
+    await controller.clearDevStorage();
+    expect(platform.requests.last.$1, 'clearDevStorage');
+    expect(platform.requests.last.$2, {'id': controller.id});
+    await controller.close();
+  });
+
   test('cancellation wins while asynchronous host work is pending', () async {
     final controller = await WeappContainerController.create(storageKey: null);
     final response = Completer<Object?>();

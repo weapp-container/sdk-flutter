@@ -23,9 +23,9 @@ try {
   await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), bytes);
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const receipt = {
-    schemaVersion: 1, sdkVersion: '0.1.0-preview.2', platform: 'macos-universal',
+    schemaVersion: 1, sdkVersion: '0.1.0-preview.3', platform: 'macos-universal',
     sourceCommit: 'a'.repeat(40), sourceDirty: false, status: 'verified',
-    native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: '0.1.0-preview.2', platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
+    native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: '0.1.0-preview.3', platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
     artifacts: [{ file: 'lib/libweapp_container_sdk.a', sha256 }],
   };
   const run = async (value, success) => {
@@ -55,6 +55,42 @@ try {
   await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), 'corrupted archive');
   await run(receipt, false);
   assert.equal(JSON.parse(await readFile(path.join(plugin, 'vendor/prepared.json'), 'utf8')).archiveSha256, sha256);
+  // GPU preview preparation binds the separate desktop adapter archive and
+  // reviewed native-only headers before replacing any previous installation.
+  await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), bytes);
+  const wrapper = Buffer.from('isolated native preview wrapper fixture');
+  const wrapperSha = createHash('sha256').update(wrapper).digest('hex');
+  await writeFile(path.join(native, 'lib/libweapp_container_desktop.a'), wrapper);
+  for (const file of ['weapp/desktop.hpp', 'weapp/native_preview.hpp', 'weapp_container_sdk_gl.h']) {
+    const source = await readFile(path.join(here, '../include', file));
+    for (const directory of [native, helper]) {
+      await mkdir(path.dirname(path.join(directory, 'include', file)), { recursive: true });
+      await writeFile(path.join(directory, 'include', file), source);
+    }
+  }
+  const linux = { ...receipt, platform: 'linux-x64',
+    native: [{ ...receipt.native[0], platform: 'linux', target: 'x86_64-unknown-linux-gnu' }],
+    artifacts: [...receipt.artifacts, { file: 'lib/libweapp_container_desktop.a', sha256: wrapperSha }] };
+  const runLinux = async (value, success) => {
+    await writeFile(path.join(native, 'package.json'), JSON.stringify(value));
+    const result = spawnSync(process.execPath, [path.join(helper, 'prepare.mjs'), '--target', 'linux', '--from', native], { encoding: 'utf8' });
+    assert.equal(result.status === 0, success, result.stderr);
+  };
+  await runLinux(linux, true);
+  const linuxPlugin = path.join(root, 'flutter/weapp_container_linux/linux/vendor');
+  const preparedLinux = JSON.parse(await readFile(path.join(linuxPlugin, 'prepared.json'), 'utf8'));
+  assert.equal(preparedLinux.wrapperSha256, wrapperSha);
+  assert.equal(preparedLinux.wrapperArchive, 'libweapp_container_desktop.a');
+  assert.deepEqual(await readFile(path.join(linuxPlugin, 'lib/libweapp_container_desktop.a')), wrapper);
+  await runLinux({ ...linux, artifacts: receipt.artifacts }, false);
+  await writeFile(path.join(native, 'lib/libweapp_container_desktop.a'), 'tampered preview adapter');
+  await runLinux(linux, false);
+  assert.deepEqual(await readFile(path.join(linuxPlugin, 'lib/libweapp_container_desktop.a')), wrapper);
+  await writeFile(path.join(native, 'lib/libweapp_container_desktop.a'), wrapper);
+  await writeFile(path.join(native, 'include/weapp/native_preview.hpp'), 'unreviewed native adapter');
+  await runLinux(linux, false);
+  assert.equal(JSON.parse(await readFile(path.join(linuxPlugin, 'prepared.json'), 'utf8')).wrapperSha256, wrapperSha);
+  console.log('PASS native preview wrapper/archive/header binding and rejected-input installation preservation');
   console.log('PASS native v1 receipt/ABI provenance, optional exit status, integrity rejection, and clean restaging');
 } finally {
   await rm(root, { recursive: true, force: true });
