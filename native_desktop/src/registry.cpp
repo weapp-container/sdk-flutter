@@ -277,6 +277,9 @@ void Registry::close(const std::shared_ptr<Entry> &e, Reply reply) {
         Status::error("ERR_CANCELLED", "session closed before initial layout"),
         {});
   }
+  for (auto &pending : e->pending_prepares)
+    pending(Status::error("ERR_CANCELLED", "session closed before measured-view preparation"), {});
+  e->pending_prepares.clear();
   if (e->texture && !e->retiring) {
     e->texture->invalidate_presentation();
     auto s = e->texture->suspend(e->native);
@@ -624,6 +627,13 @@ void Registry::invoke(const std::string &method, const Json &args,
         report(e->id, foreground(*e));
         reply({}, {{"textureId", e->texture->texture_id()},
                    {"nativePreview", e->texture->is_native_preview()}});
+        auto prepares = std::exchange(e->pending_prepares, {});
+        if (!prepares.empty()) {
+          auto prepared = ensure(*e);
+          Json capabilities;
+          if (prepared) prepared = command(e->native, "capabilities", Json::object(), &capabilities);
+          for (auto &pending : prepares) pending(prepared, capabilities);
+        }
         if (e->pending_load) {
           auto pending = std::exchange(e->pending_load, {});
           auto pending_args = std::move(e->load);
@@ -633,6 +643,18 @@ void Registry::invoke(const std::string &method, const Json &args,
         if (e->texture) s = e->texture->layout(e->metrics);
         reply(s, nullptr);
       }
+      return;
+    }
+    if (method == "prepareView") {
+      if (!e->metrics.width) {
+        if (e->pending_prepares.size() >= 8) reply(Status::error("ERR_BUSY", "too many measured-view preparations"), {});
+        else e->pending_prepares.push_back(std::move(reply));
+        return;
+      }
+      auto status = ensure(*e);
+      Json capabilities;
+      if (status) status = command(e->native, "capabilities", Json::object(), &capabilities);
+      reply(status, capabilities);
       return;
     }
     if (method == "load") {

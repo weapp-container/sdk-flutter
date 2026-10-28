@@ -122,6 +122,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 "flushStorage" -> session.flushStorage()
                 "state" -> session.state()
                 "capabilities" -> session.capabilities()
+                "prepareView" -> session.prepareView()
                 "detachView" -> retireView(entry)
                 "close" -> closeEntry(id, entry)
                 "completeHostCall" -> {

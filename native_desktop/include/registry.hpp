@@ -151,6 +151,7 @@ private:
     bool closing = false, closed = false, retiring = false, foreground = true;
     Json load;
     Reply pending_load;
+    std::vector<Reply> pending_prepares;
     std::map<uint64_t, std::vector<Reply>> flushes;
     std::vector<Reply> closes;
     Status close_status;

@@ -70,6 +70,14 @@ dispatch; marshal completion back to the session queue.
 
 ## Development reload (preview.3)
 
+The additive wrapper method `prepareView` waits for an attached view's real
+positive layout, creates an empty native runtime using those metrics, and returns
+its capabilities. It executes no App/Page code and is not a load or presentation
+receipt. Mount the candidate view before awaiting it; keep an accepted view
+mounted until candidate preparation and `load` succeed. Closing cancels pending
+preparation. The method is implemented by platform wrappers, not a new C ABI
+command; existing `capabilities` and `load` behavior is unchanged.
+
 Require `capabilities.pack.devReload.protocolVersion == "1.0"` and the selected
 reload kind before sending a development command. Older runtimes reject unknown
 commands with `ERR_UNSUPPORTED_CAPABILITY`; do not emulate success. Dev Player

@@ -42,6 +42,14 @@ assets or downloads/verifies a local pack directory; platform plugins do not
 provide another pack parser. The example shows asset extraction. Stable storage
 keys identify application/account data, never runtime IDs or pack hashes.
 
+Development clients can await `controller.prepareView()` after mounting the
+widget to inspect capabilities before the first `load`. This waits for actual
+native layout and creates only an empty runtime; it executes no guest code and
+does not acknowledge presentation. Keep the widget mounted while waiting and
+close a cancelled candidate. Initial startup uses `load`; `applyDevPack` updates
+an already loaded session. A staged replacement can remain mounted with
+`foreground: false` and input disabled until accepted.
+
 Keep a controller across route/widget detach to retain the JavaScript isolate.
 Only one widget may attach to a controller. Widget disposal waits for native
 surface/texture retirement before a remount can attach. `close()` is asynchronous

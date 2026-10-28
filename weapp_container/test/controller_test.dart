@@ -26,6 +26,12 @@ class FakePlatform extends WeappContainerPlatform {
     if (!initialized) throw StateError("Transport used before initialization");
     requests.add((method, args));
     if (method == 'create') return {'id': ++nextId} as T;
+    if (method == 'prepareView')
+      return {
+        'pack': {
+          'devReload': {'protocolVersion': '1.0'}
+        }
+      } as T;
     if (method == 'applyDevPack')
       return {
         'reloadKind': 'inPlace',
@@ -60,6 +66,19 @@ void main() {
   });
   tearDown(() async {
     await platform.source.close();
+  });
+  test('measured-view preflight keeps host registration before guest startup',
+      () async {
+    final controller = await WeappContainerController.create(storageKey: null);
+    final capabilities = await controller.prepareView();
+    expect(
+        (capabilities['pack'] as Map)['devReload'], {'protocolVersion': '1.0'});
+    expect(platform.requests.last.$1, 'prepareView');
+    expect(platform.requests.last.$2, {'id': controller.id});
+    expect(platform.requests.where((item) => item.$1 == 'load'), isEmpty);
+    await controller.registerHostMethod('host.beforeLoad', (_) => null);
+    expect(platform.requests.last.$1, 'registerHostMethod');
+    await controller.close();
   });
   test(
       'GPU opt-in reaches the native owner and development updates preserve result identity',

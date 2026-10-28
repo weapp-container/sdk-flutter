@@ -123,6 +123,7 @@ import UIKit
         case "flushStorage": try await session.flushStorage()
         case "state": return codec(try session.state())
         case "capabilities": return codec(try session.capabilities())
+        case "prepareView": return codec(try await session.prepareView())
         case "detachView":
             try await retireView(entry)
         case "close": try await close(id, entry)

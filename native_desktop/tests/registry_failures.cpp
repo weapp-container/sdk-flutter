@@ -12,6 +12,8 @@ struct weapp_container_sdk_session {
 };
 static int destroy_failures = 0, live_sessions = 0;
 static int ack_attempts = 0, successful_acks = 0;
+static int guest_loads = 0;
+static Json native_config;
 static bool presentation_required = false, ack_advances_frame = false;
 static int32_t response(weapp_container_sdk_buffer *out, Json value,
                         bool ok = true, const char *code = "ERR_INJECTED") {
@@ -32,9 +34,10 @@ void weapp_container_sdk_buffer_free(weapp_container_sdk_buffer *b) {
   b->data = nullptr;
   b->len = 0;
 }
-int32_t weapp_container_sdk_session_new(const uint8_t *, size_t,
+int32_t weapp_container_sdk_session_new(const uint8_t *config, size_t length,
                                         weapp_container_sdk_session **s,
                                         weapp_container_sdk_buffer *b) {
+  native_config = Json::parse(config, config + length);
   *s = new weapp_container_sdk_session;
   ++live_sessions;
   return response(b, nullptr);
@@ -59,6 +62,7 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
     return response(b, {{"reloadKind", "inPlace"}, {"state", {{"generation", s->generation}}}});
   }
   if (op == "load") {
+    ++guest_loads;
     s->ready = true; ++s->generation; ++s->revision;
     s->input_enabled = !presentation_required;
   }
@@ -87,6 +91,8 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
                         {"inputEnabled", s->input_enabled}});
   if (op == "takeEvents")
     return response(b, Json::array());
+  if (op == "capabilities")
+    return response(b, {{"pack", {{"devReload", {{"protocolVersion", "1.0"}}}}}});
   return response(b, nullptr);
 }
 int32_t weapp_container_sdk_session_destroy(weapp_container_sdk_session **s,
@@ -216,6 +222,42 @@ int main() {
   };
   auto r = make();
   call(*r, "initialize", {{"clientEpoch", "one"}});
+  // Capability preflight must wait for the native view's measured metrics,
+  // create an empty runtime with those exact metrics, and execute no guest JS.
+  auto prepared_id = call(*r, "create", {{"storageKey", nullptr}})["id"].get<int64_t>();
+  bool prepared = false;
+  r->invoke("prepareView", {{"id", prepared_id}}, [&](Status status, Json result) {
+    assert(status && result["pack"]["devReload"]["protocolVersion"] == "1.0");
+    prepared = true;
+  });
+  assert(!prepared && live_sessions == 0 && guest_loads == 0);
+  call(*r, "attach", metrics(prepared_id));
+  assert(prepared && live_sessions == 1 && guest_loads == 0);
+  assert(native_config["host"]["windowWidth"] == 320);
+  assert(native_config["host"]["windowHeight"] == 440);
+  assert(native_config["host"]["displayMetrics"]["pixelRatio"] == 2);
+  assert(call(*r, "state", {{"id", prepared_id}})["status"] == "empty");
+  call(*r, "load", {{"id", prepared_id}, {"packPath", "/first-measured-load"}});
+  assert(guest_loads == 1 && live_sessions == 1);
+  call(*r, "close", {{"id", prepared_id}});
+  assert(live_sessions == 0 && probe->live == 0);
+  // Closing an unmeasured view settles every bounded waiter, without creating
+  // a native session or leaving a future waiting for a widget that is gone.
+  prepared_id = call(*r, "create", {{"storageKey", nullptr}})["id"].get<int64_t>();
+  int cancelled_preparations = 0;
+  for (int i = 0; i < 8; ++i)
+    r->invoke("prepareView", {{"id", prepared_id}}, [&](Status status, Json) {
+      assert(!status && status.code == "ERR_CANCELLED");
+      ++cancelled_preparations;
+    });
+  bool bounded_prepare = false;
+  r->invoke("prepareView", {{"id", prepared_id}}, [&](Status status, Json) {
+    assert(!status && status.code == "ERR_BUSY");
+    bounded_prepare = true;
+  });
+  assert(bounded_prepare && cancelled_preparations == 0 && live_sessions == 0);
+  call(*r, "close", {{"id", prepared_id}});
+  assert(cancelled_preparations == 8 && live_sessions == 0);
   auto create = [&] {
     auto id =
         call(*r, "create", {{"storageKey", nullptr}})["id"].get<int64_t>();
@@ -413,6 +455,7 @@ int main() {
   bounded.invalidate(); bounded.consumed(invalidated);
   assert(!bounded.take());
   std::cout << "PASS dev reload classification, in-place receipt revocation, restart ownership, rejected GPU-only CPU plugins\n";
+  std::cout << "PASS measured-view preflight, exact native metrics, no guest startup, bounded cancellation\n";
   std::cout << "PASS texture-consumption ACK ownership, duplicate/late/epoch "
                "rejection, ready-hook frame mutation, CPU legacy isolation\n";
   std::cout << "PASS close error settlement/retry, unregister ownership, epoch "

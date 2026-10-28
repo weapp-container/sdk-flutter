@@ -154,6 +154,11 @@ class WeappContainerController {
       Map<String, Object?>.from((await _invoke<Map>('state'))!);
   Future<Map<String, Object?>> capabilities() async =>
       Map<String, Object?>.from((await _invoke<Map>('capabilities'))!);
+
+  /// Prepare an empty runtime after the native view supplies real metrics.
+  /// This runs no mini-program module and grants no presentation authority.
+  Future<Map<String, Object?>> prepareView() async =>
+      Map<String, Object?>.from((await _invoke<Map>('prepareView'))!);
   Future<void> close() {
     if (_closed) return Future.value();
     return _closing ??= _close();
