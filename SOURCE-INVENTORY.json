@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.5",
-  "sourceBaseCommit": "2a6f0de26184d78e7b532d755e5824f10b1eec19",
-  "review": "Align synthetic fixture receipts and federated package assertions with shared preview.5 SDK_VERSION; preserve historical preview.4 runtime lock and ORIGIN without artifact claims.",
+  "sourceBaseCommit": "e306b9677e370b93d899f286244683b3702eecbd",
+  "review": "Pin reviewed preview.5 binary archives, exact lock contract and separate native producer identity; retain historical evidence.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "c289b1e5a8e303d0dd11634ec6e44efcf95e183b39d09975aa8b694178de6ae7",
-      "size": 9480,
+      "sha256": "f375897819eb139adc2789de4264ad71d21a82b73ddb3b3a4bf13fa34baa2131",
+      "size": 9793,
       "mode": "100644"
     },
     {
@@ -269,7 +269,7 @@
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "418bd79ca6a60c3a654553ca22a70bafbf8d5a4b60beaff9e8fb9869b5d91797",
+      "sha256": "413ecc39ee09f19a807720716e8d8b0657eddeb4bc40e6bfd473b9527e81323d",
       "size": 3217,
       "mode": "100644"
     },
@@ -281,8 +281,8 @@
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "72d597b21fab86a4dd4c46c551da0b941d880a57e956b8e81357699bebceeb7f",
-      "size": 7802,
+      "sha256": "e81d045f1cf716b69dcfff1325be1296ab2f1aeefebf1ce4723d21f8d0520e9e",
+      "size": 8039,
       "mode": "100644"
     },
     {

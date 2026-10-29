@@ -4,7 +4,14 @@ Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repositor
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
-This checkout requires **0.1.0-preview.5** for atomic host layouts and durable Dev Player replacement attempts. A preview.4 runtime cannot satisfy this protocol; a reviewed preview.5 runtime lock must be generated before packaging. The historical preview.4 lock remains unchanged until those new bytes are verified.
+The default lock identifies the newly built **0.1.0-preview.5** QuickJS + Skia GPU
+artifacts by exact size and SHA-256. It contains seven runtime slices and Android,
+iOS and macOS universal SDK packages; native production is bound to
+`05aec6c4056a124a9c399c75b34d081cffbdaa5d`, while wrapper producer commits are
+recorded separately in archive provenance. Historical preview.2/3/4 releases,
+reports and source identities remain unchanged. No older-runtime fallback is
+allowed. Windows/Linux runtime distributions remain blocked. Archive validation,
+private publication and actual Player/GPU/device acceptance are separate gates.
 Preparation downloads the exact reviewed SDK archive from the private release or
 an authorized offline directory. Caches are isolated by version, platform,
 architecture and content hash. Prior preview.2 caches and reports remain intact;
@@ -16,7 +23,7 @@ acceptance.
 
 Use Node.js 24+, Python 3, and pinned Flutter **3.47.7** (framework `abaf9c523780a608bd46686fd5e53740a07077f8`, engine `deb287481e3ce9468f3434937ced4240a70539ca`). Native Android consumers require minSdk 26; iOS requires 16.0; macOS requires 12.0. Desktop tooling and platform SDK requirements are documented in `native_desktop/README.md`.
 
-`runtime-artifacts.lock.json` permits only exact version, component, platform, architecture, byte size and SHA-256 pins from the private `weapp-container/runtime-artifacts` release `runtime-v0.1.0-preview.4`. The current lock pins the reviewed Android universal SDK (arm64-v8a and x86_64), iOS universal SDK (arm64 device, arm64 simulator and x86_64 simulator), and macOS universal desktop SDK (arm64 and x86_64). The checked-in lock preserves all ten reviewed runtime/SDK assets; these tools consume the SDK entry for the selected platform. Targets without their exact reviewed SDK entry remain **blocked** and return an explicit missing-target error. No floating `latest`, placeholder digest, local core build or silent fallback is used.
+`runtime-artifacts.lock.json` permits only exact version, component, platform, architecture, byte size and SHA-256 pins from the private `weapp-container/runtime-artifacts` release `runtime-v0.1.0-preview.5`. The current lock pins the reviewed Android universal SDK (arm64-v8a and x86_64), iOS universal SDK (arm64 device, arm64 simulator and x86_64 simulator), and macOS universal desktop SDK (arm64 and x86_64). The checked-in lock preserves all ten reviewed runtime/SDK assets; these tools consume the SDK entry for the selected platform. Targets without their exact reviewed SDK entry remain **blocked** and return an explicit missing-target error. No floating `latest`, placeholder digest, local core build or silent fallback is used.
 
 For an available versioned GitHub release, grant `WEAPP_CONTAINER_RUNTIME_TOKEN` read access to that private repository, or set `WEAPP_CONTAINER_RUNTIME_ARTIFACT_DIR` to authorized offline `.tar.gz` assets. Never commit credentials or archives.
 
