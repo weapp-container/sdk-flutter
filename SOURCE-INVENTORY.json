@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.5.1",
-  "sourceBaseCommit": "fc5ef4a8aae97d93618cdedb8c7d5f9f79d75d16",
-  "review": "Reviewed native host-layout coherence: frozen observations and chrome, readonly owner proofs, independently measured window metrics, strict ready and typed-empty authority, absolute retry deadlines and lifetime cancellation, plus shared Dart supersession proof and bounded layout diagnostics; immutable native runtime unchanged.",
+  "sourceBaseCommit": "e83ff3d659707aee318cd4f4a657b0feef1606a3",
+  "review": "Reviewed Flutter host-layout queue separates desired geometry, native metadata and occlusion; dispatch requires current complete pending observation; startup-consumed and replaced requests do not ACK or restore input; only native-success current geometry is committed; immutable acceptance receipts, removable close-intent hooks and late-reply retirement are covered by SDK widget tests. Exact native runtime archives and original producer identities are unchanged.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "0e8afc885930e7daba18516df4d5446a3dab8fbbe36331daffa25b851d7bf248",
-      "size": 11021,
+      "sha256": "724d0128bc6be400770f21cdf3943944b2fa0ae4e616f9eea1d340a70bd93879",
+      "size": 11713,
       "mode": "100644"
     },
     {
@@ -377,14 +377,14 @@
     },
     {
       "path": "weapp_container/README.md",
-      "sha256": "e2e0afeb5ebf410f33f872a6cc751a9cbafb9c30514aee02c71e5a82fc2a58a9",
-      "size": 5103,
+      "sha256": "d46cce1d40e13945b6f8ce2afb75ba8cdee8d7ef17300eb9cb41f4153506b800",
+      "size": 5499,
       "mode": "100644"
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "0d0d911b74482e5b89340435824532ea1ca849f756b22146e426ff6945d41407",
-      "size": 15554,
+      "sha256": "0542e05cfa5750be09fa204dbf570976867a69c3f89dc31a24a43d7e953fea70",
+      "size": 17764,
       "mode": "100644"
     },
     {
@@ -395,8 +395,8 @@
     },
     {
       "path": "weapp_container/lib/src/view.dart",
-      "sha256": "56e003d62f6689e03b32dbcdb06bea86755787a5bbe95295d0d0b068841e1180",
-      "size": 20307,
+      "sha256": "1642c8a300fa390ea7e7470e91c3d5c7447c5b7fdecacf2095f31bd395fd5887",
+      "size": 26514,
       "mode": "100644"
     },
     {
@@ -413,8 +413,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "e6e378df7f7bab099e15df67a2620b7fe2955fa48b4e7eb856e86163d2542267",
-      "size": 51345,
+      "sha256": "0884234878c8311f31dd037941dd813900b3a386497f8c5c7a9e4ba13978c4c2",
+      "size": 71125,
       "mode": "100644"
     },
     {

@@ -10,6 +10,53 @@ import 'package:flutter/widgets.dart';
 import 'controller.dart';
 import 'host_layout.dart';
 
+Map<String, Object?>? _chromeSnapshot(Map<String, Object?>? value) =>
+    value == null
+        ? null
+        : (jsonDecode(jsonEncode(value)) as Map).cast<String, Object?>();
+
+bool _chromeEqual(Object? left, Object? right) {
+  if (identical(left, right)) return true;
+  if (left is Map && right is Map) {
+    return left.length == right.length &&
+        left.keys.every((key) =>
+            right.containsKey(key) && _chromeEqual(left[key], right[key]));
+  }
+  if (left is List && right is List) {
+    return left.length == right.length &&
+        List.generate(left.length, (index) => index)
+            .every((index) => _chromeEqual(left[index], right[index]));
+  }
+  return left == right;
+}
+
+bool _sameChromeObservation(
+    Map<String, Object?>? left, Map<String, Object?>? right) {
+  if (left == null || right == null) return left == null && right == null;
+  return const [
+    'schemaVersion',
+    'ownerId',
+    'surfaceGeneration',
+    'observationId',
+    'sessionId',
+    'pageId',
+    'windowMetrics',
+  ].every((key) => _chromeEqual(left[key], right[key]));
+}
+
+class _ChromeRetired implements Exception {}
+
+class _DesiredHostGeometry {
+  _DesiredHostGeometry(this.chrome, this.observation);
+  final Map<String, Object?> chrome;
+  final Map<String, Object?>? observation;
+  int? get revision => chrome['revision'] as int?;
+  bool same(_DesiredHostGeometry? other) =>
+      other != null &&
+      _chromeEqual(chrome, other.chrome) &&
+      _sameChromeObservation(observation, other.observation);
+}
+
 /// A real embedded platform view on mobile and a native texture on desktop.
 /// Give this widget finite positive constraints. Its controller outlives detach.
 class WeappContainerView extends StatefulWidget {
@@ -60,11 +107,16 @@ class _WeappContainerViewState extends State<WeappContainerView>
   Future<void>? _syncing;
   Map<String, Object?>? _pendingMetrics;
   Map<String, Object?>? _metrics;
-  int? _hostChromeRevision;
-  String? _hostObservationId;
+  _DesiredHostGeometry? _desiredGeometry;
+  _DesiredHostGeometry? _committedGeometry;
+  _DesiredHostGeometry? _attemptedGeometry;
   String? _nativeChromeSignature;
   String? _appliedNativeChromeSignature;
-  int _chromeSubmission = 0;
+  int _chromeDesiredVersion = 0;
+  int _chromeHandledVersion = 0;
+  bool _chromeRunning = false;
+  final _chromeWaiters = <void Function()>{};
+  late final void Function() _cancelCloseListener;
   bool _occluded = false;
   bool _nativeOccluded = false;
   Future<void> _chromeSync = Future.value();
@@ -79,6 +131,8 @@ class _WeappContainerViewState extends State<WeappContainerView>
   void initState() {
     super.initState();
     _controller = widget.controller;
+    _cancelCloseListener =
+        _controller.listenForCloseRequest(_retireChromeWaits);
     _ready = _controller.claimView(this);
     _run(_ready);
     _resumed = WidgetsBinding.instance.lifecycleState == null ||
@@ -131,133 +185,254 @@ class _WeappContainerViewState extends State<WeappContainerView>
 
   void _updateForeground() {
     final next = widget.foreground && _resumed;
-    if (_foreground == next || _controller.isClosed) return;
+    if (_foreground == next || _controller.closeRequested) return;
     _foreground = next;
     _run(_controller.setForeground(next));
   }
 
   void _updateChrome() {
-    // Queued measurements belong to this exact observation, even if callers
-    // subsequently reuse or mutate their maps while native measurement waits.
-    final geometry = widget.hostChrome == null
-        ? null
-        : (jsonDecode(jsonEncode(widget.hostChrome)) as Map)
-            .cast<String, Object?>();
-    final native = widget.nativeChrome;
-    final geometryRevision = geometry?['revision'] as int?;
-    final observation = widget.hostLayoutObservation == null
-        ? null
-        : (jsonDecode(jsonEncode(widget.hostLayoutObservation)) as Map)
-            .cast<String, Object?>();
-    final observationId = observation?['observationId'] as String?;
+    // Desired geometry, controls metadata and covering are independent channels.
+    // A title/locale update must neither consume a new observation nor discard
+    // the only queued geometry. Only a successful current request is committed.
+    final geometry =
+        widget.prepareOnly ? null : _chromeSnapshot(widget.hostChrome);
+    final observation = _chromeSnapshot(widget.hostLayoutObservation);
+    final next =
+        geometry == null ? null : _DesiredHostGeometry(geometry, observation);
     final nativeSupported = defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
-    // Locale is presentation metadata, independent of guest geometry revision.
-    // Capture by value so callers cannot mutate a queued native update.
-    final nativeSignature =
-        native != null && nativeSupported ? jsonEncode(native) : null;
-    final geometryChanged = !widget.prepareOnly &&
-        geometry != null &&
-        (!_controller.atomicHostLayout || observation != null) &&
-        (geometryRevision != _hostChromeRevision ||
-            observationId != _hostObservationId);
-    final nativeChanged =
-        nativeSignature != null && nativeSignature != _nativeChromeSignature;
-    final nativeSnapshot = nativeSignature != null
-        ? (jsonDecode(nativeSignature) as Map).cast<String, Object?>()
+    final nativeSignature = widget.nativeChrome != null && nativeSupported
+        ? jsonEncode(widget.nativeChrome)
         : null;
+    final geometryChanged =
+        next == null ? _desiredGeometry != null : !next.same(_desiredGeometry);
+    final nativeChanged = nativeSignature != _nativeChromeSignature;
     final occlusionChanged = widget.occluded != _occluded;
     if (!geometryChanged && !nativeChanged && !occlusionChanged) return;
-    if (geometryChanged) {
-      _hostChromeRevision = geometryRevision;
-      _hostObservationId = observationId;
+    if (geometryChanged) _desiredGeometry = next;
+    _nativeChromeSignature = nativeSignature;
+    _occluded = widget.occluded;
+    _chromeDesiredVersion++;
+    _scheduleChrome();
+  }
+
+  bool get _chromeActive => !_disposed && !_controller.closeRequested;
+
+  void _retireChromeWaits() {
+    final waiters = _chromeWaiters.toList();
+    _chromeWaiters.clear();
+    for (final retire in waiters) {
+      retire();
     }
-    if (nativeChanged) _nativeChromeSignature = nativeSignature;
-    final occluded = widget.occluded;
-    _occluded = occluded;
-    final submission = ++_chromeSubmission;
-    _chromeSync =
-        _chromeSync.catchError((Object _, StackTrace __) {}).then((_) async {
-      await _ready;
-      if (_disposed || _controller.isClosed) return;
-      // Suspend first when covering; restore only after the geometry/controls
-      // matching the accepted generation have reached the native owner.
-      if (occlusionChanged && occluded) {
-        await _controller.setPreviewOccluded(true);
-        _nativeOccluded = true;
-      }
-      if (geometryChanged) {
-        try {
-          if (_controller.atomicHostLayout) {
-            await _controller.updateHostLayout(
-                observation: observation!,
-                chrome: geometry,
-                layoutRevision: geometryRevision.toString());
-          } else {
-            await _controller.updateHostChrome(geometry);
-          }
-        } on PlatformException catch (error) {
-          if (error.code == 'ERR_CANCELLED') {
-            if (_disposed ||
-                !mounted ||
-                widget.hostChrome?['revision'] != geometryRevision ||
-                widget.hostLayoutObservation?['observationId'] != observationId)
-              return;
-            // Runtime navigation can win before Flutter consumes its chrome
-            // event. Confirm the new owner instead of faulting a healthy page.
-            final current = await _controller.state();
-            if (_controller.atomicHostLayout &&
-                supersededHostLayout(
-                    observation!, geometryRevision.toString(), current)) {
-              _hostChromeRevision = null;
-              _hostObservationId = null;
-              // The replacement observation must be measured and committed by
-              // its own queued operation. Never ACK or unocclude this one.
-              return;
-            }
-            final currentPage = current['page'];
-            if (!_controller.atomicHostLayout &&
-                ((geometry['sessionId'] != null &&
-                        geometry['sessionId'] != current['sessionId']) ||
-                    (geometry['pageId'] != null &&
-                        currentPage is Map &&
-                        geometry['pageId'] != currentPage['id']))) {
-              _hostChromeRevision = null;
-              return;
-            }
-          }
-          rethrow;
-        }
-        if (submission != _chromeSubmission) return;
-        if (!_disposed &&
-            mounted &&
-            widget.hostChrome?['revision'] == geometryRevision &&
-            widget.hostLayoutObservation?['observationId'] == observationId &&
-            widget.hostLayoutObservation?['ownerId'] ==
-                observation?['ownerId'] &&
-            widget.hostLayoutObservation?['surfaceGeneration'] ==
-                observation?['surfaceGeneration'] &&
-            widget.hostLayoutObservation?['sessionId'] ==
-                observation?['sessionId'] &&
-            widget.hostLayoutObservation?['pageId'] == observation?['pageId'] &&
-            geometryRevision != null) {
-          widget.onHostChromeApplied?.call(geometryRevision);
-        } else {
-          return;
-        }
-      }
-      if (nativeSignature != null &&
-          nativeSignature != _appliedNativeChromeSignature) {
-        await _controller.updateNativeChrome(nativeSnapshot!);
-        _appliedNativeChromeSignature = nativeSignature;
-      }
-      if (submission != _chromeSubmission) return;
-      if (!occluded && _nativeOccluded) {
-        await _controller.setPreviewOccluded(false);
-        _nativeOccluded = false;
-      }
+  }
+
+  Future<T> _awaitChrome<T>(Future<T> operation) {
+    final waiters = _chromeWaiters;
+    final result = Completer<T>();
+    void retire() {
+      if (!result.isCompleted) result.completeError(_ChromeRetired());
+    }
+
+    if (_chromeActive) {
+      waiters.add(retire);
+    } else {
+      retire();
+    }
+    // Keep an error handler on the actual operation after retiring its wait;
+    // late native replies cannot leak errors or reactivate this View.
+    operation.then<void>((value) {
+      waiters.remove(retire);
+      if (!result.isCompleted) result.complete(value);
+    }, onError: (Object error, StackTrace stack) {
+      waiters.remove(retire);
+      if (!result.isCompleted) result.completeError(error, stack);
+    });
+    return result.future;
+  }
+
+  bool _currentGeometry(_DesiredHostGeometry value) =>
+      _chromeActive &&
+      mounted &&
+      !widget.prepareOnly &&
+      value.same(_desiredGeometry) &&
+      _chromeEqual(value.chrome, widget.hostChrome) &&
+      _sameChromeObservation(value.observation, widget.hostLayoutObservation);
+
+  bool _eligibleGeometry(_DesiredHostGeometry value) =>
+      _currentGeometry(value) &&
+      (!_controller.atomicHostLayout ||
+          (value.observation != null &&
+              _sameChromeObservation(
+                  value.observation, _controller.pendingHostLayout)));
+
+  // A success reply establishes only this command's accepted geometry, never a
+  // presented frame. A subsequently consumed observation may restore covering
+  // only for the exact geometry this View actually committed, using its real
+  // native receipt. A new revision or merely healthy state is insufficient.
+  bool _acceptedCommittedGeometry(_DesiredHostGeometry value) {
+    final observation = value.observation;
+    final accepted = _controller.acceptedHostLayout;
+    if (observation == null ||
+        accepted == null ||
+        observation['schemaVersion'] != 1 ||
+        accepted['schemaVersion'] != 1 ||
+        accepted['layoutRevision'] != value.revision?.toString()) return false;
+    for (final field in const [
+      'ownerId',
+      'surfaceGeneration',
+      'observationId',
+      'windowMetrics',
+    ]) {
+      if (!_chromeEqual(accepted[field], observation[field])) return false;
+    }
+    final chrome = accepted['chrome'];
+    if (chrome is! Map) return false;
+    return chrome['revision'] == value.revision &&
+        chrome['sessionId'] == observation['sessionId'] &&
+        chrome['pageId'] == observation['pageId'] &&
+        chrome['sessionId'] == value.chrome['sessionId'] &&
+        chrome['pageId'] == value.chrome['pageId'];
+  }
+
+  bool _successfulCurrentGeometry(_DesiredHostGeometry value) {
+    if (!_currentGeometry(value)) return false;
+    if (!_controller.atomicHostLayout) return true;
+    final pending = _controller.pendingHostLayout;
+    return pending != null
+        ? _sameChromeObservation(pending, value.observation)
+        : _acceptedCommittedGeometry(value);
+  }
+
+  bool get _mayRestoreChrome {
+    if (!_chromeActive || !mounted || widget.prepareOnly || _occluded)
+      return false;
+    if (!_controller.atomicHostLayout) return true;
+    final committed = _committedGeometry;
+    if (committed == null || !_chromeEqual(widget.hostChrome, committed.chrome))
+      return false;
+    final pending = _controller.pendingHostLayout;
+    if (pending != null) {
+      return _sameChromeObservation(pending, committed.observation) &&
+          _sameChromeObservation(
+              widget.hostLayoutObservation, committed.observation);
+    }
+    return (widget.hostLayoutObservation == null ||
+            _sameChromeObservation(
+                widget.hostLayoutObservation, committed.observation)) &&
+        _acceptedCommittedGeometry(committed);
+  }
+
+  void _scheduleChrome() {
+    if (_chromeRunning || !_chromeActive) return;
+    _chromeRunning = true;
+    _chromeSync = _syncChrome().whenComplete(() {
+      _chromeRunning = false;
+      if (_chromeActive && _chromeHandledVersion != _chromeDesiredVersion)
+        _scheduleChrome();
     });
     _run(_chromeSync);
+  }
+
+  Future<void> _syncChrome() async {
+    try {
+      await _awaitChrome(_ready);
+      while (_chromeActive) {
+        final version = _chromeDesiredVersion;
+        _chromeHandledVersion = version;
+        if (_occluded && !_nativeOccluded) {
+          await _awaitChrome(_controller.setPreviewOccluded(true));
+          _nativeOccluded = true;
+        }
+        if (!_chromeActive) return;
+        final geometry = _desiredGeometry;
+        if (geometry != null &&
+            !geometry.same(_committedGeometry) &&
+            !identical(geometry, _attemptedGeometry) &&
+            _eligibleGeometry(geometry)) {
+          _attemptedGeometry = geometry;
+          try {
+            if (_controller.atomicHostLayout) {
+              await _awaitChrome(_controller.updateHostLayout(
+                  observation: geometry.observation!,
+                  chrome: geometry.chrome,
+                  layoutRevision: geometry.revision.toString()));
+            } else {
+              await _awaitChrome(_controller.updateHostChrome(geometry.chrome));
+            }
+            if (_successfulCurrentGeometry(geometry)) {
+              _committedGeometry = geometry;
+              if (geometry.revision != null) {
+                widget.onHostChromeApplied?.call(geometry.revision!);
+              }
+            }
+          } on PlatformException catch (error, stack) {
+            var cancelled = false;
+            if (error.code == 'ERR_CANCELLED') {
+              if (!_currentGeometry(geometry)) {
+                cancelled = true;
+              } else {
+                try {
+                  final current = await _awaitChrome(_controller.state());
+                  if (_controller.atomicHostLayout) {
+                    cancelled = supersededHostLayout(geometry.observation!,
+                        geometry.revision.toString(), current);
+                  } else {
+                    final page = current['page'];
+                    cancelled = (geometry.chrome['sessionId'] != null &&
+                            geometry.chrome['sessionId'] !=
+                                current['sessionId']) ||
+                        (geometry.chrome['pageId'] != null &&
+                            page is Map &&
+                            geometry.chrome['pageId'] != page['id']);
+                  }
+                } on _ChromeRetired {
+                  rethrow;
+                } catch (_) {
+                  // An unavailable read-only proof cannot rewrite the original
+                  // cancellation or prevent independent controls from updating.
+                  cancelled = false;
+                }
+              }
+            }
+            if (!cancelled && _chromeActive) {
+              _error(error, stack);
+            }
+          } on _ChromeRetired {
+            rethrow;
+          } catch (error, stack) {
+            if (_chromeActive) _error(error, stack);
+          }
+        }
+        if (!_chromeActive) return;
+        // Even a skipped consumed geometry must not swallow newer locale/title
+        // metadata. It also cannot acknowledge that geometry or restore input.
+        final nativeSignature = _nativeChromeSignature;
+        if (nativeSignature != null &&
+            nativeSignature != _appliedNativeChromeSignature) {
+          final snapshot =
+              (jsonDecode(nativeSignature) as Map).cast<String, Object?>();
+          try {
+            await _awaitChrome(_controller.updateNativeChrome(snapshot));
+            _appliedNativeChromeSignature = nativeSignature;
+          } on _ChromeRetired {
+            rethrow;
+          } catch (error, stack) {
+            if (_chromeActive) _error(error, stack);
+          }
+        }
+        if (!_chromeActive) return;
+        if (_mayRestoreChrome &&
+            (_nativeChromeSignature == null ||
+                _nativeChromeSignature == _appliedNativeChromeSignature) &&
+            _nativeOccluded) {
+          await _awaitChrome(_controller.setPreviewOccluded(false));
+          _nativeOccluded = false;
+        }
+        if (version == _chromeDesiredVersion) return;
+      }
+    } on _ChromeRetired {
+      // Ignore late replies after this View or its controller began retirement.
+    }
   }
 
   void _layout(Map<String, Object?> next) {
@@ -285,7 +460,9 @@ class _WeappContainerViewState extends State<WeappContainerView>
   Future<void> _sync() async {
     try {
       await _ready;
-      while (!_disposed && _pendingMetrics != null) {
+      while (!_disposed &&
+          !_controller.closeRequested &&
+          _pendingMetrics != null) {
         final next = _pendingMetrics!;
         _pendingMetrics = null;
         if (_texture == null) {
@@ -318,6 +495,8 @@ class _WeappContainerViewState extends State<WeappContainerView>
   @override
   void dispose() {
     _disposed = true;
+    _cancelCloseListener();
+    _retireChromeWaits();
     WidgetsBinding.instance.removeObserver(this);
     final retirement = _detach();
     _controller.releaseView(this, retirement);
@@ -556,7 +735,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
       _foreground == true &&
       !widget.occluded &&
       !_disposed &&
-      !_controller.isClosed;
+      !_controller.closeRequested;
 
   void _input(List<Map<String, Object?>> input) {
     if (_acceptsInput) _run(_controller.sendInput(input));

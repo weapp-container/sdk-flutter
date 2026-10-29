@@ -55,6 +55,11 @@ Only one widget may attach to a controller. Widget disposal waits for native
 surface/texture retirement before a remount can attach. `close()` is asynchronous
 and idempotent; await it to persist and release the session. Native cleanup
 failures retain ownership and allow explicit retry.
+Close intent immediately retires the mounted View's layout queue; late native
+replies cannot acknowledge geometry, update controls or resume preview input.
+`controller.closeRequested` remains true if cleanup needs a retry. A successful
+layout command or `acceptedHostLayout` event establishes layout acceptance only;
+the separate native presentation receipt still controls frame/input readiness.
 
 The widget forwards application lifecycle and its `foreground` property. Set
 `foreground: false` when hiding a feature that remains mounted. Completion pumps

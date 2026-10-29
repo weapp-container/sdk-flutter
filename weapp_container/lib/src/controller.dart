@@ -61,14 +61,22 @@ class WeappContainerController {
           WeappContainerEvent(Map<String, Object?>.from(value['event'] as Map));
       if (event.type == 'hostLayoutObservation' &&
           event.fields['observation'] is Map) {
-        _pendingHostLayout =
-            Map<String, Object?>.from(event.fields['observation'] as Map);
-        _lastHostLayoutObservation = _pendingHostLayout;
+        _pendingHostLayout = _layoutCopy(event.fields['observation'] as Map);
+        _lastHostLayoutObservation = _layoutCopy(_pendingHostLayout!);
       } else if (event.type == 'hostLayoutAccepted') {
         final accepted = event.fields['acceptedLayout'];
-        if (accepted is Map &&
-            accepted['observationId'] == _pendingHostLayout?['observationId']) {
-          _pendingHostLayout = null;
+        if (accepted is Map) {
+          _acceptedHostLayout = _layoutCopy(accepted);
+          if (const [
+                'schemaVersion',
+                'ownerId',
+                'surfaceGeneration',
+                'observationId'
+              ].every((key) => accepted[key] == _pendingHostLayout?[key]) &&
+              _layoutEqual(accepted['windowMetrics'],
+                  _pendingHostLayout?['windowMetrics'])) {
+            _pendingHostLayout = null;
+          }
         }
       }
       if (event.type == 'hostCall') {
@@ -104,21 +112,62 @@ class WeappContainerController {
   final bool atomicHostLayout;
   Map<String, Object?>? _pendingHostLayout;
   Map<String, Object?>? _lastHostLayoutObservation;
-  Map<String, Object?>? get pendingHostLayout => _pendingHostLayout;
+  Map<String, Object?>? _acceptedHostLayout;
+  Map<String, Object?> _layoutCopy(Map value) =>
+      (jsonDecode(jsonEncode(value)) as Map).cast<String, Object?>();
+  bool _layoutEqual(Object? left, Object? right) {
+    if (left is Map && right is Map) {
+      return left.length == right.length &&
+          left.keys.every((key) =>
+              right.containsKey(key) && _layoutEqual(left[key], right[key]));
+    }
+    if (left is List && right is List) {
+      return left.length == right.length &&
+          List.generate(left.length, (index) => index)
+              .every((index) => _layoutEqual(left[index], right[index]));
+    }
+    return left == right;
+  }
+
+  Map<String, Object?>? get pendingHostLayout =>
+      _pendingHostLayout == null ? null : _layoutCopy(_pendingHostLayout!);
   Map<String, Object?>? get lastHostLayoutObservation =>
-      _lastHostLayoutObservation;
+      _lastHostLayoutObservation == null
+          ? null
+          : _layoutCopy(_lastHostLayoutObservation!);
+
+  /// The real native acceptance event. This is not a GPU presentation receipt.
+  Map<String, Object?>? get acceptedHostLayout =>
+      _acceptedHostLayout == null ? null : _layoutCopy(_acceptedHostLayout!);
   final WeappContainerPlatform _platform;
   final _events = StreamController<WeappContainerEvent>.broadcast();
   final _methods = <String, WeappHostMethod>{};
   final _calls = <String, WeappHostCall>{};
   late final StreamSubscription<Map<String, Object?>> _subscription;
   Future<void>? _closing;
+  bool _closeRequested = false;
+  final _closeListeners = <void Function()>{};
   bool _closed = false;
   bool _loadRequested = false;
   Object? _viewOwner;
   Future<void> _retirement = Future.value();
   Stream<WeappContainerEvent> get events => _events.stream;
   bool get isClosed => _closed;
+
+  /// View retirement begins with close intent, including a failed close that
+  /// still needs an explicit retry. A late command cannot reactivate that View.
+  bool get closeRequested => _closeRequested;
+
+  // View implementation hook. A removable listener avoids retaining detached
+  // Views or accumulating one pending lifetime callback per layout operation.
+  void Function() listenForCloseRequest(void Function() listener) {
+    if (_closeRequested) {
+      listener();
+    } else {
+      _closeListeners.add(listener);
+    }
+    return () => _closeListeners.remove(listener);
+  }
 
   Future<T?> _invoke<T>(String method,
       [Map<String, Object?> arguments = const {}]) {
@@ -319,6 +368,14 @@ class WeappContainerController {
       Map<String, Object?>.from((await _invoke<Map>('prepareView'))!);
   Future<void> close() {
     if (_closed) return Future.value();
+    if (!_closeRequested) {
+      _closeRequested = true;
+      final listeners = _closeListeners.toList();
+      _closeListeners.clear();
+      for (final listener in listeners) {
+        listener();
+      }
+    }
     return _closing ??= _close();
   }
 

@@ -15,6 +15,16 @@ and canonical decimal layout identities. These wrapper changes reuse the exact
 native archives above; their source commit does not replace the archive's
 original producer identity. Device verification remains a separate requirement.
 
+The View keeps desired geometry, native control metadata and occlusion separate.
+Immediately before dispatch, it checks the complete current widget and native
+pending observation, including owner, surface, page and window metrics. Startup
+may already have consumed a prepared observation; queued duplicates are skipped
+without another layout ACK or input restoration. Titles and accessibility labels
+still update independently. Only a successful current layout is committed, and
+the native acceptance event is distinct from GPU presentation. `closeRequested`
+is set when closing begins; that View retires its waits and ignores late replies,
+even when native cleanup needs an explicit retry.
+
 The default lock identifies the independently built **0.1.0-preview.5.1** QuickJS
 + Skia GPU artifacts by exact size and SHA-256: seven runtime slices and Android,
 iOS and macOS universal SDK packages. Native production is bound to
