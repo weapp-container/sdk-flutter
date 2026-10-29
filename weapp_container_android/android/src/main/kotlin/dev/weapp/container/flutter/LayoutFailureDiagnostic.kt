@@ -10,18 +10,25 @@ internal object LayoutFailureDiagnostic {
         "prepareHostChrome", "inspectPackChrome", "state", "capabilities", "hostLayout",
         "prepareHostLayout", "observeHostLayout")
     fun operation(value: String?): String = value?.takeIf { it in operations } ?: "other"
-    fun reason(message: String?): String = when (message) {
-        "initial host chrome dimensions differ from window metrics" -> "chrome-viewport-mismatch"
-        "invalid host chrome geometry" -> "invalid-chrome-geometry"
-        "host chrome geometry exceeds logical bounds" -> "chrome-bounds"
-        "no pending native layout observation" -> "layout-no-pending-observation"
-        "layout does not match the exact native observation and page owner" -> "layout-observation-superseded"
-        "host layout surface owner changed" -> "layout-surface-owner-changed"
-        "stale complete host layout revision" -> "layout-stale-revision"
-        "native layout measurement expired; observe and measure again" -> "layout-measurement-expired"
-        "Chrome owner retired before native measurement" -> "layout-native-owner-retired"
-        else -> "native-operation"
-    }
+    private data class KnownFailure(val code: String, val message: String, val reason: String)
+    private val failures = listOf(
+        KnownFailure("ERR_INVALID_REQUEST", "initial host chrome dimensions differ from window metrics", "chrome-viewport-mismatch"),
+        KnownFailure("ERR_INVALID_REQUEST", "invalid host chrome geometry", "invalid-chrome-geometry"),
+        KnownFailure("ERR_INVALID_REQUEST", "host chrome geometry exceeds logical bounds", "chrome-bounds"),
+        KnownFailure("ERR_CANCELLED", "no pending native layout observation", "layout-no-pending-observation"),
+        KnownFailure("ERR_CANCELLED", "layout does not match the exact native observation and page owner", "layout-observation-superseded"),
+        KnownFailure("ERR_CANCELLED", "host layout surface owner changed", "layout-surface-owner-changed"),
+        KnownFailure("ERR_CANCELLED", "stale complete host layout revision", "layout-stale-revision"),
+        KnownFailure("ERR_TIMEOUT", "native layout measurement expired; observe and measure again", "layout-measurement-expired"),
+        KnownFailure("ERR_CANCELLED", "Chrome owner retired before native measurement", "layout-native-owner-retired"),
+    )
+    // The immutable FFI uses SdkError's "{code}: {message}" Display; local
+    // wrapper errors use the bare message. Accept only these two exact forms
+    // for a reviewed (code, message) pair. Never strip arbitrary prefixes or
+    // expose an unknown message in diagnostics. Classification is not recovery.
+    fun reason(code: String?, message: String?): String = failures.firstOrNull {
+        it.code == code && (message == it.message || message == "${it.code}: ${it.message}")
+    }?.reason ?: "native-operation"
     private fun decimal(value: Any?): String? {
         val text = value as? String ?: return null
         return text.takeIf { positiveDecimal.matches(it) && BigInteger(it) <= maximum }

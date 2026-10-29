@@ -298,8 +298,8 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         while ((error is CompletionException || error is ExecutionException) && error.cause != null) error = error.cause!!
         // Never log arbitrary native text, payloads, paths or credentials. The
         // reviewed reason and numeric layout observations locate startup faults.
-        val reason = LayoutFailureDiagnostic.reason(error.message)
         val code = (error as? ContainerException)?.code?.takeIf { it.matches(Regex("ERR_[A-Z_]{1,48}")) } ?: "ERR_ANDROID"
+        val reason = LayoutFailureDiagnostic.reason(code, error.message)
         val op = LayoutFailureDiagnostic.operation(operation)
         val stamp = LayoutFailureDiagnostic.stamp(operation, arguments)
         val content = entry.clientChrome?.optJSONObject("contentRect")
