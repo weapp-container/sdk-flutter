@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
@@ -15,9 +16,11 @@ class FakePlatform extends WeappContainerPlatform {
   Completer<void>? detach;
   bool initialized = false;
   bool cancelChrome = false;
+  bool cancelLayout = false;
+  Completer<void>? layoutGate;
   Map<String, Object?> currentState = {
     'sessionId': 'session',
-    'page': {'id': 2}
+    'page': {'id': 2},
   };
   @override
   Stream<Map<String, Object?>> get events => source.stream;
@@ -32,7 +35,18 @@ class FakePlatform extends WeappContainerPlatform {
     requests.add((method, args));
     if (method == 'hostChrome' && cancelChrome)
       throw PlatformException(
-          code: 'ERR_CANCELLED', message: 'stale page geometry');
+        code: 'ERR_CANCELLED',
+        message: 'stale page geometry',
+      );
+    if (method == 'hostLayout') {
+      await layoutGate?.future;
+      if (cancelLayout) {
+        throw PlatformException(
+          code: 'ERR_CANCELLED',
+          message: 'fixture native observation superseded',
+        );
+      }
+    }
     if (method == 'state') return currentState as T;
     if (method == 'create') return {'id': ++nextId} as T;
     if (method == 'inspectPackChrome') {
@@ -54,7 +68,7 @@ class FakePlatform extends WeappContainerPlatform {
         'observationId': observation['observationId'],
         'layoutRevision': args['layoutRevision'],
         'windowMetrics': observation['windowMetrics'],
-        'chrome': args['chrome']
+        'chrome': args['chrome'],
       } as T;
     }
     if (method == 'command') {
@@ -68,40 +82,186 @@ class FakePlatform extends WeappContainerPlatform {
         'acceptedPackIdentity': {
           'root': 'verified-root',
           'acceptedPackRevision': '9007199254740994',
-          'sessionId': 'native'
+          'sessionId': 'native',
         },
       } as T;
     }
     if (method == 'prepareView')
       return {
         'pack': {
-          'devReload': {'protocolVersion': '1.0'}
-        }
+          'devReload': {'protocolVersion': '1.0'},
+        },
       } as T;
     if (method == 'applyDevPack')
       return {
         'reloadKind': 'inPlace',
-        'state': {'sessionId': 'same'}
+        'state': {'sessionId': 'same'},
       } as T;
     if (method == 'devState')
       return {
         'state': {'sessionId': 'same'},
         'pages': [
           {
-            'data': {'count': 9}
-          }
-        ]
+            'data': {'count': 9},
+          },
+        ],
       } as T;
     if (method == 'attach') return {'textureId': 7} as T;
     if (method == 'detach') await detach?.future;
     if (method == 'close' && failClose)
       throw PlatformException(
-          code: 'ERR_RENDER', message: 'Retirement requires retry');
+        code: 'ERR_RENDER',
+        message: 'Retirement requires retry',
+      );
     return null;
   }
 
   void emit(int id, Map<String, Object?> event) =>
       source.add({'id': id, 'event': event});
+}
+
+Map<String, Object?> atomicObservation({
+  String owner = '7',
+  String surface = '5',
+  String sequence = '10',
+}) =>
+    {
+      'schemaVersion': 1,
+      'ownerId': owner,
+      'surfaceGeneration': surface,
+      'observationId': sequence,
+      'sessionId': 'same-session',
+      'pageId': 2,
+      'windowMetrics': {'windowWidth': 390, 'windowHeight': 700},
+    };
+
+Map<String, Object?> atomicGeometry({int revision = 17}) => {
+      'schemaVersion': 1,
+      'revision': revision,
+      'sessionId': 'same-session',
+      'pageId': 2,
+      'contentRect': {'left': 0, 'top': 44, 'width': 390, 'height': 700},
+      'menuButtonRect': {
+        'left': 294,
+        'right': 382,
+        'top': 6,
+        'bottom': 38,
+        'width': 88,
+        'height': 32,
+      },
+    };
+
+Map<String, Object?> atomicState({
+  String owner = '7',
+  String surface = '5',
+  String? pending = '11',
+  String? accepted,
+  String revision = '18',
+}) =>
+    {
+      'schemaVersion': 1,
+      'status': 'ready',
+      'sessionId': 'same-session',
+      'page': {'id': 2},
+      'ownerId': owner,
+      'hostSurface': {'ownerId': owner, 'surfaceGeneration': surface},
+      'executionHealth': {
+        'schemaVersion': 1,
+        'requiresRestart': false,
+        'appServiceFault': null,
+        'viewFault': null,
+        'navigationFault': null,
+      },
+      'pendingHostLayout': pending == null
+          ? null
+          : atomicObservation(
+              owner: owner, surface: surface, sequence: pending),
+      'acceptedLayout': accepted == null
+          ? null
+          : {
+              ...atomicObservation(
+                owner: owner,
+                surface: surface,
+                sequence: accepted,
+              ),
+              'layoutRevision': revision,
+              'chrome': atomicGeometry(revision: int.tryParse(revision) ?? 17),
+            },
+    };
+
+Widget atomicView(
+  WeappContainerController controller,
+  Map<String, Object?> observation,
+  Map<String, Object?> geometry,
+  List<Object> errors,
+  List<int> acknowledgements, {
+  bool occluded = false,
+  bool prepareOnly = false,
+  Map<String, Object?>? nativeChrome,
+}) =>
+    Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 390,
+        height: 700,
+        child: WeappContainerView(
+          controller: controller,
+          hostLayoutObservation: observation,
+          hostChrome: geometry,
+          occluded: occluded,
+          prepareOnly: prepareOnly,
+          nativeChrome: nativeChrome,
+          onError: (error, _) => errors.add(error),
+          onHostChromeApplied: acknowledgements.add,
+        ),
+      ),
+    );
+
+Future<void> flushChrome(WidgetTester tester) async {
+  for (var i = 0; i < 5; i++) {
+    await tester.pump();
+  }
+}
+
+final atomicOwners = <WeappContainerController>[];
+
+void atomicTestWidgets(String name, Future<void> Function(WidgetTester) body) {
+  testWidgets(name, (tester) async {
+    try {
+      await body(tester);
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await flushChrome(tester);
+      for (final controller in atomicOwners) {
+        if (!controller.isClosed) await tester.runAsync(controller.close);
+      }
+      atomicOwners.clear();
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+}
+
+Future<WeappContainerController> atomicController(WidgetTester tester) async {
+  debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  final creating = WeappContainerController.create(
+    storageKey: null,
+    atomicHostLayout: true,
+  );
+  await tester.pump();
+  final controller = await creating;
+  atomicOwners.add(controller);
+  return controller;
+}
+
+Future<void> closeAtomic(
+  WidgetTester tester,
+  WeappContainerController controller,
+) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await flushChrome(tester);
+  await tester.runAsync(controller.close);
+  expect(tester.takeException(), isNull);
 }
 
 void main() {
@@ -113,112 +273,137 @@ void main() {
   tearDown(() async {
     await platform.source.close();
   });
-  test('measured-view preflight keeps host registration before guest startup',
-      () async {
-    final controller = await WeappContainerController.create(storageKey: null);
-    final capabilities = await controller.prepareView();
-    expect(
-        (capabilities['pack'] as Map)['devReload'], {'protocolVersion': '1.0'});
-    expect(platform.requests.last.$1, 'prepareView');
-    expect(platform.requests.last.$2, {'id': controller.id});
-    expect(platform.requests.where((item) => item.$1 == 'load'), isEmpty);
-    await controller.registerHostMethod('host.beforeLoad', (_) => null);
-    expect(platform.requests.last.$1, 'registerHostMethod');
-    await controller.close();
-  });
   test(
-      'chrome preflight, measured geometry and tabs use explicit native commands',
-      () async {
-    final controller =
-        await WeappContainerController.create(storageKey: 'retained');
-    final chrome = await controller.inspectPackChrome('/verified/pack',
-        route: 'pages/custom/index');
-    expect(chrome['navigationStyle'], 'custom');
-    expect(
+    'measured-view preflight keeps host registration before guest startup',
+    () async {
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      final capabilities = await controller.prepareView();
+      expect((capabilities['pack'] as Map)['devReload'], {
+        'protocolVersion': '1.0',
+      });
+      expect(platform.requests.last.$1, 'prepareView');
+      expect(platform.requests.last.$2, {'id': controller.id});
+      expect(platform.requests.where((item) => item.$1 == 'load'), isEmpty);
+      await controller.registerHostMethod('host.beforeLoad', (_) => null);
+      expect(platform.requests.last.$1, 'registerHostMethod');
+      await controller.close();
+    },
+  );
+  test(
+    'chrome preflight, measured geometry and tabs use explicit native commands',
+    () async {
+      final controller = await WeappContainerController.create(
+        storageKey: 'retained',
+      );
+      final chrome = await controller.inspectPackChrome(
+        '/verified/pack',
+        route: 'pages/custom/index',
+      );
+      expect(chrome['navigationStyle'], 'custom');
+      expect(
         platform.requests.where((r) => r.$1 == 'load' || r.$1 == 'prepareView'),
-        isEmpty);
-    const geometry = <String, Object?>{
-      'schemaVersion': 1,
-      'revision': 4,
-      'contentRect': {'left': 0, 'top': 92, 'width': 390, 'height': 700},
-      'menuButtonRect': {
-        'left': 294,
-        'right': 382,
-        'top': 52,
-        'bottom': 84,
-        'width': 88,
-        'height': 32
-      },
-    };
-    final prospective = await controller.prepareHostChrome(geometry);
-    expect(prospective, geometry);
-    expect(platform.requests.where((r) => r.$1 == 'hostChrome'), isEmpty);
-    await controller.applyDevPack('/verified/restart',
-        initialHostChrome: prospective);
-    expect(platform.requests.last.$2['initialHostChrome'], geometry);
-    await controller.updateHostChrome(geometry);
-    expect(platform.requests.last.$1, 'hostChrome');
-    expect(platform.requests.last.$2,
-        {'id': controller.id, ...geometry, 'coordinateSpace': 'flutterClient'});
-    await controller.setPreviewOccluded(true);
-    await controller.setPreviewOccluded(false);
-    expect(platform.requests.where((r) => r.$1 == 'setForeground'), isEmpty);
-    await controller.switchTab('pages/settings/index');
-    expect(platform.requests.last.$1, 'switchTab');
-    expect(platform.requests.last.$2,
-        {'id': controller.id, 'route': 'pages/settings/index'});
-    await controller.close();
-  });
+        isEmpty,
+      );
+      const geometry = <String, Object?>{
+        'schemaVersion': 1,
+        'revision': 4,
+        'contentRect': {'left': 0, 'top': 92, 'width': 390, 'height': 700},
+        'menuButtonRect': {
+          'left': 294,
+          'right': 382,
+          'top': 52,
+          'bottom': 84,
+          'width': 88,
+          'height': 32,
+        },
+      };
+      final prospective = await controller.prepareHostChrome(geometry);
+      expect(prospective, geometry);
+      expect(platform.requests.where((r) => r.$1 == 'hostChrome'), isEmpty);
+      await controller.applyDevPack(
+        '/verified/restart',
+        initialHostChrome: prospective,
+      );
+      expect(platform.requests.last.$2['initialHostChrome'], geometry);
+      await controller.updateHostChrome(geometry);
+      expect(platform.requests.last.$1, 'hostChrome');
+      expect(platform.requests.last.$2, {
+        'id': controller.id,
+        ...geometry,
+        'coordinateSpace': 'flutterClient',
+      });
+      await controller.setPreviewOccluded(true);
+      await controller.setPreviewOccluded(false);
+      expect(platform.requests.where((r) => r.$1 == 'setForeground'), isEmpty);
+      await controller.switchTab('pages/settings/index');
+      expect(platform.requests.last.$1, 'switchTab');
+      expect(platform.requests.last.$2, {
+        'id': controller.id,
+        'route': 'pages/settings/index',
+      });
+      await controller.close();
+    },
+  );
 
   testWidgets(
-      'covering developer UI keeps app foreground and blocks Flutter input',
-      (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    final creating = WeappContainerController.create(storageKey: null);
-    await tester.pump();
-    final controller = await creating;
-    Widget view(bool occluded) => Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(
-            width: 390,
-            height: 700,
-            child: WeappContainerView(
-                controller: controller, occluded: occluded)));
-    await tester.pumpWidget(view(false));
-    await tester.pump();
-    await tester.pump();
-    final before = platform.requests.length;
-    await tester.pumpWidget(view(true));
-    await tester.pump();
-    await tester.pump();
-    await tester.tap(find.byType(WeappContainerView));
-    await tester.pump();
-    final covered = platform.requests.skip(before).toList();
-    expect(
+    'covering developer UI keeps app foreground and blocks Flutter input',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final creating = WeappContainerController.create(storageKey: null);
+      await tester.pump();
+      final controller = await creating;
+      Widget view(bool occluded) => Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              width: 390,
+              height: 700,
+              child: WeappContainerView(
+                  controller: controller, occluded: occluded),
+            ),
+          );
+      await tester.pumpWidget(view(false));
+      await tester.pump();
+      await tester.pump();
+      final before = platform.requests.length;
+      await tester.pumpWidget(view(true));
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.byType(WeappContainerView));
+      await tester.pump();
+      final covered = platform.requests.skip(before).toList();
+      expect(
         covered
             .where((r) => r.$1 == 'setPreviewOccluded')
             .single
             .$2['occluded'],
-        true);
-    expect(covered.where((r) => r.$1 == 'input' || r.$1 == 'setForeground'),
-        isEmpty);
-    await tester.pumpWidget(view(false));
-    await tester.pump();
-    await tester.pump();
-    expect(
+        true,
+      );
+      expect(
+        covered.where((r) => r.$1 == 'input' || r.$1 == 'setForeground'),
+        isEmpty,
+      );
+      await tester.pumpWidget(view(false));
+      await tester.pump();
+      await tester.pump();
+      expect(
         platform.requests
             .where((r) => r.$1 == 'setPreviewOccluded')
             .last
             .$2['occluded'],
-        false);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    await tester.runAsync(controller.close);
-    debugDefaultTargetPlatformOverride = null;
-  });
-  testWidgets('late page geometry cancellation does not fault the new page',
-      (tester) async {
+        false,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.runAsync(controller.close);
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+  testWidgets('late page geometry cancellation does not fault the new page', (
+    tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final creating = WeappContainerController.create(storageKey: null);
@@ -238,18 +423,23 @@ void main() {
         'top': 6,
         'bottom': 38,
         'width': 88,
-        'height': 32
-      }
+        'height': 32,
+      },
     };
-    await tester.pumpWidget(Directionality(
+    await tester.pumpWidget(
+      Directionality(
         textDirection: TextDirection.ltr,
         child: SizedBox(
-            width: 390,
-            height: 700,
-            child: WeappContainerView(
-                controller: controller,
-                hostChrome: geometry,
-                onError: (error, _) => failures.add(error)))));
+          width: 390,
+          height: 700,
+          child: WeappContainerView(
+            controller: controller,
+            hostChrome: geometry,
+            onError: (error, _) => failures.add(error),
+          ),
+        ),
+      ),
+    );
     await tester.pump();
     await tester.pump();
     await tester.pump();
@@ -262,100 +452,114 @@ void main() {
   });
   for (final target in [TargetPlatform.windows, TargetPlatform.linux]) {
     testWidgets(
-        '$target host label changes preserve guest geometry and surface',
-        (tester) async {
-      debugDefaultTargetPlatformOverride = target;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-      final creating = WeappContainerController.create(storageKey: null);
-      await tester.pump();
-      final controller = await creating;
-      const geometry = <String, Object?>{
-        'schemaVersion': 1,
-        'revision': 4,
-      };
-      final labels = <String, Object?>{
-        'more': 'More',
-        'close': 'Close mini-program',
-        'back': 'Back',
-        'navigation': 'Mini-program navigation',
-        'tabs': 'Mini-program tabs',
-      };
-      final native = <String, Object?>{
-        'schemaVersion': 1,
-        'revision': 4,
-        'accessibilityLabels': labels,
-        'chrome': {
-          'title': 'Guest title',
-          'tabBar': {
-            'list': [
-              {'text': 'Guest tab'}
-            ]
-          }
-        },
-      };
-      Widget view() => Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-              width: 390,
-              height: 700,
-              child: WeappContainerView(
+      '$target host label changes preserve guest geometry and surface',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = target;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        final creating = WeappContainerController.create(storageKey: null);
+        await tester.pump();
+        final controller = await creating;
+        const geometry = <String, Object?>{'schemaVersion': 1, 'revision': 4};
+        final labels = <String, Object?>{
+          'more': 'More',
+          'close': 'Close mini-program',
+          'back': 'Back',
+          'navigation': 'Mini-program navigation',
+          'tabs': 'Mini-program tabs',
+        };
+        final native = <String, Object?>{
+          'schemaVersion': 1,
+          'revision': 4,
+          'accessibilityLabels': labels,
+          'chrome': {
+            'title': 'Guest title',
+            'tabBar': {
+              'list': [
+                {'text': 'Guest tab'},
+              ],
+            },
+          },
+        };
+        Widget view() => Directionality(
+              textDirection: TextDirection.ltr,
+              child: SizedBox(
+                width: 390,
+                height: 700,
+                child: WeappContainerView(
                   controller: controller,
                   hostChrome: geometry,
-                  nativeChrome: native)));
-      await tester.pumpWidget(view());
-      await tester.pump();
-      await tester.pump();
-      expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(1));
-      expect(
-          platform.requests.where((r) => r.$1 == 'hostChrome'), hasLength(1));
-      expect(
-          platform.requests.where((r) => r.$1 == 'nativeChrome'), hasLength(1));
-      final accepted =
-          platform.requests.lastWhere((r) => r.$1 == 'nativeChrome');
-      final before = platform.requests.length;
-      // Deliberately mutate the same map: the SDK captures descriptor values,
-      // not caller map identity or geometry revision alone.
-      labels.addAll({
-        'more': '更多',
-        'close': '关闭小程序',
-        'back': '返回',
-        'navigation': '小程序导航',
-        'tabs': '小程序标签栏',
-      });
-      await tester.pumpWidget(view());
-      await tester.pump();
-      await tester.pump();
-      final updates = platform.requests.skip(before).toList();
-      expect(updates.map((r) => r.$1), ['nativeChrome']);
-      expect(updates.single.$2['revision'], 4);
-      expect(updates.single.$2['accessibilityLabels'], labels);
-      expect((accepted.$2['accessibilityLabels'] as Map)['more'], 'More',
-          reason: 'A queued descriptor must not borrow caller-owned maps');
-      expect(updates.single.$2['chrome'], native['chrome']);
-      final unchanged = platform.requests.length;
-      await tester.pumpWidget(view());
-      await tester.pump();
-      expect(platform.requests.length, unchanged);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      await tester.runAsync(controller.close);
-      expect(tester.takeException(), isNull);
-      debugDefaultTargetPlatformOverride = null;
-    });
+                  nativeChrome: native,
+                ),
+              ),
+            );
+        await tester.pumpWidget(view());
+        await tester.pump();
+        await tester.pump();
+        expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(1));
+        expect(
+          platform.requests.where((r) => r.$1 == 'hostChrome'),
+          hasLength(1),
+        );
+        expect(
+          platform.requests.where((r) => r.$1 == 'nativeChrome'),
+          hasLength(1),
+        );
+        final accepted = platform.requests.lastWhere(
+          (r) => r.$1 == 'nativeChrome',
+        );
+        final before = platform.requests.length;
+        // Deliberately mutate the same map: the SDK captures descriptor values,
+        // not caller map identity or geometry revision alone.
+        labels.addAll({
+          'more': '更多',
+          'close': '关闭小程序',
+          'back': '返回',
+          'navigation': '小程序导航',
+          'tabs': '小程序标签栏',
+        });
+        await tester.pumpWidget(view());
+        await tester.pump();
+        await tester.pump();
+        final updates = platform.requests.skip(before).toList();
+        expect(updates.map((r) => r.$1), ['nativeChrome']);
+        expect(updates.single.$2['revision'], 4);
+        expect(updates.single.$2['accessibilityLabels'], labels);
+        expect(
+          (accepted.$2['accessibilityLabels'] as Map)['more'],
+          'More',
+          reason: 'A queued descriptor must not borrow caller-owned maps',
+        );
+        expect(updates.single.$2['chrome'], native['chrome']);
+        final unchanged = platform.requests.length;
+        await tester.pumpWidget(view());
+        await tester.pump();
+        expect(platform.requests.length, unchanged);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await tester.runAsync(controller.close);
+        expect(tester.takeException(), isNull);
+        debugDefaultTargetPlatformOverride = null;
+      },
+    );
   }
   test(
       'GPU opt-in reaches the native owner and development updates preserve result identity',
       () async {
     final controller = await WeappContainerController.create(
-        storageKey: 'project:one', gpuRequired: true, devDiagnostics: true);
+      storageKey: 'project:one',
+      gpuRequired: true,
+      devDiagnostics: true,
+    );
     expect(platform.requests.last.$1, 'create');
     expect(platform.requests.last.$2, {
       'storageKey': 'project:one',
       'gpuRequired': true,
-      'devDiagnostics': true
+      'devDiagnostics': true,
     });
-    final result = await controller.applyDevPack('/verified/generation/2',
-        route: 'pages/home/index');
+    final result = await controller.applyDevPack(
+      '/verified/generation/2',
+      route: 'pages/home/index',
+    );
     expect(result['reloadKind'], 'inPlace');
     expect((result['state'] as Map)['sessionId'], 'same');
     expect(platform.requests.last.$1, 'applyDevPack');
@@ -363,10 +567,12 @@ void main() {
       'id': controller.id,
       'packPath': '/verified/generation/2',
       'route': 'pages/home/index',
-      'options': <String, Object?>{}
+      'options': <String, Object?>{},
     });
     await expectLater(
-        controller.registerHostMethod('late', (_) => null), throwsStateError);
+      controller.registerHostMethod('late', (_) => null),
+      throwsStateError,
+    );
     final inspected = await controller.devState();
     expect(((inspected['pages'] as List).single as Map)['data'], {'count': 9});
     await controller.clearDevStorage();
@@ -375,78 +581,107 @@ void main() {
     await controller.close();
   });
 
-  test('atomic layout and durable attempts preserve opaque decimal identities',
-      () async {
-    final controller = await WeappContainerController.create(
-        storageKey: null, atomicHostLayout: true);
-    expect(platform.requests.last.$2['hostLayout'],
-        {'protocolVersion': '1.0', 'atomic': true});
-    final observation = <String, Object?>{
-      'schemaVersion': 1,
-      'ownerId': '9007199254740993',
-      'surfaceGeneration': '18446744073709551614',
-      'observationId': '9007199254740995',
-      'windowMetrics': {'windowWidth': 390, 'windowHeight': 700}
-    };
-    final events = <String>[];
-    final subscription =
-        controller.events.listen((event) => events.add(event.type));
-    platform.emit(controller.id,
-        {'type': 'hostLayoutObservation', 'observation': observation});
-    platform.emit(controller.id, {
-      'type': 'navigationLayout',
-      'request': {'ticket': 'navigation-1'}
-    });
-    platform.emit(controller.id, {
-      'type': 'devPackAttempt',
-      'receipt': {'attemptId': '9007199254740999'}
-    });
-    await Future<void>.delayed(Duration.zero);
-    expect(controller.pendingHostLayout, observation);
-    expect(events,
-        ['hostLayoutObservation', 'navigationLayout', 'devPackAttempt']);
-    const geometry = <String, Object?>{'schemaVersion': 1, 'revision': 1};
-    final prepared = await controller.prepareHostLayout(
+  test(
+    'atomic layout and durable attempts preserve opaque decimal identities',
+    () async {
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+        atomicHostLayout: true,
+      );
+      expect(platform.requests.last.$2['hostLayout'], {
+        'protocolVersion': '1.0',
+        'atomic': true,
+      });
+      final observation = <String, Object?>{
+        'schemaVersion': 1,
+        'ownerId': '9007199254740993',
+        'surfaceGeneration': '18446744073709551614',
+        'observationId': '9007199254740995',
+        'windowMetrics': {'windowWidth': 390, 'windowHeight': 700},
+      };
+      final events = <String>[];
+      final subscription = controller.events.listen(
+        (event) => events.add(event.type),
+      );
+      platform.emit(controller.id, {
+        'type': 'hostLayoutObservation',
+        'observation': observation,
+      });
+      platform.emit(controller.id, {
+        'type': 'navigationLayout',
+        'request': {'ticket': 'navigation-1'},
+      });
+      platform.emit(controller.id, {
+        'type': 'devPackAttempt',
+        'receipt': {'attemptId': '9007199254740999'},
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.pendingHostLayout, observation);
+      expect(events, [
+        'hostLayoutObservation',
+        'navigationLayout',
+        'devPackAttempt',
+      ]);
+      const geometry = <String, Object?>{'schemaVersion': 1, 'revision': 1};
+      final prepared = await controller.prepareHostLayout(
         observation: observation,
         chrome: geometry,
-        layoutRevision: '9007199254740996');
-    expect(prepared['layoutRevision'], '9007199254740996');
-    expect(prepared['observationId'], observation['observationId']);
-    await controller.updateHostLayout(
+        layoutRevision: '9007199254740996',
+      );
+      expect(prepared['layoutRevision'], '9007199254740996');
+      expect(prepared['observationId'], observation['observationId']);
+      await controller.updateHostLayout(
         observation: observation,
         chrome: geometry,
-        layoutRevision: '9007199254740996');
-    expect(platform.requests.last.$1, 'hostLayout');
-    expect(platform.requests.last.$2['observation'], observation);
-    final receipt = await controller.beginDevPackAttempt('/verified/pack',
-        operation: 'load', expectedAccepted: null);
-    expect(platform.requests.last.$2['payload'], {
-      'operation': 'load',
-      'packPath': '/verified/pack',
-      'expectedAccepted': null,
-      'options': <String, Object?>{}
-    });
-    await controller.applyDevPackAttempt(receipt,
-        expectedAccepted: null, initialHostLayout: prepared);
-    expect((platform.requests.last.$2['payload'] as Map)['attemptId'],
-        '18446744073709551614');
-    await controller.queryDevPackAttempt(receipt);
-    expect((platform.requests.last.$2['payload'] as Map)['ownerId'],
-        '9007199254740993');
-    expect(
-        platform.requests
-            .where((r) => r.$1 == 'hostChrome' || r.$1 == 'prepareHostChrome'),
-        isEmpty);
-    await subscription.cancel();
-    await controller.close();
-  });
+        layoutRevision: '9007199254740996',
+      );
+      expect(platform.requests.last.$1, 'hostLayout');
+      expect(platform.requests.last.$2['observation'], observation);
+      final receipt = await controller.beginDevPackAttempt(
+        '/verified/pack',
+        operation: 'load',
+        expectedAccepted: null,
+      );
+      expect(platform.requests.last.$2['payload'], {
+        'operation': 'load',
+        'packPath': '/verified/pack',
+        'expectedAccepted': null,
+        'options': <String, Object?>{},
+      });
+      await controller.applyDevPackAttempt(
+        receipt,
+        expectedAccepted: null,
+        initialHostLayout: prepared,
+      );
+      expect(
+        (platform.requests.last.$2['payload'] as Map)['attemptId'],
+        '18446744073709551614',
+      );
+      await controller.queryDevPackAttempt(receipt);
+      expect(
+        (platform.requests.last.$2['payload'] as Map)['ownerId'],
+        '9007199254740993',
+      );
+      expect(
+        platform.requests.where(
+          (r) => r.$1 == 'hostChrome' || r.$1 == 'prepareHostChrome',
+        ),
+        isEmpty,
+      );
+      await subscription.cancel();
+      await controller.close();
+    },
+  );
 
-  testWidgets('identical rectangles answer each full native observation',
-      (tester) async {
+  testWidgets('identical rectangles answer each full native observation', (
+    tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final creating = WeappContainerController.create(
-        storageKey: null, atomicHostLayout: true);
+      storageKey: null,
+      atomicHostLayout: true,
+    );
     await tester.pump();
     final controller = await creating;
     final observation = <String, Object?>{
@@ -454,17 +689,20 @@ void main() {
       'ownerId': '1',
       'surfaceGeneration': '1',
       'observationId': '1',
-      'windowMetrics': {'windowWidth': 390, 'windowHeight': 700}
+      'windowMetrics': {'windowWidth': 390, 'windowHeight': 700},
     };
     Widget view() => Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
             width: 390,
             height: 700,
             child: WeappContainerView(
-                controller: controller,
-                hostLayoutObservation: Map.of(observation),
-                hostChrome: const {'schemaVersion': 1, 'revision': 1})));
+              controller: controller,
+              hostLayoutObservation: Map.of(observation),
+              hostChrome: const {'schemaVersion': 1, 'revision': 1},
+            ),
+          ),
+        );
     await tester.pumpWidget(view());
     await tester.pump();
     await tester.pump();
@@ -486,6 +724,465 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
+  for (final scenario in <(String, Map<String, Object?>)>[
+    ('pending newer same-page observation', atomicState()),
+    (
+      'accepted newer same-page observation',
+      atomicState(pending: null, accepted: '11'),
+    ),
+    (
+      'accepted newer layout on identical observation',
+      atomicState(pending: null, accepted: '10', revision: '18'),
+    ),
+    (
+      'same owner native surface advanced with newer observation',
+      atomicState(surface: '6'),
+    ),
+    (
+      'greater than 2^53 observations remain distinct',
+      atomicState(pending: '9007199254740994'),
+    ),
+    (
+      'maximum u64 observation is valid',
+      atomicState(pending: '18446744073709551615'),
+    ),
+  ]) {
+    atomicTestWidgets(
+      'atomic cancellation reconciles ${scenario.$1} without ACK or unocclusion',
+      (tester) async {
+        final controller = await atomicController(tester);
+        final errors = <Object>[], acknowledgements = <int>[];
+        final observation = atomicObservation(
+          sequence: scenario.$1.contains('2^53') ? '9007199254740993' : '10',
+        );
+        final geometry = atomicGeometry();
+        await tester.pumpWidget(
+          atomicView(
+            controller,
+            observation,
+            geometry,
+            errors,
+            acknowledgements,
+            occluded: true,
+            prepareOnly: true,
+          ),
+        );
+        await flushChrome(tester);
+        expect(
+          platform.requests
+              .where((r) => r.$1 == 'setPreviewOccluded')
+              .last
+              .$2['occluded'],
+          true,
+        );
+        final baseline = platform.requests.length;
+        platform.cancelLayout = true;
+        platform.currentState = scenario.$2;
+        await tester.pumpWidget(
+          atomicView(
+            controller,
+            observation,
+            geometry,
+            errors,
+            acknowledgements,
+          ),
+        );
+        await flushChrome(tester);
+        expect(
+          platform.requests.skip(baseline).where((r) => r.$1 == 'hostLayout'),
+          hasLength(1),
+        );
+        expect(
+          platform.requests.skip(baseline).where((r) => r.$1 == 'state'),
+          hasLength(1),
+        );
+        expect(errors, isEmpty);
+        expect(acknowledgements, isEmpty);
+        expect(
+          platform.requests
+              .skip(baseline)
+              .where((r) => r.$1 == 'setPreviewOccluded'),
+          isEmpty,
+          reason:
+              'cancelled geometry must not restore preview input/presentation',
+        );
+        platform.cancelLayout = false;
+        final next = atomicObservation(
+          surface: (scenario.$2['hostSurface'] as Map)['surfaceGeneration']
+              as String,
+          sequence: scenario.$1.contains('2^53') ? '9007199254740994' : '11',
+        );
+        await tester.pumpWidget(
+          atomicView(
+            controller,
+            next,
+            atomicGeometry(revision: 19),
+            errors,
+            acknowledgements,
+          ),
+        );
+        await flushChrome(tester);
+        expect(errors, isEmpty);
+        expect(acknowledgements, [19]);
+        expect(
+          platform.requests
+              .skip(baseline)
+              .where((r) => r.$1 == 'setPreviewOccluded')
+              .single
+              .$2['occluded'],
+          false,
+        );
+        await closeAtomic(tester, controller);
+      },
+    );
+  }
+
+  final invalidAtomicStates = <(String, Map<String, Object?>)>[
+    ('unknown cancellation without native proof', atomicState(pending: null)),
+    (
+      'same observation and same layout revision',
+      atomicState(pending: '10', accepted: '10', revision: '17'),
+    ),
+    (
+      'older observation',
+      atomicState(pending: '9', accepted: '9', revision: '16'),
+    ),
+    ('wrong state owner', atomicState(owner: '8')),
+    ('older native surface', atomicState(surface: '4')),
+    (
+      'overflow pending observation',
+      atomicState(pending: '18446744073709551616'),
+    ),
+    ('noncanonical pending observation', atomicState(pending: '011')),
+    (
+      'numeric pending observation',
+      atomicState()
+        ..['pendingHostLayout'] = {...atomicObservation(), 'observationId': 11},
+    ),
+    (
+      'overflow accepted layout revision despite newer observation',
+      atomicState(
+        pending: null,
+        accepted: '11',
+        revision: '18446744073709551616',
+      ),
+    ),
+    (
+      'noncanonical accepted layout revision despite newer observation',
+      atomicState(pending: null, accepted: '11', revision: '018'),
+    ),
+    (
+      'overflow same-observation accepted revision',
+      atomicState(
+        pending: null,
+        accepted: '10',
+        revision: '18446744073709551616',
+      ),
+    ),
+    ('missing health', atomicState()..remove('executionHealth')),
+    (
+      'wrong health schema',
+      atomicState()
+        ..['executionHealth'] = {'schemaVersion': 2, 'requiresRestart': false},
+    ),
+    (
+      'restart required',
+      atomicState()
+        ..['executionHealth'] = {'schemaVersion': 1, 'requiresRestart': true},
+    ),
+    for (final domain in ['appServiceFault', 'viewFault', 'navigationFault'])
+      (
+        '$domain present',
+        atomicState()
+          ..['executionHealth'] = {
+            'schemaVersion': 1,
+            'requiresRestart': false,
+            domain: {'code': 'ERR_TIMEOUT'},
+          },
+      ),
+    ('wrong state schema', atomicState()..['schemaVersion'] = 2),
+  ];
+  for (final field in ['ownerId', 'surfaceGeneration', 'schemaVersion']) {
+    final state = atomicState();
+    (state['pendingHostLayout'] as Map)[field] =
+        field == 'schemaVersion' ? 2 : '8';
+    invalidAtomicStates.add(('wrong pending $field', state));
+  }
+  for (final field in ['ownerId', 'surfaceGeneration']) {
+    final state = atomicState();
+    (state['hostSurface'] as Map)[field] = field == 'ownerId' ? '8' : '04';
+    invalidAtomicStates.add(('invalid current surface $field', state));
+  }
+  for (final field in ['ownerId', 'surfaceGeneration', 'schemaVersion']) {
+    final state = atomicState(pending: null, accepted: '11');
+    (state['acceptedLayout'] as Map)[field] =
+        field == 'schemaVersion' ? 2 : '8';
+    invalidAtomicStates.add(('wrong accepted $field', state));
+  }
+  for (final scenario in invalidAtomicStates) {
+    atomicTestWidgets('atomic cancellation preserves error for ${scenario.$1}',
+        (
+      tester,
+    ) async {
+      final controller = await atomicController(tester);
+      platform.cancelLayout = true;
+      platform.currentState = scenario.$2;
+      final errors = <Object>[], acknowledgements = <int>[];
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+        ),
+      );
+      await flushChrome(tester);
+      expect(
+        errors,
+        hasLength(1),
+        reason:
+            'ambiguous/unhealthy/stale native state cannot make ERR_CANCELLED harmless',
+      );
+      expect(
+        errors.single,
+        isA<PlatformException>().having((e) => e.code, 'code', 'ERR_CANCELLED'),
+      );
+      expect(acknowledgements, isEmpty);
+      expect(
+        platform.requests.where((r) => r.$1 == 'setPreviewOccluded'),
+        isEmpty,
+      );
+      await closeAtomic(tester, controller);
+    });
+  }
+
+  for (final field in ['ownerId', 'surfaceGeneration', 'observationId']) {
+    for (final bad in ['01', '18446744073709551616']) {
+      atomicTestWidgets(
+          'atomic cancellation rejects invalid attempted $field=$bad',
+          (tester) async {
+        final controller = await atomicController(tester);
+        final observation = atomicObservation();
+        observation[field] = bad;
+        platform.currentState = atomicState(
+          owner: field == 'ownerId' ? bad : '7',
+          surface: field == 'surfaceGeneration' ? bad : '5',
+        );
+        platform.cancelLayout = true;
+        final errors = <Object>[], acknowledgements = <int>[];
+        await tester.pumpWidget(atomicView(controller, observation,
+            atomicGeometry(), errors, acknowledgements));
+        await flushChrome(tester);
+        expect(errors, hasLength(1));
+        expect(
+            errors.single,
+            isA<PlatformException>()
+                .having((e) => e.code, 'code', 'ERR_CANCELLED'));
+        expect(acknowledgements, isEmpty);
+        await closeAtomic(tester, controller);
+      });
+    }
+  }
+
+  atomicTestWidgets(
+      'atomic successful stale revision cannot ACK or unocclude a newer observation',
+      (tester) async {
+    final controller = await atomicController(tester);
+    final errors = <Object>[], acknowledgements = <int>[];
+    final geometry = atomicGeometry();
+    await tester.pumpWidget(atomicView(
+        controller, atomicObservation(), geometry, errors, acknowledgements,
+        occluded: true, prepareOnly: true));
+    await flushChrome(tester);
+    final first = Completer<void>(), latest = Completer<void>();
+    platform.layoutGate = first;
+    final baseline = platform.requests.length;
+    await tester.pumpWidget(atomicView(
+        controller, atomicObservation(), geometry, errors, acknowledgements));
+    await flushChrome(tester);
+    expect(platform.requests.skip(baseline).where((r) => r.$1 == 'hostLayout'),
+        hasLength(1));
+    platform.layoutGate = latest;
+    await tester.pumpWidget(atomicView(controller,
+        atomicObservation(sequence: '11'), geometry, errors, acknowledgements));
+    await flushChrome(tester);
+    first.complete();
+    await flushChrome(tester);
+    final layouts = platform.requests
+        .skip(baseline)
+        .where((r) => r.$1 == 'hostLayout')
+        .toList();
+    expect(layouts, hasLength(2));
+    expect((layouts.first.$2['observation'] as Map)['observationId'], '10');
+    expect((layouts.last.$2['observation'] as Map)['observationId'], '11');
+    expect(layouts.map((r) => r.$2['layoutRevision']), ['17', '17']);
+    expect(acknowledgements, isEmpty);
+    expect(
+        platform.requests
+            .skip(baseline)
+            .where((r) => r.$1 == 'setPreviewOccluded'),
+        isEmpty);
+    latest.complete();
+    await flushChrome(tester);
+    expect(acknowledgements, [17]);
+    expect(
+        platform.requests
+            .skip(baseline)
+            .where((r) => r.$1 == 'setPreviewOccluded')
+            .single
+            .$2['occluded'],
+        false);
+    expect(errors, isEmpty);
+    await closeAtomic(tester, controller);
+  });
+
+  atomicTestWidgets(
+      'atomic ACK checks the full surface tuple even when revision and observation ID match',
+      (tester) async {
+    final controller = await atomicController(tester);
+    final errors = <Object>[], acknowledgements = <int>[];
+    final geometry = atomicGeometry();
+    await tester.pumpWidget(atomicView(
+        controller, atomicObservation(), geometry, errors, acknowledgements,
+        occluded: true, prepareOnly: true));
+    await flushChrome(tester);
+    final first = Completer<void>();
+    platform.layoutGate = first;
+    final baseline = platform.requests.length;
+    await tester.pumpWidget(atomicView(
+        controller, atomicObservation(), geometry, errors, acknowledgements));
+    await flushChrome(tester);
+    await tester.pumpWidget(atomicView(controller,
+        atomicObservation(surface: '6'), geometry, errors, acknowledgements));
+    await flushChrome(tester);
+    first.complete();
+    await flushChrome(tester);
+    expect(acknowledgements, isEmpty);
+    expect(
+        platform.requests
+            .skip(baseline)
+            .where((r) => r.$1 == 'setPreviewOccluded'),
+        isEmpty);
+    await tester.pumpWidget(atomicView(
+        controller,
+        atomicObservation(surface: '6', sequence: '11'),
+        geometry,
+        errors,
+        acknowledgements));
+    await flushChrome(tester);
+    expect(acknowledgements, [17]);
+    expect(
+        platform.requests
+            .skip(baseline)
+            .where((r) => r.$1 == 'setPreviewOccluded')
+            .single
+            .$2['occluded'],
+        false);
+    expect(errors, isEmpty);
+    await closeAtomic(tester, controller);
+  });
+
+  atomicTestWidgets(
+      'Windows same native signature survives a superseded geometry wait and applies exactly once',
+      (tester) async {
+    final controller = await atomicController(tester);
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    final errors = <Object>[], acknowledgements = <int>[];
+    final geometry = atomicGeometry();
+    final native = <String, Object?>{
+      'schemaVersion': 1,
+      'title': '本地窗口',
+      'accessibilityLabels': {'more': '更多', 'close': '关闭小程序'}
+    };
+    await tester.pumpWidget(atomicView(
+        controller, atomicObservation(), geometry, errors, acknowledgements,
+        occluded: true, prepareOnly: true));
+    await flushChrome(tester);
+    final first = Completer<void>(), latest = Completer<void>();
+    platform.layoutGate = first;
+    final baseline = platform.requests.length;
+    await tester.pumpWidget(atomicView(
+        controller, atomicObservation(), geometry, errors, acknowledgements,
+        nativeChrome: native));
+    await flushChrome(tester);
+    platform.layoutGate = latest;
+    await tester.pumpWidget(atomicView(controller,
+        atomicObservation(sequence: '11'), geometry, errors, acknowledgements,
+        nativeChrome: {
+          ...native,
+          'accessibilityLabels': {'more': '更多', 'close': '关闭小程序'}
+        }));
+    await flushChrome(tester);
+    first.complete();
+    await flushChrome(tester);
+    expect(acknowledgements, isEmpty);
+    expect(
+        platform.requests.skip(baseline).where(
+            (r) => r.$1 == 'nativeChrome' || r.$1 == 'setPreviewOccluded'),
+        isEmpty);
+    latest.complete();
+    await flushChrome(tester);
+    final applied = platform.requests
+        .skip(baseline)
+        .where((r) => r.$1 == 'nativeChrome')
+        .single;
+    expect(applied.$2, {'id': controller.id, ...native});
+    expect(acknowledgements, [17]);
+    final operations =
+        platform.requests.skip(baseline).map((r) => r.$1).toList();
+    expect(operations.indexOf('nativeChrome'),
+        lessThan(operations.indexOf('setPreviewOccluded')));
+    expect(
+        platform.requests
+            .skip(baseline)
+            .where((r) => r.$1 == 'setPreviewOccluded')
+            .single
+            .$2['occluded'],
+        false);
+    expect(errors, isEmpty);
+    await closeAtomic(tester, controller);
+  });
+
+  atomicTestWidgets(
+    'atomic queued observation and nested chrome snapshots resist external mutation',
+    (tester) async {
+      final controller = await atomicController(tester);
+      final errors = <Object>[], acknowledgements = <int>[];
+      final observation = atomicObservation(), geometry = atomicGeometry();
+      platform.layoutGate = Completer<void>();
+      await tester.pumpWidget(
+        atomicView(controller, observation, geometry, errors, acknowledgements),
+      );
+      await flushChrome(tester);
+      final request =
+          platform.requests.singleWhere((r) => r.$1 == 'hostLayout').$2;
+      observation['ownerId'] = 'mutated';
+      observation['observationId'] = '99';
+      (observation['windowMetrics'] as Map)['windowWidth'] = 1;
+      geometry['sessionId'] = 'mutated';
+      (geometry['contentRect'] as Map)['width'] = 1;
+      (geometry['menuButtonRect'] as Map)['left'] = 1;
+      expect((request['observation'] as Map)['ownerId'], '7');
+      expect((request['observation'] as Map)['observationId'], '10');
+      expect(
+        ((request['observation'] as Map)['windowMetrics']
+            as Map)['windowWidth'],
+        390,
+      );
+      expect((request['chrome'] as Map)['sessionId'], 'same-session');
+      expect(((request['chrome'] as Map)['contentRect'] as Map)['width'], 390);
+      expect(
+        ((request['chrome'] as Map)['menuButtonRect'] as Map)['left'],
+        294,
+      );
+      platform.layoutGate!.complete();
+      await flushChrome(tester);
+      expect(errors, isEmpty);
+      await closeAtomic(tester, controller);
+    },
+  );
+
   test('cancellation wins while asynchronous host work is pending', () async {
     final controller = await WeappContainerController.create(storageKey: null);
     final response = Completer<Object?>();
@@ -498,33 +1195,47 @@ void main() {
       'type': 'hostCall',
       'callId': 'g1-1',
       'method': 'host.wait',
-      'payload': '中文 🧊'
+      'payload': '中文 🧊',
     });
     expect(received.payload, '中文 🧊');
-    platform
-        .emit(controller.id, {'type': 'hostCallCancelled', 'callId': 'g1-1'});
+    platform.emit(controller.id, {
+      'type': 'hostCallCancelled',
+      'callId': 'g1-1',
+    });
     await received.cancellation.whenCancelled;
     response.complete('late');
     await Future<void>.delayed(Duration.zero);
-    expect(platform.requests.where((item) => item.$1 == 'completeHostCall'),
-        isEmpty);
+    expect(
+      platform.requests.where((item) => item.$1 == 'completeHostCall'),
+      isEmpty,
+    );
     await controller.close();
   });
   test('async host result preserves JSON null and completes once', () async {
-    final controller =
-        await WeappContainerController.create(storageKey: 'account:catalog');
+    final controller = await WeappContainerController.create(
+      storageKey: 'account:catalog',
+    );
     await controller.registerHostMethod('host.null', (_) async => null);
-    platform.emit(controller.id + 1,
-        {'type': 'hostCall', 'callId': 'other', 'method': 'host.null'});
-    platform.emit(controller.id,
-        {'type': 'hostCall', 'callId': 'mine', 'method': 'host.null'});
+    platform.emit(controller.id + 1, {
+      'type': 'hostCall',
+      'callId': 'other',
+      'method': 'host.null',
+    });
+    platform.emit(controller.id, {
+      'type': 'hostCall',
+      'callId': 'mine',
+      'method': 'host.null',
+    });
     await Future<void>.delayed(Duration.zero);
     final replies = platform.requests
         .where((item) => item.$1 == 'completeHostCall')
         .toList();
     expect(replies, hasLength(1));
-    expect(replies.single.$2,
-        {'id': controller.id, 'callId': 'mine', 'result': null});
+    expect(replies.single.$2, {
+      'id': controller.id,
+      'callId': 'mine',
+      'result': null,
+    });
     await controller.close();
   });
   test('failed native retirement can be explicitly retried', () async {
@@ -559,42 +1270,46 @@ void main() {
     await controller.close();
   });
   testWidgets(
-      'public widget rapid remount waits for native detach acknowledgment',
-      (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-    addTearDown(() {
+    'public widget rapid remount waits for native detach acknowledgment',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+      });
+      final creating = WeappContainerController.create(storageKey: null);
+      await tester.pump();
+      final controller = await creating;
+      Widget mounted() => Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              width: 400,
+              height: 500,
+              child: WeappContainerView(controller: controller),
+            ),
+          );
+      await tester.pumpWidget(mounted());
+      await tester.pump();
+      await tester.pump();
+      expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(1));
+      platform.detach = Completer<void>();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(mounted());
+      await tester.pump();
+      expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(1));
+      platform.detach!.complete();
+      await tester.pump();
+      await tester.pump();
+      expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(2));
+      await tester.runAsync(() => controller.close());
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       debugDefaultTargetPlatformOverride = null;
-    });
-    final creating = WeappContainerController.create(storageKey: null);
-    await tester.pump();
-    final controller = await creating;
-    Widget mounted() => Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(
-            width: 400,
-            height: 500,
-            child: WeappContainerView(controller: controller)));
-    await tester.pumpWidget(mounted());
-    await tester.pump();
-    await tester.pump();
-    expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(1));
-    platform.detach = Completer<void>();
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(mounted());
-    await tester.pump();
-    expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(1));
-    platform.detach!.complete();
-    await tester.pump();
-    await tester.pump();
-    expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(2));
-    await tester.runAsync(() => controller.close());
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    expect(tester.takeException(), isNull);
-    debugDefaultTargetPlatformOverride = null;
-  });
-  testWidgets('desktop input is owned by the deepest embedded view',
-      (tester) async {
+    },
+  );
+  testWidgets('desktop input is owned by the deepest embedded view', (
+    tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() {
       debugDefaultTargetPlatformOverride = null;
@@ -604,43 +1319,55 @@ void main() {
     final controller = await creating;
     final scrolling = ScrollController();
     addTearDown(scrolling.dispose);
-    await tester.pumpWidget(Directionality(
-      textDirection: TextDirection.ltr,
-      child: Align(
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
           alignment: Alignment.topLeft,
           child: SizedBox(
             width: 400,
             height: 500,
             child: SingleChildScrollView(
-                controller: scrolling,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 80),
-                    SizedBox(
-                        key: const ValueKey('embedded'),
-                        width: 300,
-                        height: 300,
-                        child: WeappContainerView(controller: controller)),
-                    const SizedBox(height: 1000),
-                  ],
-                )),
-          )),
-    ));
+              controller: scrolling,
+              child: Column(
+                children: [
+                  const SizedBox(height: 80),
+                  SizedBox(
+                    key: const ValueKey('embedded'),
+                    width: 300,
+                    height: 300,
+                    child: WeappContainerView(controller: controller),
+                  ),
+                  const SizedBox(height: 1000),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     await tester.pump();
     await tester.pump();
     final inside = tester.getCenter(find.byKey(const ValueKey('embedded')));
     await tester.sendEventToBinding(
-        PointerScrollEvent(position: inside, scrollDelta: const Offset(0, 60)));
+      PointerScrollEvent(position: inside, scrollDelta: const Offset(0, 60)),
+    );
     await tester.pump();
-    expect(scrolling.offset, 0,
-        reason: 'One wheel must not scroll both SDK and parent');
+    expect(
+      scrolling.offset,
+      0,
+      reason: 'One wheel must not scroll both SDK and parent',
+    );
     final inputs = platform.requests.where((r) => r.$1 == 'input').toList();
     expect(inputs, hasLength(1));
     expect((inputs.single.$2['events'] as List).single['type'], 'wheel');
     await tester.dragFrom(inside, const Offset(0, -60));
     await tester.pumpAndSettle();
-    expect(scrolling.offset, 0,
-        reason: 'A contact starting inside the SDK belongs to it');
+    expect(
+      scrolling.offset,
+      0,
+      reason: 'A contact starting inside the SDK belongs to it',
+    );
     List<Object?> sent(String type) => platform.requests
         .where((r) => r.$1 == 'input')
         .expand((r) => r.$2['events'] as List)
@@ -654,30 +1381,50 @@ void main() {
     await cancelled.cancel();
     await tester.pump();
     expect(sent('touchcancel'), hasLength(1));
-    expect(sent('tap'), hasLength(1),
-        reason: 'Cancellation must not activate a tap');
+    expect(
+      sent('tap'),
+      hasLength(1),
+      reason: 'Cancellation must not activate a tap',
+    );
     final first = await tester.startGesture(inside, pointer: 11);
-    final second =
-        await tester.startGesture(inside + const Offset(10, 0), pointer: 12);
+    final second = await tester.startGesture(
+      inside + const Offset(10, 0),
+      pointer: 12,
+    );
     await second.up();
     await first.up();
     await tester.pump();
-    expect(sent('tap'), hasLength(1),
-        reason: 'Multiple contacts must not activate a tap');
-    await tester.sendEventToBinding(const PointerScrollEvent(
-        position: Offset(20, 40), scrollDelta: Offset(0, 60)));
+    expect(
+      sent('tap'),
+      hasLength(1),
+      reason: 'Multiple contacts must not activate a tap',
+    );
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(
+        position: Offset(20, 40),
+        scrollDelta: Offset(0, 60),
+      ),
+    );
     await tester.pump();
-    expect(scrolling.offset, 60,
-        reason: 'The host still owns input outside the SDK');
+    expect(
+      scrolling.offset,
+      60,
+      reason: 'The host still owns input outside the SDK',
+    );
     await tester.runAsync(() => controller.close());
     final sentBeforeClose =
         platform.requests.where((r) => r.$1 == 'input').length;
     await tester.dragFrom(inside, const Offset(0, -60));
     await tester.pumpAndSettle();
-    expect(scrolling.offset, greaterThan(60),
-        reason: 'A closed view must not capture host gestures');
-    expect(platform.requests.where((r) => r.$1 == 'input'),
-        hasLength(sentBeforeClose));
+    expect(
+      scrolling.offset,
+      greaterThan(60),
+      reason: 'A closed view must not capture host gestures',
+    );
+    expect(
+      platform.requests.where((r) => r.$1 == 'input'),
+      hasLength(sentBeforeClose),
+    );
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     expect(tester.takeException(), isNull);

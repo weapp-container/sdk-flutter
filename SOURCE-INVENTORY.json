@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.5.1",
-  "sourceBaseCommit": "0a3ad6d9bfa3c3446c5e15c6f7f2483a33cf1b2d",
-  "review": "Pin independently reviewed preview.5.1 archive manifest bc2bf8a7; preserve original binary producers and historical evidence",
+  "sourceBaseCommit": "a1d6a9377123e04dcc1984a60d9b41a3a7231611",
+  "review": "Reconcile proven native layout supersession, snapshot queued inputs, reject obsolete chrome ACKs, and retain safe Android layout diagnostics; reuse immutable preview.5.1 native archives.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "8a6e10269a8e7bb46dab25ee88f8ddfc6d21dc80cff43843dbe24a007a423966",
-      "size": 10385,
+      "sha256": "0e8afc885930e7daba18516df4d5446a3dab8fbbe36331daffa25b851d7bf248",
+      "size": 11021,
       "mode": "100644"
     },
     {
@@ -389,8 +389,8 @@
     },
     {
       "path": "weapp_container/lib/src/view.dart",
-      "sha256": "eeacf673276e2b2460b630858112de019d8aeb0d8a1a985f1a84ee3e82dd974a",
-      "size": 18478,
+      "sha256": "bf63d2dabdb4c147eb11fe7377f8318d68af926f3c37d3e2e639fa0c4f978e05",
+      "size": 22790,
       "mode": "100644"
     },
     {
@@ -407,8 +407,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "efd30668e8448188c23e26d7285fa937def98545e3b24de1b2f5d13b6322c967",
-      "size": 26777,
+      "sha256": "a2b66516b8774aab0ef6cd56156b80c0754d94e5a36a3b48ded0a3d5a3f3c9ea",
+      "size": 48700,
       "mode": "100644"
     },
     {
@@ -460,15 +460,27 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/LayoutFailureDiagnostic.kt",
+      "sha256": "c48d4a4b745eadf404acddcaac2d743793d0ddde078c6ac40e507ab09b505c23",
+      "size": 2283,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "a0f339285fd5503da0e7eef15f49005a1bdceb5c6e5c9490e574090e560465b0",
-      "size": 22295,
+      "sha256": "f60cdb310c60e7de338a9ba59118fa330db40d2d124fe1f713ce3161ebd7f810",
+      "size": 22046,
       "mode": "100644"
     },
     {
       "path": "weapp_container_android/android/src/test/kotlin/dev/weapp/container/flutter/ChromeViewportTest.kt",
       "sha256": "3562c0b39267c8ae5ba0a082c2e1c835bd88cb5ce97f12ba2471b2c27a1a976b",
       "size": 1431,
+      "mode": "100644"
+    },
+    {
+      "path": "weapp_container_android/android/src/test/kotlin/dev/weapp/container/flutter/LayoutFailureDiagnosticTest.kt",
+      "sha256": "39cd9e0907404af49279b2d2ef9542710a24d46c6bae41373523a94b4fe3f0ed",
+      "size": 1594,
       "mode": "100644"
     },
     {

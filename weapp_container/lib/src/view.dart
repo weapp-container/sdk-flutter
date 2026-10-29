@@ -9,6 +9,64 @@ import 'package:flutter/widgets.dart';
 
 import 'controller.dart';
 
+BigInt? _layoutSequence(Object? value) {
+  if (value is! String || !RegExp(r'^[1-9][0-9]{0,19}$').hasMatch(value)) {
+    return null;
+  }
+  final number = BigInt.parse(value);
+  return number <= BigInt.parse('18446744073709551615') ? number : null;
+}
+
+/// A cancellation is expected only when the native owner proves that this
+/// queued observation has been superseded. A healthy frame alone is not proof.
+bool _supersededHostLayout(Map<String, Object?> observation, String revision,
+    Map<String, Object?> state) {
+  final owner = observation['ownerId'];
+  final surface = _layoutSequence(observation['surfaceGeneration']);
+  final sequence = _layoutSequence(observation['observationId']);
+  final attemptedRevision = _layoutSequence(revision);
+  final currentSurface = state['hostSurface'];
+  final health = state['executionHealth'];
+  if (observation['schemaVersion'] != 1 ||
+      state['schemaVersion'] != 1 ||
+      _layoutSequence(owner) == null ||
+      surface == null ||
+      sequence == null ||
+      attemptedRevision == null ||
+      state['ownerId'] != owner ||
+      currentSurface is! Map ||
+      currentSurface['ownerId'] != owner ||
+      health is! Map ||
+      health['schemaVersion'] != 1 ||
+      health['requiresRestart'] != false ||
+      health['appServiceFault'] != null ||
+      health['viewFault'] != null ||
+      health['navigationFault'] != null) return false;
+  final activeSurface = _layoutSequence(currentSurface['surfaceGeneration']);
+  if (activeSurface == null || activeSurface < surface) return false;
+  bool newer(Object? value, {required bool accepted}) {
+    if (value is! Map ||
+        value['schemaVersion'] != 1 ||
+        value['ownerId'] != owner ||
+        value['surfaceGeneration'] != currentSurface['surfaceGeneration']) {
+      return false;
+    }
+    final next = _layoutSequence(value['observationId']);
+    if (next == null || next < sequence) return false;
+    final nextRevision =
+        accepted ? _layoutSequence(value['layoutRevision']) : null;
+    if (accepted && nextRevision == null) return false;
+    // Observation identity, rather than an arbitrary error message or a
+    // coincidentally identical rectangle, establishes native supersession.
+    if (next > sequence) return true;
+    if (!accepted || activeSurface != surface) return false;
+    return nextRevision != null && nextRevision > attemptedRevision;
+  }
+
+  return newer(state['pendingHostLayout'], accepted: false) ||
+      newer(state['acceptedLayout'], accepted: true);
+}
+
 /// A real embedded platform view on mobile and a native texture on desktop.
 /// Give this widget finite positive constraints. Its controller outlives detach.
 class WeappContainerView extends StatefulWidget {
@@ -62,6 +120,8 @@ class _WeappContainerViewState extends State<WeappContainerView>
   int? _hostChromeRevision;
   String? _hostObservationId;
   String? _nativeChromeSignature;
+  String? _appliedNativeChromeSignature;
+  int _chromeSubmission = 0;
   bool _occluded = false;
   bool _nativeOccluded = false;
   Future<void> _chromeSync = Future.value();
@@ -134,10 +194,18 @@ class _WeappContainerViewState extends State<WeappContainerView>
   }
 
   void _updateChrome() {
-    final geometry = widget.hostChrome;
+    // Queued measurements belong to this exact observation, even if callers
+    // subsequently reuse or mutate their maps while native measurement waits.
+    final geometry = widget.hostChrome == null
+        ? null
+        : (jsonDecode(jsonEncode(widget.hostChrome)) as Map)
+            .cast<String, Object?>();
     final native = widget.nativeChrome;
     final geometryRevision = geometry?['revision'] as int?;
-    final observation = widget.hostLayoutObservation;
+    final observation = widget.hostLayoutObservation == null
+        ? null
+        : (jsonDecode(jsonEncode(widget.hostLayoutObservation)) as Map)
+            .cast<String, Object?>();
     final observationId = observation?['observationId'] as String?;
     final nativeSupported = defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
@@ -152,7 +220,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
             observationId != _hostObservationId);
     final nativeChanged =
         nativeSignature != null && nativeSignature != _nativeChromeSignature;
-    final nativeSnapshot = nativeChanged
+    final nativeSnapshot = nativeSignature != null
         ? (jsonDecode(nativeSignature) as Map).cast<String, Object?>()
         : null;
     final occlusionChanged = widget.occluded != _occluded;
@@ -164,6 +232,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
     if (nativeChanged) _nativeChromeSignature = nativeSignature;
     final occluded = widget.occluded;
     _occluded = occluded;
+    final submission = ++_chromeSubmission;
     _chromeSync =
         _chromeSync.catchError((Object _, StackTrace __) {}).then((_) async {
       await _ready;
@@ -194,26 +263,52 @@ class _WeappContainerViewState extends State<WeappContainerView>
             // Runtime navigation can win before Flutter consumes its chrome
             // event. Confirm the new owner instead of faulting a healthy page.
             final current = await _controller.state();
+            if (_controller.atomicHostLayout &&
+                _supersededHostLayout(
+                    observation!, geometryRevision.toString(), current)) {
+              _hostChromeRevision = null;
+              _hostObservationId = null;
+              // The replacement observation must be measured and committed by
+              // its own queued operation. Never ACK or unocclude this one.
+              return;
+            }
             final currentPage = current['page'];
-            if ((geometry['sessionId'] != null &&
-                    geometry['sessionId'] != current['sessionId']) ||
-                (geometry['pageId'] != null &&
-                    currentPage is Map &&
-                    geometry['pageId'] != currentPage['id'])) {
+            if (!_controller.atomicHostLayout &&
+                ((geometry['sessionId'] != null &&
+                        geometry['sessionId'] != current['sessionId']) ||
+                    (geometry['pageId'] != null &&
+                        currentPage is Map &&
+                        geometry['pageId'] != currentPage['id']))) {
               _hostChromeRevision = null;
               return;
             }
           }
           rethrow;
         }
+        if (submission != _chromeSubmission) return;
         if (!_disposed &&
             mounted &&
             widget.hostChrome?['revision'] == geometryRevision &&
+            widget.hostLayoutObservation?['observationId'] == observationId &&
+            widget.hostLayoutObservation?['ownerId'] ==
+                observation?['ownerId'] &&
+            widget.hostLayoutObservation?['surfaceGeneration'] ==
+                observation?['surfaceGeneration'] &&
+            widget.hostLayoutObservation?['sessionId'] ==
+                observation?['sessionId'] &&
+            widget.hostLayoutObservation?['pageId'] == observation?['pageId'] &&
             geometryRevision != null) {
           widget.onHostChromeApplied?.call(geometryRevision);
+        } else {
+          return;
         }
       }
-      if (nativeChanged) await _controller.updateNativeChrome(nativeSnapshot!);
+      if (nativeSignature != null &&
+          nativeSignature != _appliedNativeChromeSignature) {
+        await _controller.updateNativeChrome(nativeSnapshot!);
+        _appliedNativeChromeSignature = nativeSignature;
+      }
+      if (submission != _chromeSubmission) return;
       if (!occluded && _nativeOccluded) {
         await _controller.setPreviewOccluded(false);
         _nativeOccluded = false;

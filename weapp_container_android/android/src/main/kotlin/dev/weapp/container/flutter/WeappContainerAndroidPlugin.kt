@@ -174,7 +174,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 }
                 else -> { result.notImplemented(); return }
             }
-            settle(operation, result, call.method, entry)
+            settle(operation, result, call.method, entry, args)
         } catch (error: Throwable) { failure(result, error) }
     }
     private fun initialize(next: String): CompletableFuture<Unit> {
@@ -287,28 +287,24 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         return CompletableFuture.allOf(*tasks).thenApply { Unit }
     }
     private fun requireEntry(id: Long): Entry = sessions[id] ?: throw ContainerException("ERR_CLOSED", "Unknown or retired session id")
-    private fun settle(future: CompletableFuture<*>, result: MethodChannel.Result, operation: String? = null, entry: Entry? = null) {
+    private fun settle(future: CompletableFuture<*>, result: MethodChannel.Result, operation: String? = null, entry: Entry? = null, arguments: Map<*, *>? = null) {
         future.whenComplete { value, error -> if (error == null) result.success(if (value === Unit) null else codec(value)) else {
-            if (entry?.diagnostics == true) logFailure(operation, entry, error)
+            if (entry?.diagnostics == true) logFailure(operation, entry, error, arguments)
             failure(result, error)
         } }
     }
-    private fun logFailure(operation: String?, entry: Entry, raw: Throwable) {
+    private fun logFailure(operation: String?, entry: Entry, raw: Throwable, arguments: Map<*, *>?) {
         var error = raw
         while ((error is CompletionException || error is ExecutionException) && error.cause != null) error = error.cause!!
         // Never log arbitrary native text, payloads, paths or credentials. The
         // reviewed reason and numeric layout observations locate startup faults.
-        val reason = when (error.message) {
-            "initial host chrome dimensions differ from window metrics" -> "chrome-viewport-mismatch"
-            "invalid host chrome geometry" -> "invalid-chrome-geometry"
-            "host chrome geometry exceeds logical bounds" -> "chrome-bounds"
-            else -> "native-operation"
-        }
+        val reason = LayoutFailureDiagnostic.reason(error.message)
         val code = (error as? ContainerException)?.code?.takeIf { it.matches(Regex("ERR_[A-Z_]{1,48}")) } ?: "ERR_ANDROID"
-        val op = operation?.takeIf { it in setOf("load", "applyDevPack", "prepareView", "hostChrome", "prepareHostChrome", "inspectPackChrome", "state", "capabilities") } ?: "other"
+        val op = LayoutFailureDiagnostic.operation(operation)
+        val stamp = LayoutFailureDiagnostic.stamp(operation, arguments)
         val content = entry.clientChrome?.optJSONObject("contentRect")
         val view = entry.view
-        Log.e("WeappContainer", "operation=$op code=$code reason=$reason clientWidth=${content?.optDouble("width")} clientHeight=${content?.optDouble("height")} physicalWidth=${view?.width} physicalHeight=${view?.height} density=${view?.resources?.displayMetrics?.density}")
+        Log.e("WeappContainer", "operation=$op code=$code reason=$reason$stamp clientWidth=${content?.optDouble("width")} clientHeight=${content?.optDouble("height")} physicalWidth=${view?.width} physicalHeight=${view?.height} density=${view?.resources?.displayMetrics?.density}")
     }
     private fun failure(result: MethodChannel.Result, raw: Throwable) {
         var error = raw

@@ -6,6 +6,15 @@ The current source and exact runtime lock target `0.1.0-preview.5.1`. The lock S
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
+Atomic host layout captures queued geometry by value. A cancelled measurement is
+treated as superseded only when the same native owner proves a newer observation
+or accepted layout revision and execution remains healthy. Unknown cancellations
+still reach `onError`; an obsolete operation cannot acknowledge chrome or resume
+presentation. Android development diagnostics expose only allowlisted reasons
+and canonical decimal layout identities. These wrapper changes reuse the exact
+native archives above; their source commit does not replace the archive's
+original producer identity. Device verification remains a separate requirement.
+
 The default lock identifies the independently built **0.1.0-preview.5.1** QuickJS
 + Skia GPU artifacts by exact size and SHA-256: seven runtime slices and Android,
 iOS and macOS universal SDK packages. Native production is bound to
