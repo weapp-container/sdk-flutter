@@ -1,8 +1,8 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.2**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.3**; native ABI: **1**.
 
-The current source and distribution lock target `0.1.0-preview.5.2`. The contained native runtime remains `0.1.0-preview.5.1`; this is a wrapper/distribution update, not a Rust rebuild. The lock SHA-256 is `10cf2f084601c9d0e2f06c54dcce4810527035beeee760f075b414651c67d829`; it pins ten independently produced archives. Native preparation checks the matching version and exact artifact bytes; it cannot reuse or relabel an older binary. The lock does not assert private-release availability, Player installation or GPU/device acceptance.
+The current source requires a newly produced `0.1.0-preview.5.3` native runtime and SDK bundle. Its source includes the shared Skia layout-authority and native selector-owner corrections. The checked-in lock currently retains the original `0.1.0-preview.5.2` bytes (SHA-256 `10cf2f084601c9d0e2f06c54dcce4810527035beeee760f075b414651c67d829`) until the new archives are actually produced and independently verified. This is a pending distribution transition: the old lock cannot satisfy the new source version, and no old native binary may be relabeled. Publication, installation and device acceptance remain separate gates.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 

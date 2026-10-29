@@ -1,3 +1,7 @@
+# 0.1.0-preview.5.3
+
+Requires the independently built preview.5.3 runtime: accepted Skia layout authority, resize/recovery input fencing and native selector owner validation. Exact distribution pins and device validation are separate gates; previous previews remain immutable.
+
 # 0.1.0-preview.5.1
 
 - Prepare the P0 preview.5 patch release with separately reviewed runtime artifacts.

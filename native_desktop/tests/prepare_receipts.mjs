@@ -6,8 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { SDK_VERSION } from '../../tools/runtime-artifacts.mjs';
-// The new wrapper bundle retains its independently produced desktop/native SDK.
-const desktopProducerVersion = '0.1.0-preview.5.1';
+// The current wrapper requires a newly produced desktop/native SDK of the same release.
+const desktopProducerVersion = '0.1.0-preview.5.3';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = await mkdtemp(path.join(tmpdir(), 'weapp-flutter-receipt-'));
@@ -37,9 +37,11 @@ try {
     assert.equal(result.status === 0, success, result.stderr);
   };
   await run(receipt, true);
-  assert.notEqual(SDK_VERSION, desktopProducerVersion);
-  await run({ ...receipt, sdkVersion: SDK_VERSION }, false);
-  await run({ ...receipt, native: [{ ...receipt.native[0], sdkVersion: SDK_VERSION }] }, false);
+  assert.equal(SDK_VERSION, desktopProducerVersion);
+  for (const oldVersion of ['0.1.0-preview.5.1', '0.1.0-preview.5.2']) {
+    await run({ ...receipt, sdkVersion: oldVersion }, false);
+    await run({ ...receipt, native: [{ ...receipt.native[0], sdkVersion: oldVersion }] }, false);
+  }
   const prepared = JSON.parse(await readFile(path.join(plugin, 'vendor/prepared.json'), 'utf8'));
   assert.equal(prepared.archiveSha256, sha256);
   assert.deepEqual(prepared.packageReceipt, receipt);
