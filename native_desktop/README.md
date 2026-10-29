@@ -18,7 +18,7 @@ The command copies the core archive, C header, notices and common source into
 that plugin package. Distribute the prepared directory tree, including generated
 `vendor` and `native_shared` directories. A consuming project needs no repository
 checkout or Rust toolchain. Public registry publication is outside this preview.
-Preparation requires a verified `0.1.0-preview.2` native package receipt with
+Preparation requires a verified `0.1.0-preview.5.1` native package receipt with
 clean source commits for the package and every native slice. It checks the core
 archive SHA256, clears old generated files, and preserves the complete receipt
 and archive hash in `vendor/prepared.json`.

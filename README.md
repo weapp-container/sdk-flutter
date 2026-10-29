@@ -1,6 +1,8 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.1**; native ABI: **1**.
+
+The current source is the `0.1.0-preview.5.1` patch. Native preparation requires an independently reviewed matching `0.1.0-preview.5.1` artifact lock; a source version bump cannot reuse or relabel older binaries. The checked-in historical lock and producer identities below remain unchanged until new artifacts are built and pinned. Missing matching artifacts fail explicitly.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
@@ -102,7 +104,7 @@ After reviewing source or runtime-lock updates, stage all intended new files and
 
 ```sh
 git add <reviewed-files>
-node tools/source-inventory.mjs --write --version 0.1.0-preview.5 --reason "Describe the reviewed source changes"
+node tools/source-inventory.mjs --write --version 0.1.0-preview.5.1 --reason "Describe the reviewed source changes"
 git add SOURCE-INVENTORY.json
 node tools/source-inventory.mjs
 node --test tests/source-inventory.test.mjs tests/source-contract.test.mjs

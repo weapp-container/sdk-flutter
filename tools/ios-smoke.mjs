@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { cpSync, createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SDK_VERSION } from './runtime-artifacts.mjs';
 import { makeProject } from '../example/ios-ui/make-project.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,7 +21,7 @@ const id = randomBytes(5).toString('hex');
 const output = resolve(option('--out', resolve(root, '.build/ios-validation', id)));
 const workspace = resolve(output, 'ui-runner'); mkdirSync(workspace, { recursive: true });
 const testBundle = `org.weappcontainer.fluttervalidation.${id}.tests`;
-const receipt = { schemaVersion: 1, sdkVersion: '0.1.0-preview.4', flutterVersion: '3.47.7', status: 'running', scope: hostLifecycle ? 'host-lifecycle' : 'public-controller', startedAt: new Date().toISOString(), checks: [], resources: [{ kind: 'simulator', id: device, created: false }], cleanup: [] };
+const receipt = { schemaVersion: 1, sdkVersion: SDK_VERSION, flutterVersion: '3.47.7', status: 'running', scope: hostLifecycle ? 'host-lifecycle' : 'public-controller', startedAt: new Date().toISOString(), checks: [], resources: [{ kind: 'simulator', id: device, created: false }], cleanup: [] };
 const save = () => writeFileSync(resolve(output, 'validation.json'), JSON.stringify(receipt, null, 2) + '\n');
 function applicationFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap(entry => {

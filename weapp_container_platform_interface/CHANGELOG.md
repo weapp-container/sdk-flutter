@@ -1,3 +1,8 @@
+# 0.1.0-preview.5.1
+
+- Prepare the P0 preview.5 patch release with separately reviewed runtime artifacts.
+- Retain the preview.5 protocol and original historical release evidence.
+
 # 0.1.0-preview.5
 
 - Add correlated atomic native layout observations and durable development pack attempt transport.
