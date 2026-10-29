@@ -163,6 +163,10 @@ a GPU. Resolve initial navigation layout, measure the actual content surface,
 supply native `windowMetrics` and `hostChrome`, then `load`. `windowMetrics` is
 also accepted before load; it remains the sole viewport/display update boundary.
 The content rectangle's dimensions must match initial window metrics.
+Android's adapter quantizes content width/height through the physical View size
+and then the same integer logical viewport used by `WindowMetrics`, including
+prospective resize layouts. Screen origins and the measured capsule remain
+fractional logical coordinates; they must not be rounded with the viewport.
 
 `state.chrome` and `{type:"chrome",generation,chrome}` events contain the
 `PageChrome` observation defined in the declarations. App window defaults,

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.4",
-  "sourceBaseCommit": "d011e76f09a799e5938237ab2cabf4c7e05f0cdd",
-  "review": "Review actual preview.4 runtime archive pins and standalone package preflight fixture updated to supply the complete source-inventory dependency and real reviewed Git provenance; installed native bytes remain ignored.",
+  "sourceBaseCommit": "fc9553fb4eb5ce279d557d3a0c9bc1a4e96d9af8",
+  "review": "Review Android physical-to-logical viewport quantization, fixed-field startup diagnostics and native capsule contrast; preserve runtime ABI and historical origin.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -23,8 +23,8 @@
     },
     {
       "path": "CONTRACT.md",
-      "sha256": "e1ae00fd1b55a952943ac025832eadc0384037e31f728fb703cc8729fde2547c",
-      "size": 13434,
+      "sha256": "15a6d16cc519024e886acd504c26417fd99bb2172fdd5aff97d3da255ae2f4ff",
+      "size": 13743,
       "mode": "100644"
     },
     {
@@ -107,8 +107,8 @@
     },
     {
       "path": "native_desktop/include/native_chrome_overlay.hpp",
-      "sha256": "d6b56f989e98b08d0232bbf58b2c878a5f4a7b08a6038a55c34ca61b5104691b",
-      "size": 30995,
+      "sha256": "148414642ed14c334cc752861ed0682b0116ba153a78cfdbf9148201fcdbac98",
+      "size": 32621,
       "mode": "100644"
     },
     {
@@ -157,6 +157,12 @@
       "path": "native_desktop/src/registry.cpp",
       "sha256": "8f01f0e8e3590f3ae6efa53d02465c8010d50ac41bbc41ef038eb7c0ef361d49",
       "size": 32681,
+      "mode": "100644"
+    },
+    {
+      "path": "native_desktop/tests/chrome_palette.cpp",
+      "sha256": "e95ec980911ea5842aebc8832c9dd6cffd53e5f8b7709f2bdd6594f370df6bae",
+      "size": 702,
       "mode": "100644"
     },
     {
@@ -437,8 +443,8 @@
     },
     {
       "path": "weapp_container_android/android/build.gradle",
-      "sha256": "cdf5556c26d0880b14bbe61adef192c804bafc208a7ac0e5c711cbed68728962",
-      "size": 1502,
+      "sha256": "05ee2c8faf63cbcffbc4023b4a4d2f232aa324c60b64d8cd5e8618106aa81ea5",
+      "size": 1550,
       "mode": "100644"
     },
     {
@@ -448,9 +454,21 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/ChromeViewport.kt",
+      "sha256": "7e03950f0883c19129129f85463d59458774065030e396e6176428dc65925786",
+      "size": 990,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "bc2ed509eb55ca13e57955a51b77c3d6c74d961210cb98f55325b23cfbc5e012",
-      "size": 17482,
+      "sha256": "f9510f7f2b59ae7de3665e893156d93d67a3fa4764523b538da4308b9fe89c26",
+      "size": 19688,
+      "mode": "100644"
+    },
+    {
+      "path": "weapp_container_android/android/src/test/kotlin/dev/weapp/container/flutter/ChromeViewportTest.kt",
+      "sha256": "3562c0b39267c8ae5ba0a082c2e1c835bd88cb5ce97f12ba2471b2c27a1a976b",
+      "size": 1431,
       "mode": "100644"
     },
     {

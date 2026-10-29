@@ -47,6 +47,17 @@ inline unsigned color(const Json &chrome, const char *key, unsigned fallback) {
     return fallback;
   return static_cast<unsigned>(std::stoul(text.substr(1), nullptr, 16));
 }
+// A custom page's navigation background need not match its content. Give the
+// floating host controls their own contrasting backplate, derived from the
+// declared foreground rather than that unrelated navigation background.
+inline bool light_capsule_foreground(const Json &chrome) {
+  auto foreground = color(chrome, "frontColor", 0x000000);
+  return (((foreground >> 16) & 255) * 299 + ((foreground >> 8) & 255) * 587 +
+          (foreground & 255) * 114) >= 128000;
+}
+inline unsigned capsule_background(const Json &chrome) {
+  return light_capsule_foreground(chrome) ? 0x242424 : 0xf3f3f3;
+}
 inline std::vector<unsigned char> icon_bytes(const Json &descriptor) {
   const auto path = descriptor.at("path").get<std::string>(),
              mime = descriptor.at("mime").get<std::string>();
@@ -227,8 +238,10 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
   void draw_button(const DRAWITEMSTRUCT &item, bool tabs) {
     const auto &chrome = value_.at("chrome");
     const auto &colors = tabs ? chrome.at("tabBar") : chrome;
-    auto brush = CreateSolidBrush(
-        rgb(chrome_detail::color(colors, "backgroundColor", 0xffffff)));
+    const bool capsule = !tabs && (item.CtlID == 100 || item.CtlID == 101);
+    auto brush = CreateSolidBrush(rgb(
+        capsule ? chrome_detail::capsule_background(chrome)
+                : chrome_detail::color(colors, "backgroundColor", 0xffffff)));
     FillRect(item.hDC, &item.rcItem, brush);
     DeleteObject(brush);
     SetBkMode(item.hDC, TRANSPARENT);
@@ -320,7 +333,9 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
     const auto &chrome = value_.at("chrome");
     const auto &colors = plane.tabs ? chrome.at("tabBar") : chrome;
     auto brush = CreateSolidBrush(
-        rgb(chrome_detail::color(colors, "backgroundColor", 0xffffff)));
+        rgb(!plane.tabs && custom()
+                ? chrome_detail::capsule_background(chrome)
+                : chrome_detail::color(colors, "backgroundColor", 0xffffff)));
     FillRect(dc, &bounds, brush);
     DeleteObject(brush);
     SetBkMode(dc, TRANSPARENT);
@@ -373,7 +388,9 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
       }
       auto pen = CreatePen(PS_SOLID, 1, rgb(0x999999));
       auto old_pen = SelectObject(dc, pen);
-      auto old_brush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+      auto capsule_brush =
+          CreateSolidBrush(rgb(chrome_detail::capsule_background(chrome)));
+      auto old_brush = SelectObject(dc, capsule_brush);
       RoundRect(dc, pill.left, pill.top, pill.right, pill.bottom,
                 static_cast<int>(32 * scale_), static_cast<int>(32 * scale_));
       auto mid = (pill.left + pill.right) / 2;
@@ -385,6 +402,7 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
       DrawTextW(dc, L"···", -1, &more, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
       DrawTextW(dc, L"⊙", -1, &close, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
       SelectObject(dc, old_brush);
+      DeleteObject(capsule_brush);
       SelectObject(dc, old_pen);
       DeleteObject(pen);
     }
@@ -430,6 +448,15 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
                              "could not create native chrome HWND");
     }
     auto r = plane_rect(plane.tabs);
+    auto extended = GetWindowLongPtrW(plane.window, GWL_EXSTYLE);
+    const bool floating = !plane.tabs && custom();
+    SetWindowLongPtrW(plane.window, GWL_EXSTYLE,
+                      floating ? extended | WS_EX_LAYERED
+                               : extended & ~WS_EX_LAYERED);
+    if (floating &&
+        !SetLayeredWindowAttributes(plane.window, 0, 240, LWA_ALPHA))
+      return Status::error("ERR_RENDER",
+                           "could not set native capsule opacity");
     SetWindowPos(
         plane.window, HWND_TOP, static_cast<int>(std::lround(r.x * scale_)),
         static_cast<int>(std::lround(r.y * scale_)),
@@ -649,10 +676,13 @@ public:
         put(header, toolbar);
       }
       auto *capsule = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-      style(capsule, "* {border-radius:16px; background-color:" +
-                         chrome.value("backgroundColor", "#ffffff") +
-                         "; color:" + chrome.value("frontColor", "#000000") +
-                         ";}");
+      const auto backplate = chrome_detail::light_capsule_foreground(chrome)
+                                 ? "rgba(24,24,24,0.84)"
+                                 : "rgba(255,255,255,0.90)";
+      style(capsule,
+            std::string("* {border-radius:16px; background-image:none; ") +
+                "background-color:" + backplate +
+                "; color:" + chrome.value("frontColor", "#000000") + ";}");
       gtk_box_pack_start(GTK_BOX(capsule), button("···", "More", "more"), TRUE,
                          TRUE, 0);
       gtk_box_pack_start(GTK_BOX(capsule),

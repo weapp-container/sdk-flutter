@@ -26,4 +26,7 @@ rootProject.allprojects {
         google(); mavenCentral()
     }
 }
-dependencies { implementation 'com.sonofmagic.weapp:weapp-container-android:0.1.0-preview.4' }
+dependencies {
+    implementation 'com.sonofmagic.weapp:weapp-container-android:0.1.0-preview.4'
+    testImplementation 'junit:junit:4.13.2'
+}
