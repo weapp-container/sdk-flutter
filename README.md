@@ -2,7 +2,7 @@
 
 Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.3**; native ABI: **1**.
 
-The current source requires a newly produced `0.1.0-preview.5.3` native runtime and SDK bundle. Its source includes the shared Skia layout-authority and native selector-owner corrections. The checked-in lock currently retains the original `0.1.0-preview.5.2` bytes (SHA-256 `10cf2f084601c9d0e2f06c54dcce4810527035beeee760f075b414651c67d829`) until the new archives are actually produced and independently verified. This is a pending distribution transition: the old lock cannot satisfy the new source version, and no old native binary may be relabeled. Publication, installation and device acceptance remain separate gates.
+The current source requires `0.1.0-preview.5.3` native runtime and SDK bundles, including the shared Skia layout-authority and native selector-owner corrections. The checked-in lock pins the independently reviewed, privately published release bytes (SHA-256 `ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388`). Archive review and publication do not establish consumer installation or Player/GPU/device acceptance; those remain separate gates.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
@@ -25,14 +25,25 @@ the native acceptance event is distinct from GPU presentation. `closeRequested`
 is set when closing begins; that View retires its waits and ignores late replies,
 even when native cleanup needs an explicit retry.
 
-The default lock identifies the **0.1.0-preview.5.2** distribution of QuickJS
+The default lock identifies the **0.1.0-preview.5.3** distribution of QuickJS
 + Skia GPU artifacts by exact size and SHA-256: seven runtime slices and Android,
-iOS and macOS universal SDK packages. Native production is bound to
-`747d0b02131d7f67b3adbdd7127abcd5e21ffdbe`; wrapper producer commits remain
-separately recorded in archive provenance. Android wrapper `preview.5.2` was built
+iOS and macOS universal SDK packages. Native production remains bound to
+`012400d43cb20b4d91a73fbbde7e1cf11bd0bb6a`; the packaging envelope is
+`eff194421aa48ea7871b0989f9903f3636f6432e`. Android, iOS and desktop wrapper
+producer commits are respectively `e4fa84e784edc1a80d972655eea347537ca40774`,
+`159b7e2e66aa83e952e2af43edcd771344829379` and
+`ae67dde1a104587968e2db37a9636b8776328607`. Later lock-only commits do not
+replace those producer identities. Windows/Linux runtime distributions remain
+blocked.
+
+The historical preview.5.2 lock had SHA-256
+`10cf2f084601c9d0e2f06c54dcce4810527035beeee760f075b414651c67d829`. Its
+native production remains bound to `747d0b02131d7f67b3adbdd7127abcd5e21ffdbe`.
+Android wrapper `preview.5.2` was built
 from `c8241b83017d7f5f7fd614dc34bd9fbf00230c0f`; iOS wrapper `preview.5.2`
-from `f8af959868b009b6b627c370c28983c410be7e9e`. The desktop SDK remains
-`preview.5.1`. Later pin-only commits do not change those producer identities. Windows/Linux runtime distributions remain blocked.
+from `f8af959868b009b6b627c370c28983c410be7e9e`. That distribution used the
+`preview.5.1` desktop SDK. Later pin-only commits do not change those historical
+producer identities.
 Archive validation, private publication and actual Player/GPU/device acceptance
 are separate gates. No older-runtime fallback is allowed.
 
@@ -50,7 +61,7 @@ acceptance.
 
 Use Node.js 24+, Python 3, and pinned Flutter **3.47.7** (framework `abaf9c523780a608bd46686fd5e53740a07077f8`, engine `deb287481e3ce9468f3434937ced4240a70539ca`). Native Android consumers require minSdk 26; iOS requires 16.0; macOS requires 12.0. Desktop tooling and platform SDK requirements are documented in `native_desktop/README.md`.
 
-`runtime-artifacts.lock.json` permits only exact version, component, platform, architecture, byte size and SHA-256 pins from the private `weapp-container/runtime-artifacts` release `runtime-v0.1.0-preview.5.2`. The current lock pins the reviewed Android universal SDK (arm64-v8a and x86_64), iOS universal SDK (arm64 device, arm64 simulator and x86_64 simulator), and macOS universal desktop SDK (arm64 and x86_64). The checked-in lock preserves all ten reviewed runtime/SDK assets; these tools consume the SDK entry for the selected platform. Targets without their exact reviewed SDK entry remain **blocked** and return an explicit missing-target error. No floating `latest`, placeholder digest, local core build or silent fallback is used.
+`runtime-artifacts.lock.json` permits only exact version, component, platform, architecture, byte size and SHA-256 pins from the private `weapp-container/runtime-artifacts` release `runtime-v0.1.0-preview.5.3`. The current lock pins the reviewed Android universal SDK (arm64-v8a and x86_64), iOS universal SDK (arm64 device, arm64 simulator and x86_64 simulator), and macOS universal desktop SDK (arm64 and x86_64). The checked-in lock preserves all ten reviewed runtime/SDK assets; these tools consume the SDK entry for the selected platform. Targets without their exact reviewed SDK entry remain **blocked** and return an explicit missing-target error. No floating `latest`, placeholder digest, local core build or silent fallback is used.
 
 For an available versioned GitHub release, grant `WEAPP_CONTAINER_RUNTIME_TOKEN` read access to that private repository, or set `WEAPP_CONTAINER_RUNTIME_ARTIFACT_DIR` to authorized offline `.tar.gz` assets. Never commit credentials or archives.
 
@@ -129,7 +140,7 @@ After reviewing source or runtime-lock updates, stage all intended new files and
 
 ```sh
 git add <reviewed-files>
-node tools/source-inventory.mjs --write --version 0.1.0-preview.5.2 --reason "Describe the reviewed source changes"
+node tools/source-inventory.mjs --write --version 0.1.0-preview.5.3 --reason "Describe the reviewed source changes"
 git add SOURCE-INVENTORY.json
 node tools/source-inventory.mjs
 node --test tests/source-inventory.test.mjs tests/source-contract.test.mjs
