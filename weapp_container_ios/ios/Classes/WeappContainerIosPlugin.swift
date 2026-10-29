@@ -1,3 +1,212 @@
+import Foundation
+import CoreFoundation
+import Dispatch
+
+enum IOSLayoutMeasurementError: Error {
+    case invalidSnapshot, cancelled, expired
+}
+
+/// Value-only gate shared by atomic measurement and native chrome conversion.
+/// Its deterministic tests compile this exact production code without UIKit.
+struct IOSLayoutMeasurement {
+    enum Decision: Equatable { case ready, wait, cancelled, expired }
+    struct Native {
+        let windowMetrics: [String: Any]
+        let left: Double
+        let top: Double
+    }
+    static let budgetNanoseconds: UInt64 = 10_000_000_000
+    let deadlineNanoseconds: UInt64
+    let observation: [String: Any]?
+    let layoutRevision: String?
+    let preparingNavigation: Bool
+
+    init(observation: [String: Any]? = nil, layoutRevision: String? = nil,
+         preparingNavigation: Bool = false, nowNanoseconds: UInt64,
+         budgetNanoseconds: UInt64 = Self.budgetNanoseconds) throws {
+        let sum = nowNanoseconds.addingReportingOverflow(budgetNanoseconds)
+        deadlineNanoseconds = sum.overflow ? UInt64.max : sum.partialValue
+        self.observation = try observation.map(Self.snapshot)
+        self.layoutRevision = layoutRevision
+        self.preparingNavigation = preparingNavigation
+        if let value = self.observation {
+            guard Self.schemaOne(value["schemaVersion"]), Self.sequence(value["ownerId"]) != nil,
+                  Self.sequence(value["surfaceGeneration"]) != nil, Self.sequence(value["observationId"]) != nil,
+                  Self.sequence(layoutRevision) != nil,
+                  let metrics = value["windowMetrics"] as? [String: Any], Self.validMetrics(metrics) else {
+                throw IOSLayoutMeasurementError.invalidSnapshot
+            }
+        }
+    }
+
+    static func snapshot(_ value: [String: Any]) throws -> [String: Any] {
+        guard JSONSerialization.isValidJSONObject(value) else { throw IOSLayoutMeasurementError.invalidSnapshot }
+        let bytes = try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys])
+        guard let result = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
+            throw IOSLayoutMeasurementError.invalidSnapshot
+        }
+        return result
+    }
+    static func sequence(_ value: Any?) -> UInt64? {
+        guard let raw = value as? String, !raw.isEmpty, raw.utf8.count <= 20,
+              raw.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }),
+              let number = UInt64(raw), number > 0, String(number) == raw else { return nil }
+        return number
+    }
+    static func number(_ value: Any?) -> Double? {
+        guard let value = value as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID(),
+              value.doubleValue.isFinite else { return nil }
+        return value.doubleValue
+    }
+    private static func schemaOne(_ value: Any?) -> Bool { number(value) == 1 }
+    private static func falseBoolean(_ value: Any?) -> Bool {
+        guard let value = value as? NSNumber, CFGetTypeID(value) == CFBooleanGetTypeID() else { return false }
+        return !value.boolValue
+    }
+    private static func absent(_ value: Any?) -> Bool { value == nil || value is NSNull }
+    private static func equal(_ left: Any?, _ right: Any?) -> Bool {
+        if absent(left) || absent(right) { return absent(left) && absent(right) }
+        guard let left, let right,
+              let a = try? JSONSerialization.data(withJSONObject: left, options: [.sortedKeys, .fragmentsAllowed]),
+              let b = try? JSONSerialization.data(withJSONObject: right, options: [.sortedKeys, .fragmentsAllowed]) else { return false }
+        return a == b
+    }
+    private static func healthy(_ state: [String: Any]) -> Bool {
+        guard let health = state["executionHealth"] as? [String: Any], schemaOne(health["schemaVersion"]),
+              falseBoolean(health["requiresRestart"]) else { return false }
+        return ["appServiceFault", "viewFault", "navigationFault"].allSatisfy { absent(health[$0]) }
+    }
+    private static func typedEmpty(_ state: [String: Any], observation: [String: Any]) -> Bool {
+        // HostLayoutObservation omits None session/page Options on the Rust
+        // wire. Accept omitted or explicit null there, while state ownership
+        // and accepted identities must remain present with typed null values.
+        state["status"] as? String == "empty" && state["executionHealth"] is NSNull
+            && ["sessionId", "page", "acceptedPackIdentity", "acceptedLayout"].allSatisfy { state[$0] is NSNull }
+            && absent(observation["sessionId"]) && absent(observation["pageId"])
+    }
+    private static func validMetrics(_ metrics: [String: Any]) -> Bool {
+        let required: Set<String> = ["windowWidth", "windowHeight", "screenWidth", "screenHeight", "pixelRatio",
+                                     "statusBarHeight", "screenTop", "deviceOrientation"]
+        guard required.isSubset(of: Set(metrics.keys)), Set(metrics.keys).isSubset(of: required.union(["safeArea"])) else { return false }
+        for key in ["windowWidth", "windowHeight", "screenWidth", "screenHeight"] {
+            guard let value = number(metrics[key]), value > 0, value <= Double(UInt32.max), value.rounded() == value else { return false }
+        }
+        guard let scale = number(metrics["pixelRatio"]), scale > 0,
+              let status = number(metrics["statusBarHeight"]), status >= 0,
+              let screenHeight = number(metrics["screenHeight"]), status <= screenHeight + 0.5,
+              number(metrics["screenTop"]) != nil,
+              let orientation = metrics["deviceOrientation"] as? String,
+              ["portrait", "landscape"].contains(orientation) else { return false }
+        if !absent(metrics["safeArea"]) {
+            guard let safe = metrics["safeArea"] as? [String: Any],
+                  Set(safe.keys) == Set(["left", "top", "right", "bottom", "width", "height"]),
+                  let screenWidth = number(metrics["screenWidth"]) else { return false }
+            for key in ["left", "top", "right", "bottom", "width", "height"] {
+                guard number(safe[key]) != nil else { return false }
+            }
+            let limit = max(screenWidth, screenHeight) + 0.5
+            for (extent, start, end) in [("width", "left", "right"), ("height", "top", "bottom")] {
+                let size = number(safe[extent])!, leading = number(safe[start])!, trailing = number(safe[end])!
+                guard size > 0, size <= limit, abs(size - (trailing - leading)) <= 0.000001 else { return false }
+            }
+        }
+        return true
+    }
+
+    /// A healthy frame or different rectangle never establishes supersession.
+    /// Require the native owner, canonical u64 identities and a strict advance.
+    func superseded(by state: [String: Any]) -> Bool {
+        guard let old = observation, let owner = old["ownerId"] as? String,
+              let surface = Self.sequence(old["surfaceGeneration"]),
+              let sequence = Self.sequence(old["observationId"]),
+              let revision = Self.sequence(layoutRevision), Self.schemaOne(state["schemaVersion"]),
+              state["ownerId"] as? String == owner,
+              let active = state["hostSurface"] as? [String: Any], active["ownerId"] as? String == owner,
+              let activeSurface = Self.sequence(active["surfaceGeneration"]), activeSurface >= surface else { return false }
+        let empty = Self.typedEmpty(state, observation: old)
+        guard empty || (state["status"] as? String == "ready" && Self.healthy(state)) else { return false }
+        func newer(_ item: Any?, accepted: Bool) -> Bool {
+            guard let value = item as? [String: Any], Self.schemaOne(value["schemaVersion"]),
+                  value["ownerId"] as? String == owner,
+                  value["surfaceGeneration"] as? String == active["surfaceGeneration"] as? String,
+                  let next = Self.sequence(value["observationId"]), next >= sequence,
+                  let metrics = value["windowMetrics"] as? [String: Any], Self.validMetrics(metrics) else { return false }
+            if empty {
+                return !accepted && Self.absent(value["sessionId"]) && Self.absent(value["pageId"]) && next > sequence
+            }
+            let nextRevision = accepted ? Self.sequence(value["layoutRevision"]) : nil
+            if accepted && nextRevision == nil { return false }
+            if next > sequence { return true }
+            return accepted && activeSurface == surface && nextRevision! > revision
+        }
+        return newer(state["pendingHostLayout"], accepted: false) || newer(state["acceptedLayout"], accepted: true)
+    }
+    private func matchesCurrentTuple(_ state: [String: Any]) -> Bool {
+        guard let old = observation, Self.schemaOne(state["schemaVersion"]),
+              state["ownerId"] as? String == old["ownerId"] as? String,
+              let surface = state["hostSurface"] as? [String: Any],
+              surface["ownerId"] as? String == old["ownerId"] as? String,
+              surface["surfaceGeneration"] as? String == old["surfaceGeneration"] as? String else { return false }
+        let pending = state["pendingHostLayout"] as? [String: Any]
+        // Only an explicit empty startup owner can lack execution health.
+        // Readiness still needs its exact pending tuple; cancellation instead
+        // requires the strict newer pending proof checked by superseded(by:).
+        let emptyStartup = Self.typedEmpty(state, observation: old) && pending != nil
+        guard (state["status"] as? String == "ready" && Self.healthy(state)) || emptyStartup else { return false }
+        // Generic hostLayout must never consume a native navigation ticket.
+        // A prepared payload is committed later by completeNavigationLayout.
+        if !preparingNavigation && !Self.absent(state["pendingNavigation"]) { return false }
+        let candidate: [String: Any]
+        let owner: [String: Any]
+        if let pending { candidate = pending; owner = pending }
+        else {
+            guard Self.absent(state["pendingHostLayout"]), let accepted = state["acceptedLayout"] as? [String: Any],
+                  accepted["layoutRevision"] as? String == layoutRevision,
+                  let chrome = accepted["chrome"] as? [String: Any] else { return false }
+            candidate = accepted; owner = chrome
+        }
+        guard Self.schemaOne(candidate["schemaVersion"]) else { return false }
+        for key in ["ownerId", "surfaceGeneration", "observationId", "windowMetrics"] {
+            if !Self.equal(candidate[key], old[key]) { return false }
+        }
+        return ["sessionId", "pageId"].allSatisfy { Self.equal(owner[$0], old[$0]) }
+    }
+    private func matchesNative(_ native: Native, chrome: [String: Any]) -> Bool {
+        guard let old = observation, let expected = old["windowMetrics"] as? [String: Any],
+              Self.validMetrics(native.windowMetrics), native.left.isFinite, native.top.isFinite,
+              let content = chrome["contentRect"] as? [String: Any] else { return false }
+        for key in ["windowWidth", "windowHeight", "screenWidth", "screenHeight", "screenTop", "statusBarHeight", "pixelRatio"] {
+            guard let a = Self.number(expected[key]), let b = Self.number(native.windowMetrics[key]),
+                  abs(a - b) <= (key == "pixelRatio" ? 0.000001 : 0.5) else { return false }
+        }
+        guard expected["deviceOrientation"] as? String == native.windowMetrics["deviceOrientation"] as? String else { return false }
+        let expectedSafe = expected["safeArea"] as? [String: Any], currentSafe = native.windowMetrics["safeArea"] as? [String: Any]
+        if let a = expectedSafe, let b = currentSafe {
+            for key in ["left", "top", "right", "bottom", "width", "height"] {
+                guard let x = Self.number(a[key]), let y = Self.number(b[key]), abs(x - y) <= 0.5 else { return false }
+            }
+        } else if !Self.absent(expected["safeArea"]) || !Self.absent(native.windowMetrics["safeArea"]) { return false }
+        for (field, target) in [("width", expected["windowWidth"]), ("height", expected["windowHeight"])] {
+            guard let actual = Self.number(content[field]), let expected = Self.number(target), actual > 0, abs(actual - expected) <= 0.5 else { return false }
+        }
+        guard let left = Self.number(content["left"]), let top = Self.number(content["top"]),
+              abs(left - native.left) <= 0.5, abs(top - native.top) <= 0.5 else { return false }
+        return true
+    }
+    func decision(nowNanoseconds: UInt64, ownerCurrent: Bool, state: [String: Any]? = nil,
+                  native: Native? = nil, chrome: [String: Any]? = nil) -> Decision {
+        if !ownerCurrent { return .cancelled }
+        if nowNanoseconds >= deadlineNanoseconds { return .expired }
+        guard observation != nil else { return .ready }
+        guard let state else { return .wait }
+        if superseded(by: state) { return .cancelled }
+        guard matchesCurrentTuple(state), let native, let chrome, matchesNative(native, chrome: chrome) else { return .wait }
+        return .ready
+    }
+    func remainingNanoseconds(now: UInt64) -> UInt64 { now >= deadlineNanoseconds ? 0 : deadlineNanoseconds - now }
+}
+
+#if !WEAPP_LAYOUT_GATE_TESTS
 import Flutter
 import UIKit
 
@@ -11,6 +220,7 @@ import UIKit
         var calls: [String: CheckedContinuation<WeappJSON, Error>] = [:]
         var clientChrome: [String: Any]?
         var preparedClientChrome: [String: Any]?
+        var measurementLifetime = UUID()
         init(_ session: WeappContainerSession) { self.session = session }
     }
     private var entries: [Int64: Entry] = [:]
@@ -50,6 +260,13 @@ import UIKit
             do { result(try await perform(call)) }
             catch let error as WeappContainerError { result(FlutterError(code: error.code, message: error.message, details: nil)) }
             catch let error as WeappHostError { result(FlutterError(code: error.code.rawValue, message: error.message, details: nil)) }
+            catch let error as IOSLayoutMeasurementError {
+                switch error {
+                case .cancelled: result(FlutterError(code: "ERR_CANCELLED", message: "Native layout measurement was superseded or its owner retired", details: nil))
+                case .expired: result(FlutterError(code: "ERR_NOT_READY", message: "Native layout measurement deadline expired", details: nil))
+                case .invalidSnapshot: result(FlutterError(code: "ERR_INVALID_REQUEST", message: "Expected immutable complete native layout measurement", details: nil))
+                }
+            }
             catch { result(FlutterError(code: "ERR_INVALID_REQUEST", message: error.localizedDescription, details: nil)) }
         }
     }
@@ -128,8 +345,8 @@ import UIKit
             }
             return codec(value)
         case "prepareHostLayout", "hostLayout":
-            let raw = args.filter { $0.key != "id" }
-            let value = try await measureLayout(entry, raw)
+            let raw = try IOSLayoutMeasurement.snapshot(args.filter { $0.key != "id" })
+            let value = try await measureLayout(entry, raw, preparing: call.method == "prepareHostLayout")
             if call.method == "prepareHostLayout" { entry.preparedClientChrome = raw["chrome"] as? [String: Any]; return value }
             _ = try await session.executeCommand("hostLayout", object(value)); entry.clientChrome = raw["chrome"] as? [String: Any]
         case "devState": return codec(try session.devState())
@@ -140,7 +357,7 @@ import UIKit
         case "inspectPackChrome": return codec(try session.inspectPackChrome(packURL: URL(fileURLWithPath: string(args, "packPath")), route: args["route"] as? String))
         case "hostChrome": try await updateChrome(entry, args.filter { $0.key != "id" })
         case "prepareHostChrome":
-            let raw=args.filter { $0.key != "id" }
+            let raw=try IOSLayoutMeasurement.snapshot(args.filter { $0.key != "id" })
             let value=try await measureChrome(entry,raw,prospective:true)
             entry.preparedClientChrome=raw;return value
         case "setPreviewOccluded":
@@ -175,6 +392,7 @@ import UIKit
         return nil
     }
     private func retireView(_ entry: Entry) async throws {
+        entry.measurementLifetime = UUID()
         if let pending = entry.retiringView { return try await pending.value }
         guard let view = entry.view else { return }
         let operation = Task { @MainActor in try await view.detach() }; entry.retiringView = operation
@@ -186,14 +404,19 @@ import UIKit
               (initial["revision"] as? NSNumber)?.uint64Value == (raw["revision"] as? NSNumber)?.uint64Value else { return }
         entry.clientChrome=raw;entry.preparedClientChrome=nil
     }
-    private func measureLayout(_ entry: Entry, _ supplied: [String: Any]) async throws -> [String: Any] {
-        guard let observation = supplied["observation"] as? [String: Any], var chrome = supplied["chrome"] as? [String: Any],
-              let revision = supplied["layoutRevision"] as? String else { throw fail("Expected complete host layout observation, chrome and revision") }
-        chrome["coordinateSpace"] = supplied["coordinateSpace"]
+    private func measureLayout(_ entry: Entry, _ supplied: [String: Any], preparing: Bool) async throws -> [String: Any] {
+        let started = DispatchTime.now().uptimeNanoseconds
+        let frozen = try IOSLayoutMeasurement.snapshot(supplied)
+        guard let observation = frozen["observation"] as? [String: Any], var chrome = frozen["chrome"] as? [String: Any],
+              let revision = frozen["layoutRevision"] as? String else { throw fail("Expected complete host layout observation, chrome and revision") }
+        let measurement = try IOSLayoutMeasurement(observation: observation, layoutRevision: revision,
+                                                   preparingNavigation: preparing, nowNanoseconds: started)
+        let lifetime = entry.measurementLifetime
+        chrome["coordinateSpace"] = frozen["coordinateSpace"]
         chrome.removeValue(forKey: "observationId")
         // Atomic layout measures the native view already mounted in this
         // shell. The prior accepted clientChrome is not its coordinate anchor.
-        chrome = try await measureChrome(entry, chrome, prospective: false)
+        chrome = try await measureChrome(entry, chrome, prospective: false, measurement: measurement, lifetime: lifetime)
         for key in ["sessionId", "pageId"] { chrome.removeValue(forKey: key); if let value = observation[key] { chrome[key] = value } }
         var layout: [String: Any] = ["schemaVersion": 1, "chrome": chrome, "layoutRevision": revision]
         for key in ["ownerId", "surfaceGeneration", "observationId", "windowMetrics"] {
@@ -202,43 +425,99 @@ import UIKit
         return layout
     }
     private func updateChrome(_ entry: Entry, _ supplied: [String: Any]) async throws {
-        let measured=try await measureChrome(entry,supplied,prospective:false)
-        try entry.session.updateHostChrome(object(measured));entry.clientChrome=supplied
+        let frozen = try IOSLayoutMeasurement.snapshot(supplied)
+        let measured=try await measureChrome(entry,frozen,prospective:false)
+        try entry.session.updateHostChrome(object(measured));entry.clientChrome=frozen
     }
-    private func measureChrome(_ entry: Entry, _ supplied: [String: Any],prospective:Bool) async throws -> [String:Any] {
-        var payload = supplied
+    private func measurementOwnerCurrent(_ entry: Entry, _ lifetime: UUID) -> Bool {
+        !Task.isCancelled && !detached && initializing == nil && entry.closing == nil
+            && entry.retiringView == nil && entry.measurementLifetime == lifetime
+            && entries.values.contains(where: { $0 === entry })
+    }
+    private func requireMeasurement(_ decision: IOSLayoutMeasurement.Decision) throws {
+        switch decision {
+        case .cancelled: throw IOSLayoutMeasurementError.cancelled
+        case .expired: throw IOSLayoutMeasurementError.expired
+        case .ready, .wait: return
+        }
+    }
+    private func nativeMeasurement(_ view: WeappContainerView, _ window: UIWindow) -> IOSLayoutMeasurement.Native {
+        // Match the SDK view's quantization, without requesting a new native
+        // observation or extending its navigation/measurement lease.
+        let width = max(1, view.bounds.width.rounded()), height = max(1, view.bounds.height.rounded())
+        let intersection = view.bounds.inset(by: view.safeAreaInsets).intersection(view.bounds)
+        let safe = intersection.isNull ? CGRect.zero : intersection
+        let sx = width / view.bounds.width, sy = height / view.bounds.height
+        let inScreen = view.convert(view.bounds, to: window.screen.coordinateSpace)
+        let screen = window.screen.bounds
+        let metrics: [String: Any] = [
+            "windowWidth": Double(width), "windowHeight": Double(height), "pixelRatio": Double(window.screen.scale),
+            "screenWidth": Double(screen.width), "screenHeight": Double(screen.height),
+            "statusBarHeight": Double(window.windowScene?.statusBarManager?.statusBarFrame.height ?? 0),
+            "screenTop": Double(inScreen.minY),
+            "safeArea": ["left": Double(safe.minX * sx), "right": Double(safe.maxX * sx),
+                         "top": Double(safe.minY * sy), "bottom": Double(safe.maxY * sy),
+                         "width": Double(safe.width * sx), "height": Double(safe.height * sy)],
+            "deviceOrientation": screen.width > screen.height ? "landscape" : "portrait",
+        ]
+        return IOSLayoutMeasurement.Native(windowMetrics: metrics, left: Double(inScreen.minX), top: Double(inScreen.minY))
+    }
+    private func measureChrome(_ entry: Entry, _ supplied: [String: Any], prospective: Bool,
+                               measurement suppliedMeasurement: IOSLayoutMeasurement? = nil,
+                               lifetime suppliedLifetime: UUID? = nil) async throws -> [String: Any] {
+        let started = DispatchTime.now().uptimeNanoseconds
+        let measurement = try suppliedMeasurement ?? IOSLayoutMeasurement(nowNanoseconds: started)
+        let lifetime = suppliedLifetime ?? entry.measurementLifetime
+        var payload = try IOSLayoutMeasurement.snapshot(supplied)
+        let anchor = try IOSLayoutMeasurement.snapshot(prospective ? (entry.clientChrome ?? payload) : payload)
         let coordinates = payload.removeValue(forKey: "coordinateSpace") as? String ?? "screen"
-        if coordinates == "screen" { return payload }
-        guard coordinates == "flutterClient" else { throw fail("Unknown chrome coordinate space") }
-        let deadline = Date().addingTimeInterval(10)
+        guard coordinates == "screen" || coordinates == "flutterClient" else { throw fail("Unknown chrome coordinate space") }
         while true {
-            try Task.checkCancellation()
-            guard !detached, entry.closing == nil, entries.values.contains(where: { $0 === entry }) else {
-                throw WeappContainerError(code: "ERR_CANCELLED", message: "Chrome owner retired before native measurement")
-            }
-            if let view = entry.view, let window = view.window, view.bounds.width > 0, view.bounds.height > 0 {
-                guard let content = (prospective ? (entry.clientChrome?["contentRect"] ?? payload["contentRect"]) : payload["contentRect"]) as? [String: Any],
-                      let left = content["left"] as? NSNumber, let top = content["top"] as? NSNumber else { throw fail("Missing content rectangle") }
-                if !prospective, let width=content["width"] as? NSNumber,let height=content["height"] as? NSNumber,
-                   abs(Double(view.bounds.width)-width.doubleValue)>1 || abs(Double(view.bounds.height)-height.doubleValue)>1 {
-                    guard Date()<deadline else { throw WeappContainerError(code:"ERR_NOT_READY",message:"Native chrome viewport has not matched measured layout") }
-                    try await Task.sleep(nanoseconds:16_000_000);continue
+            try requireMeasurement(measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
+                                                       ownerCurrent: measurementOwnerCurrent(entry, lifetime)))
+            if coordinates == "screen", measurement.observation == nil { return payload }
+            // Every atomic payload, even at unchanged dimensions, must still
+            // belong to the exact immutable native observation and page owner.
+            let state = measurement.observation == nil ? nil : codec(try entry.session.state()) as? [String: Any]
+            try requireMeasurement(measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
+                                                       ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state))
+            if let view = entry.view, let window = view.window,
+               view.bounds.width.isFinite, view.bounds.height.isFinite, view.bounds.width > 0, view.bounds.height > 0 {
+                let native = nativeMeasurement(view, window)
+                var measured = payload
+                if coordinates == "flutterClient" {
+                    guard let content = anchor["contentRect"] as? [String: Any],
+                          let left = IOSLayoutMeasurement.number(content["left"]),
+                          let top = IOSLayoutMeasurement.number(content["top"]) else { throw fail("Missing content rectangle") }
+                    let dx = native.left - left, dy = native.top - top
+                    for name in ["contentRect", "menuButtonRect"] {
+                        guard var rect = measured[name] as? [String: Any] else { throw fail("Missing chrome rectangle") }
+                        for key in ["left", "right"] { if let n = IOSLayoutMeasurement.number(rect[key]) { rect[key] = n + dx } }
+                        for key in ["top", "bottom"] { if let n = IOSLayoutMeasurement.number(rect[key]) { rect[key] = n + dy } }
+                        measured[name] = rect
+                    }
                 }
-                let origin = view.convert(view.bounds, to: window.screen.coordinateSpace).origin
-                let dx = Double(origin.x) - left.doubleValue, dy = Double(origin.y) - top.doubleValue
-                for name in ["contentRect", "menuButtonRect"] {
-                    guard var rect = payload[name] as? [String: Any] else { throw fail("Missing chrome rectangle") }
-                    for key in ["left", "right"] { if let n = rect[key] as? NSNumber { rect[key] = n.doubleValue + dx } }
-                    for key in ["top", "bottom"] { if let n = rect[key] as? NSNumber { rect[key] = n.doubleValue + dy } }
-                    payload[name] = rect
+                let content = measured["contentRect"] as? [String: Any]
+                let width = IOSLayoutMeasurement.number(content?["width"]), height = IOSLayoutMeasurement.number(content?["height"])
+                let sizeReady = prospective || (width != nil && height != nil
+                    && abs(width! - Double(view.bounds.width.rounded())) <= 0.5
+                    && abs(height! - Double(view.bounds.height.rounded())) <= 0.5)
+                let decision = measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
+                    ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state, native: native, chrome: measured)
+                try requireMeasurement(decision)
+                if sizeReady && decision == .ready {
+                    return measured
                 }
-                return payload
             }
-            guard Date() < deadline else { throw WeappContainerError(code: "ERR_NOT_READY", message: "Chrome needs an attached measured native view") }
-            try await Task.sleep(nanoseconds: 16_000_000)
+            let remaining = measurement.remainingNanoseconds(now: DispatchTime.now().uptimeNanoseconds)
+            if remaining == 0 { throw IOSLayoutMeasurementError.expired }
+            // Yield UIKit's actor so layout, close and view retirement can run.
+            do { try await Task.sleep(nanoseconds: min(16_000_000, remaining)) }
+            catch { throw IOSLayoutMeasurementError.cancelled }
         }
     }
     private func close(_ id: Int64, _ entry: Entry) async throws {
+        entry.measurementLifetime = UUID()
         if let operation = entry.closing { return try await operation.value }
         let operation = Task { @MainActor in
             try await entry.session.close()
@@ -314,3 +593,4 @@ import UIKit
         func view() -> UIView { label }
     }
 }
+#endif

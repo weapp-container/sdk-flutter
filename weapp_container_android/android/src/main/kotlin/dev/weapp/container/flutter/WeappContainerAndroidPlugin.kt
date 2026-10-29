@@ -1,11 +1,15 @@
 package dev.weapp.container.flutter
 
 import android.content.Context
+import android.content.res.Configuration
+import android.graphics.Point
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.View
+import android.view.WindowInsets
 import com.sonofmagic.weapp.container.sdk.*
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.*
@@ -17,6 +21,7 @@ import java.io.File
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
+import kotlin.math.roundToInt
 
 /** Per-engine registry. The native SDK owns worker/runtime/GLES operations. */
 class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
@@ -38,6 +43,8 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         val replies = mutableMapOf<String, HostReply>()
         var clientChrome: JSONObject? = null
         var preparedClientChrome: JSONObject? = null
+        var measurementEpoch = 0L
+        val measurements = mutableSetOf<CompletableFuture<JSONObject>>()
     }
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         app = binding.applicationContext
@@ -126,7 +133,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 }
                 "prepareHostLayout", "hostLayout" -> {
                     val supplied = jsonObject(args.filterKeys { it != "id" })
-                    measureLayout(entry, supplied).thenCompose { value ->
+                    measureLayout(entry, supplied, call.method == "prepareHostLayout").thenCompose { value ->
                         if (call.method == "prepareHostLayout") {
                             entry.preparedClientChrome = supplied.getJSONObject("chrome")
                             CompletableFuture.completedFuture(value)
@@ -194,15 +201,17 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         if((initial["revision"] as? Number)?.toLong()==raw.optLong("revision"))entry.clientChrome=raw
         entry.preparedClientChrome=null
     }
-    private fun measureLayout(entry: Entry, supplied: JSONObject): CompletableFuture<JSONObject> {
-        val observation = supplied.getJSONObject("observation")
+    private fun measureLayout(entry: Entry, supplied: JSONObject, prepareOnly: Boolean): CompletableFuture<JSONObject> {
+        val observation = JSONObject(supplied.getJSONObject("observation").toString())
+        val revision = supplied.getString("layoutRevision")
+        val coherence = HostLayoutCoherence(codec(observation) as Map<*, *>, revision, SystemClock.uptimeMillis(), prepareOnly = prepareOnly)
         val chrome = JSONObject(supplied.getJSONObject("chrome").toString())
         chrome.put("coordinateSpace", supplied.optString("coordinateSpace", "screen")); chrome.remove("observationId")
         // The atomic shell already moved this native view. Match its current
         // size and origin; old accepted chrome belongs to the previous shell.
-        return measureChrome(entry, chrome, false).thenApply { measured ->
+        return measureChrome(entry, chrome, false, coherence).thenApply { measured ->
             for (key in listOf("sessionId", "pageId")) { measured.remove(key); if (observation.has(key)) measured.put(key, observation.get(key)) }
-            JSONObject().put("schemaVersion", 1).put("layoutRevision", supplied.getString("layoutRevision"))
+            JSONObject().put("schemaVersion", 1).put("layoutRevision", revision)
                 .put("ownerId", observation.getString("ownerId")).put("surfaceGeneration", observation.getString("surfaceGeneration"))
                 .put("observationId", observation.getString("observationId")).put("windowMetrics", observation.getJSONObject("windowMetrics")).put("chrome", measured)
         }
@@ -213,55 +222,120 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
             entry.session.updateHostChrome(measured).thenApply { entry.clientChrome=raw;Unit }
         }
     }
-    private fun measureChrome(entry: Entry, payload: JSONObject, prospective: Boolean): CompletableFuture<JSONObject> {
-        val coordinates = payload.optString("coordinateSpace", "screen")
-        payload.remove("coordinateSpace")
-        if (coordinates == "screen") return CompletableFuture.completedFuture(payload)
-        require(coordinates == "flutterClient") { "Unknown chrome coordinate space" }
+    private data class NativeChromeMeasurement(val view: WeappContainerView, val x: Int, val y: Int, val density: Double, val metrics: JSONObject)
+    @Suppress("DEPRECATION")
+    private fun measureNativeChrome(view: WeappContainerView?): NativeChromeMeasurement? {
+        if (view == null || !view.isAttachedToWindow || !view.isAvailable || view.width <= 0 || view.height <= 0) return null
+        val display = view.display ?: return null
+        val insets = view.rootWindowInsets ?: return null
+        val extent = Point(); display.getRealSize(extent)
+        val density = view.resources.displayMetrics.density.toDouble()
+        if (!density.isFinite() || density <= 0 || extent.x <= 0 || extent.y <= 0) return null
+        val origin = IntArray(2); view.getLocationOnScreen(origin)
+        val viewport = ChromeViewport.measured(view.width, view.height, density)
+        val status = if (Build.VERSION.SDK_INT >= 30) insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top else insets.stableInsetTop
+        // Same measured fields and integer quantization as the immutable native
+        // SDK's WindowMetrics producer. That ABI deliberately has no safeArea.
+        val metrics = JSONObject().put("windowWidth", viewport.first).put("windowHeight", viewport.second)
+            .put("pixelRatio", density).put("screenWidth", (extent.x / density).roundToInt())
+            .put("screenHeight", (extent.y / density).roundToInt()).put("statusBarHeight", status / density)
+            .put("screenTop", origin[1] / density).put("deviceOrientation", if (view.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) "landscape" else "portrait")
+        return NativeChromeMeasurement(view, origin[0], origin[1], density, metrics)
+    }
+    private fun measureChrome(entry: Entry, supplied: JSONObject, prospective: Boolean, coherence: HostLayoutCoherence? = null): CompletableFuture<JSONObject> {
+        val source = JSONObject(supplied.toString())
+        val coordinates = source.optString("coordinateSpace", "screen")
+        source.remove("coordinateSpace")
+        require(coordinates == "screen" || coordinates == "flutterClient") { "Unknown chrome coordinate space" }
+        if (coordinates == "screen" && coherence == null) return CompletableFuture.completedFuture(source)
         val result = CompletableFuture<JSONObject>()
-        val deadline = SystemClock.uptimeMillis() + 10_000
-        fun observe() {
-            if (result.isDone) return
-            if (detached || entry.closing != null || !sessions.containsValue(entry)) {
-                result.completeExceptionally(ContainerException("ERR_CANCELLED", "Chrome owner retired before native measurement")); return
+        entry.measurements.add(result)
+        result.whenComplete { _, _ -> entry.measurements.remove(result) }
+        val epoch = entry.measurementEpoch
+        var ownedView = entry.view
+        val deadline = coherence?.deadlineMillis ?: (SystemClock.uptimeMillis() + 10_000)
+        lateinit var observe: () -> Unit
+        fun retired(): Boolean = detached || entry.closing != null || entry.retiringView != null ||
+            !sessions.containsValue(entry) || entry.measurementEpoch != epoch ||
+            (ownedView != null && entry.view !== ownedView)
+        fun stopIfExpiredOrRetired(): Boolean {
+            if (result.isDone) return true
+            if (retired()) {
+                result.completeExceptionally(ContainerException("ERR_CANCELLED", "Chrome owner retired before native measurement")); return true
             }
-            val view = entry.view
-            if (view == null || !view.isAttachedToWindow || view.width <= 0 || view.height <= 0) {
-                if (SystemClock.uptimeMillis() >= deadline) result.completeExceptionally(ContainerException("ERR_NOT_READY", "Chrome needs an attached measured native view"))
-                else main.postDelayed({ observe() }, 16)
-                return
+            if (SystemClock.uptimeMillis() >= deadline) {
+                result.completeExceptionally(ContainerException("ERR_NOT_READY", "Native chrome viewport has not matched measured layout")); return true
             }
+            return false
+        }
+        fun retry() { if (!stopIfExpiredOrRetired()) main.postDelayed({ observe() }, 16) }
+        fun translated(measurement: NativeChromeMeasurement): JSONObject? {
+            val payload = JSONObject(source.toString())
+            if (coordinates == "screen") return payload
+            val content = if (prospective) entry.clientChrome?.getJSONObject("contentRect") ?: payload.getJSONObject("contentRect") else payload.getJSONObject("contentRect")
+            if (!prospective && (kotlin.math.abs(measurement.view.width / measurement.density - content.getDouble("width")) > 1 || kotlin.math.abs(measurement.view.height / measurement.density - content.getDouble("height")) > 1)) return null
+            val targetContent = payload.getJSONObject("contentRect")
+            val viewport = if (prospective) ChromeViewport.prospective(targetContent.getDouble("width"), targetContent.getDouble("height"), measurement.density)
+                else Pair(measurement.metrics.getInt("windowWidth"), measurement.metrics.getInt("windowHeight"))
+            targetContent.put("width", viewport.first).put("height", viewport.second)
+            val dx = measurement.x / measurement.density - content.getDouble("left")
+            val dy = measurement.y / measurement.density - content.getDouble("top")
+            for (name in listOf("contentRect", "menuButtonRect")) {
+                val rect = payload.getJSONObject(name)
+                for (edge in listOf("left", "right")) if (rect.has(edge)) rect.put(edge, rect.getDouble(edge) + dx)
+                for (edge in listOf("top", "bottom")) if (rect.has(edge)) rect.put(edge, rect.getDouble(edge) + dy)
+            }
+            return payload
+        }
+        observe = observer@{
+            if (stopIfExpiredOrRetired()) return@observer
+            if (ownedView == null) ownedView = entry.view
             try {
-                val origin = IntArray(2); view.getLocationOnScreen(origin)
-                val density = view.resources.displayMetrics.density.toDouble()
-                val content = if(prospective) entry.clientChrome?.getJSONObject("contentRect")
-                    ?: payload.getJSONObject("contentRect")
-                    else payload.getJSONObject("contentRect")
-                if(!prospective&&(kotlin.math.abs(view.width/density-content.getDouble("width"))>1||kotlin.math.abs(view.height/density-content.getDouble("height"))>1)) {
-                    if(SystemClock.uptimeMillis()>=deadline)throw ContainerException("ERR_NOT_READY","Native chrome viewport has not matched measured layout")
-                    main.postDelayed({ observe() },16);return
+                if (coherence == null) {
+                    val measurement = measureNativeChrome(entry.view)
+                    val payload = measurement?.let(::translated)
+                    if (payload == null) retry() else result.complete(payload)
+                } else entry.session.state().whenComplete { state, failure ->
+                    if (!stopIfExpiredOrRetired()) {
+                        if (failure != null) result.completeExceptionally(failure)
+                        else try {
+                            // state() is the read-only owner-thread command.
+                            // Re-measure after its asynchronous reply; no UI
+                            // lock or old measured rectangle survives the wait.
+                            val measurement = measureNativeChrome(entry.view)
+                            val decision = coherence.decide(SystemClock.uptimeMillis(), measurement?.let { codec(it.metrics) as Map<*, *> }, codec(state) as Map<*, *>)
+                            when (decision) {
+                                HostLayoutCoherence.Decision.SUPERSEDED -> result.completeExceptionally(ContainerException("ERR_CANCELLED", "layout does not match the exact native observation and page owner"))
+                                HostLayoutCoherence.Decision.READY -> {
+                                    val payload = measurement?.let(::translated)
+                                    val content = payload?.getJSONObject("contentRect")
+                                    // Screen callers also pass this boundary;
+                                    // never return an internally mixed layout.
+                                    if (payload == null || content == null ||
+                                        !coherence.contentMatches(codec(content) as Map<*, *>, measurement.x / measurement.density, measurement.y / measurement.density)) retry()
+                                    else result.complete(payload)
+                                }
+                                else -> retry()
+                            }
+                        } catch (error: Throwable) { result.completeExceptionally(error) }
+                    }
                 }
-                val targetContent = payload.getJSONObject("contentRect")
-                val viewport = if (prospective) ChromeViewport.prospective(
-                    targetContent.getDouble("width"), targetContent.getDouble("height"), density
-                ) else ChromeViewport.measured(view.width, view.height, density)
-                // Only the content viewport is integer-quantized. Origins and
-                // the actual capsule stay measured screen-logical doubles.
-                targetContent.put("width", viewport.first).put("height", viewport.second)
-                val dx = origin[0] / density - content.getDouble("left")
-                val dy = origin[1] / density - content.getDouble("top")
-                for (name in listOf("contentRect", "menuButtonRect")) {
-                    val rect = payload.getJSONObject(name)
-                    for (edge in listOf("left", "right")) if (rect.has(edge)) rect.put(edge, rect.getDouble(edge) + dx)
-                    for (edge in listOf("top", "bottom")) if (rect.has(edge)) rect.put(edge, rect.getDouble(edge) + dy)
-                }
-                result.complete(payload)
             } catch (error: Throwable) { result.completeExceptionally(error) }
         }
+        // Bound even an outstanding read-only worker reply; retry callbacks
+        // and individual state requests never create a fresh budget.
+        val timeout = Runnable { stopIfExpiredOrRetired() }
+        main.postDelayed(timeout, (deadline - SystemClock.uptimeMillis()).coerceAtLeast(0))
+        result.whenComplete { _, _ -> main.removeCallbacks(timeout) }
         observe()
         return result
     }
+    private fun cancelMeasurements(entry: Entry) {
+        entry.measurementEpoch++
+        entry.measurements.toList().forEach { it.completeExceptionally(ContainerException("ERR_CANCELLED", "Chrome owner retired before native measurement")) }
+    }
     private fun retireView(entry: Entry): CompletableFuture<Unit> {
+        cancelMeasurements(entry)
         entry.retiringView?.let { return it }
         val view = entry.view ?: return CompletableFuture.completedFuture(Unit)
         val done = CompletableFuture<Unit>(); entry.retiringView = done

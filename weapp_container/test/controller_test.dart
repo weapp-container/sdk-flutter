@@ -18,6 +18,8 @@ class FakePlatform extends WeappContainerPlatform {
   bool cancelChrome = false;
   bool cancelLayout = false;
   Completer<void>? layoutGate;
+  Completer<void>? stateGate;
+  Object? stateFailure;
   Map<String, Object?> currentState = {
     'sessionId': 'session',
     'page': {'id': 2},
@@ -47,7 +49,11 @@ class FakePlatform extends WeappContainerPlatform {
         );
       }
     }
-    if (method == 'state') return currentState as T;
+    if (method == 'state') {
+      await stateGate?.future;
+      if (stateFailure != null) throw stateFailure!;
+      return currentState as T;
+    }
     if (method == 'create') return {'id': ++nextId} as T;
     if (method == 'inspectPackChrome') {
       return {'schemaVersion': 1, 'navigationStyle': 'custom', 'title': '测试'}
@@ -272,6 +278,79 @@ void main() {
   });
   tearDown(() async {
     await platform.source.close();
+  });
+  test('supersession query is read-only and freezes the submitted observation',
+      () async {
+    final controller = await WeappContainerController.create(
+      storageKey: null,
+      atomicHostLayout: true,
+    );
+    try {
+      final submitted = atomicObservation()..['observationId'] = '10';
+      final gate = Completer<void>();
+      platform.stateGate = gate;
+      platform.currentState = atomicState();
+      final baseline = platform.requests.length;
+      final checking = controller.wasHostLayoutSuperseded(
+        observation: submitted,
+        layoutRevision: '17',
+      );
+      submitted['observationId'] = '11';
+      gate.complete();
+      expect(await checking, isTrue);
+      expect(
+          platform.requests.skip(baseline).map((entry) => entry.$1), ['state']);
+      expect(platform.requests.last.$2, {'id': controller.id});
+    } finally {
+      await controller.close();
+    }
+  });
+  test('supersession query preserves unknown, faulted and unavailable states',
+      () async {
+    final controller = await WeappContainerController.create(
+      storageKey: null,
+      atomicHostLayout: true,
+    );
+    try {
+      platform.currentState = atomicState(pending: null);
+      expect(
+        await controller.wasHostLayoutSuperseded(
+            observation: atomicObservation(), layoutRevision: '17'),
+        isFalse,
+      );
+      for (final domain in [
+        'appServiceFault',
+        'viewFault',
+        'navigationFault'
+      ]) {
+        platform.currentState = atomicState();
+        (platform.currentState['executionHealth'] as Map)[domain] = {
+          'code': 'ERR_TIMEOUT',
+        };
+        expect(
+          await controller.wasHostLayoutSuperseded(
+              observation: atomicObservation(), layoutRevision: '17'),
+          isFalse,
+        );
+      }
+      platform.stateFailure = PlatformException(
+        code: 'ERR_NATIVE_STATE',
+        message: 'original read-only owner query failure',
+      );
+      await expectLater(
+        controller.wasHostLayoutSuperseded(
+            observation: atomicObservation(), layoutRevision: '17'),
+        throwsA(isA<PlatformException>()
+            .having((error) => error.code, 'code', 'ERR_NATIVE_STATE')),
+      );
+      expect(
+          platform.requests.where((entry) => entry.$1 == 'observeHostLayout'),
+          isEmpty);
+      expect(
+          platform.requests.where((entry) => entry.$1 == 'command'), isEmpty);
+    } finally {
+      await controller.close();
+    }
   });
   test(
     'measured-view preflight keeps host registration before guest startup',

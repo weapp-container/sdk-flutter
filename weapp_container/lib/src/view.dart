@@ -8,64 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'controller.dart';
-
-BigInt? _layoutSequence(Object? value) {
-  if (value is! String || !RegExp(r'^[1-9][0-9]{0,19}$').hasMatch(value)) {
-    return null;
-  }
-  final number = BigInt.parse(value);
-  return number <= BigInt.parse('18446744073709551615') ? number : null;
-}
-
-/// A cancellation is expected only when the native owner proves that this
-/// queued observation has been superseded. A healthy frame alone is not proof.
-bool _supersededHostLayout(Map<String, Object?> observation, String revision,
-    Map<String, Object?> state) {
-  final owner = observation['ownerId'];
-  final surface = _layoutSequence(observation['surfaceGeneration']);
-  final sequence = _layoutSequence(observation['observationId']);
-  final attemptedRevision = _layoutSequence(revision);
-  final currentSurface = state['hostSurface'];
-  final health = state['executionHealth'];
-  if (observation['schemaVersion'] != 1 ||
-      state['schemaVersion'] != 1 ||
-      _layoutSequence(owner) == null ||
-      surface == null ||
-      sequence == null ||
-      attemptedRevision == null ||
-      state['ownerId'] != owner ||
-      currentSurface is! Map ||
-      currentSurface['ownerId'] != owner ||
-      health is! Map ||
-      health['schemaVersion'] != 1 ||
-      health['requiresRestart'] != false ||
-      health['appServiceFault'] != null ||
-      health['viewFault'] != null ||
-      health['navigationFault'] != null) return false;
-  final activeSurface = _layoutSequence(currentSurface['surfaceGeneration']);
-  if (activeSurface == null || activeSurface < surface) return false;
-  bool newer(Object? value, {required bool accepted}) {
-    if (value is! Map ||
-        value['schemaVersion'] != 1 ||
-        value['ownerId'] != owner ||
-        value['surfaceGeneration'] != currentSurface['surfaceGeneration']) {
-      return false;
-    }
-    final next = _layoutSequence(value['observationId']);
-    if (next == null || next < sequence) return false;
-    final nextRevision =
-        accepted ? _layoutSequence(value['layoutRevision']) : null;
-    if (accepted && nextRevision == null) return false;
-    // Observation identity, rather than an arbitrary error message or a
-    // coincidentally identical rectangle, establishes native supersession.
-    if (next > sequence) return true;
-    if (!accepted || activeSurface != surface) return false;
-    return nextRevision != null && nextRevision > attemptedRevision;
-  }
-
-  return newer(state['pendingHostLayout'], accepted: false) ||
-      newer(state['acceptedLayout'], accepted: true);
-}
+import 'host_layout.dart';
 
 /// A real embedded platform view on mobile and a native texture on desktop.
 /// Give this widget finite positive constraints. Its controller outlives detach.
@@ -264,7 +207,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
             // event. Confirm the new owner instead of faulting a healthy page.
             final current = await _controller.state();
             if (_controller.atomicHostLayout &&
-                _supersededHostLayout(
+                supersededHostLayout(
                     observation!, geometryRevision.toString(), current)) {
               _hostChromeRevision = null;
               _hostObservationId = null;

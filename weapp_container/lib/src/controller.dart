@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:weapp_container_platform_interface/weapp_container_platform_interface.dart';
+import 'host_layout.dart';
 
 class WeappContainerEvent {
   WeappContainerEvent(Map<String, Object?> fields)
@@ -254,6 +256,19 @@ class WeappContainerController {
 
   Future<void> requestHostLayoutObservation() =>
       _invoke<void>('observeHostLayout');
+
+  /// Prove that this submitted measurement was superseded. The dedicated
+  /// state query does not request another observation, renew its deadline,
+  /// acknowledge presentation, or mutate the navigation/candidate attempt.
+  Future<bool> wasHostLayoutSuperseded({
+    required Map<String, Object?> observation,
+    required String layoutRevision,
+  }) async {
+    if (!atomicHostLayout) return false;
+    final captured =
+        (jsonDecode(jsonEncode(observation)) as Map).cast<String, Object?>();
+    return supersededHostLayout(captured, layoutRevision, await state());
+  }
 
   /// Native adapter supplies screen-coordinate conversion. No partial geometry
   /// or guessed display metrics cross the atomic host layout boundary.

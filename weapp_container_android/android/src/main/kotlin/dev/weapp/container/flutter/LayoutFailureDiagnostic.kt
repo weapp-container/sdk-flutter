@@ -15,6 +15,8 @@ internal object LayoutFailureDiagnostic {
         KnownFailure("ERR_INVALID_REQUEST", "initial host chrome dimensions differ from window metrics", "chrome-viewport-mismatch"),
         KnownFailure("ERR_INVALID_REQUEST", "invalid host chrome geometry", "invalid-chrome-geometry"),
         KnownFailure("ERR_INVALID_REQUEST", "host chrome geometry exceeds logical bounds", "chrome-bounds"),
+        KnownFailure("ERR_INVALID_REQUEST", "content rectangle disagrees with native window metrics", "layout-content-metrics-mismatch"),
+        KnownFailure("ERR_INVALID_REQUEST", "a navigation measurement must commit through completeNavigationLayout", "layout-navigation-measurement-required"),
         KnownFailure("ERR_CANCELLED", "no pending native layout observation", "layout-no-pending-observation"),
         KnownFailure("ERR_CANCELLED", "layout does not match the exact native observation and page owner", "layout-observation-superseded"),
         KnownFailure("ERR_CANCELLED", "host layout surface owner changed", "layout-surface-owner-changed"),
@@ -33,6 +35,10 @@ internal object LayoutFailureDiagnostic {
         val text = value as? String ?: return null
         return text.takeIf { positiveDecimal.matches(it) && BigInteger(it) <= maximum }
     }
+    private fun boundedNumber(value: Any?): String? {
+        val number = (value as? Number)?.toDouble() ?: return null
+        return number.takeIf { it.isFinite() && it >= -16384 && it <= 16384 }?.toString()
+    }
     fun stamp(method: String?, arguments: Map<*, *>?): String {
         if (method !in setOf("hostLayout", "prepareHostLayout")) return ""
         val observation = arguments?.get("observation") as? Map<*, *> ?: return ""
@@ -40,6 +46,14 @@ internal object LayoutFailureDiagnostic {
             decimal(observation[name])?.let { "$name=$it" }
         }.toMutableList()
         decimal(arguments["layoutRevision"])?.let { fields.add("layoutRevision=$it") }
+        val metrics = observation["windowMetrics"] as? Map<*, *>
+        for ((field, label) in listOf("windowWidth" to "requestedWindowWidth", "windowHeight" to "requestedWindowHeight", "screenTop" to "requestedScreenTop", "pixelRatio" to "requestedPixelRatio")) {
+            boundedNumber(metrics?.get(field))?.let { fields.add("$label=$it") }
+        }
+        val content = (arguments["chrome"] as? Map<*, *>)?.get("contentRect") as? Map<*, *>
+        for ((field, label) in listOf("width" to "requestedChromeWidth", "height" to "requestedChromeHeight")) {
+            boundedNumber(content?.get(field))?.let { fields.add("$label=$it") }
+        }
         return fields.joinToString(" ", prefix = if (fields.isEmpty()) "" else " ")
     }
 }

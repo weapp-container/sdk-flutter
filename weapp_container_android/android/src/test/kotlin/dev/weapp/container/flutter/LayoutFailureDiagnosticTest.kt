@@ -28,6 +28,8 @@ class LayoutFailureDiagnosticTest {
             Triple("ERR_INVALID_REQUEST", "initial host chrome dimensions differ from window metrics", "chrome-viewport-mismatch"),
             Triple("ERR_INVALID_REQUEST", "invalid host chrome geometry", "invalid-chrome-geometry"),
             Triple("ERR_INVALID_REQUEST", "host chrome geometry exceeds logical bounds", "chrome-bounds"),
+            Triple("ERR_INVALID_REQUEST", "content rectangle disagrees with native window metrics", "layout-content-metrics-mismatch"),
+            Triple("ERR_INVALID_REQUEST", "a navigation measurement must commit through completeNavigationLayout", "layout-navigation-measurement-required"),
             Triple("ERR_CANCELLED", "no pending native layout observation", "layout-no-pending-observation"),
             Triple("ERR_CANCELLED", "layout does not match the exact native observation and page owner", "layout-observation-superseded"),
             Triple("ERR_CANCELLED", "host layout surface owner changed", "layout-surface-owner-changed"),
@@ -87,5 +89,17 @@ class LayoutFailureDiagnosticTest {
             assertEquals("native-operation", LayoutFailureDiagnostic.reason(code, "unreviewed native failure"))
             assertEquals("native-operation", LayoutFailureDiagnostic.reason(code, "$code: unreviewed native failure"))
         }
+    }
+    @Test fun requestedViewportLogsOnlyBoundedNumericFields() {
+        val stamp = LayoutFailureDiagnostic.stamp("prepareHostLayout", mapOf(
+            "observation" to mapOf("ownerId" to "7", "surfaceGeneration" to "5", "observationId" to "10",
+                "windowMetrics" to mapOf("windowWidth" to 390, "windowHeight" to 700, "screenTop" to 68.5, "pixelRatio" to 2.75,
+                    "private" to "must-not-log")), "layoutRevision" to "17",
+            "chrome" to mapOf("contentRect" to mapOf("width" to 389.75, "height" to 700, "private" to "must-not-log"))))
+        assertEquals(" ownerId=7 surfaceGeneration=5 observationId=10 layoutRevision=17 requestedWindowWidth=390.0 requestedWindowHeight=700.0 requestedScreenTop=68.5 requestedPixelRatio=2.75 requestedChromeWidth=389.75 requestedChromeHeight=700.0", stamp)
+        assertEquals("", LayoutFailureDiagnostic.stamp("hostLayout", mapOf("observation" to mapOf(
+            "windowMetrics" to mapOf("windowWidth" to "token=secret", "windowHeight" to Double.NaN,
+                "screenTop" to Double.POSITIVE_INFINITY, "pixelRatio" to 16385)),
+            "chrome" to mapOf("contentRect" to mapOf("width" to "private", "height" to -16385)))))
     }
 }

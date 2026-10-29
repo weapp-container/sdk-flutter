@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.5.1",
-  "sourceBaseCommit": "d2f79493e46f4791d8a55282b2adf96235689cfe",
-  "review": "Match reviewed layout diagnostics by exact error code and canonical bare or single FFI Display-prefixed message; unknown errors remain unclassified.",
+  "sourceBaseCommit": "fc5ef4a8aae97d93618cdedb8c7d5f9f79d75d16",
+  "review": "Reviewed native host-layout coherence: frozen observations and chrome, readonly owner proofs, independently measured window metrics, strict ready and typed-empty authority, absolute retry deadlines and lifetime cancellation, plus shared Dart supersession proof and bounded layout diagnostics; immutable native runtime unchanged.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -383,14 +383,20 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "262e42820dbcdcbc3788b249fc3a5b014fe9cc93383baade2d30b0fd985edb2c",
-      "size": 14922,
+      "sha256": "0d0d911b74482e5b89340435824532ea1ca849f756b22146e426ff6945d41407",
+      "size": 15554,
+      "mode": "100644"
+    },
+    {
+      "path": "weapp_container/lib/src/host_layout.dart",
+      "sha256": "5c8aa69d57511a6f1ac97882a3a6d547affd34c72a2851b5c68d8edc8c7068f5",
+      "size": 4378,
       "mode": "100644"
     },
     {
       "path": "weapp_container/lib/src/view.dart",
-      "sha256": "bf63d2dabdb4c147eb11fe7377f8318d68af926f3c37d3e2e639fa0c4f978e05",
-      "size": 22790,
+      "sha256": "56e003d62f6689e03b32dbcdb06bea86755787a5bbe95295d0d0b068841e1180",
+      "size": 20307,
       "mode": "100644"
     },
     {
@@ -407,8 +413,14 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "a2b66516b8774aab0ef6cd56156b80c0754d94e5a36a3b48ded0a3d5a3f3c9ea",
-      "size": 48700,
+      "sha256": "e6e378df7f7bab099e15df67a2620b7fe2955fa48b4e7eb856e86163d2542267",
+      "size": 51345,
+      "mode": "100644"
+    },
+    {
+      "path": "weapp_container/test/host_layout_test.dart",
+      "sha256": "00af01b7b26b195acc7df08badb7c47f239371b4593b0b1efc4e615fd30f5b90",
+      "size": 6003,
       "mode": "100644"
     },
     {
@@ -460,15 +472,21 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/HostLayoutCoherence.kt",
+      "sha256": "7042bf41037effdd63c32faafc78c290e49acf5f5f2028a62b22fbc39e213b02",
+      "size": 9973,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/LayoutFailureDiagnostic.kt",
-      "sha256": "e348918732220adb8928e4868bcacf7ebfede45fc29280314fc703671e5f2ca2",
-      "size": 3127,
+      "sha256": "0789a46f7f6ea450e236bb73667c9722bd3f4d422fdda1022711e9db962533ba",
+      "size": 4295,
       "mode": "100644"
     },
     {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "e1eafe6d652a5b4446d7663df5ffabb3c8449fe0ae4f823c6ff1750095370221",
-      "size": 22052,
+      "sha256": "b0b9b9026e9bd73667b2c68cf105b92f70a7be322588f9bb26108b281d41aa22",
+      "size": 27614,
       "mode": "100644"
     },
     {
@@ -478,9 +496,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_android/android/src/test/kotlin/dev/weapp/container/flutter/HostLayoutCoherenceTest.kt",
+      "sha256": "15815756db3922c372ceac236f394c7e32290ac2b6ac121e2d71f34c4ef0744d",
+      "size": 12074,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_android/android/src/test/kotlin/dev/weapp/container/flutter/LayoutFailureDiagnosticTest.kt",
-      "sha256": "71bce5d1e70a9f68d5e2a55b668e7b3b7c625546464e55675b821a8416d6921c",
-      "size": 6562,
+      "sha256": "8e77eb00e50bdd6e9aee5601349b6b510328370272db9719a4e3000779cfec1c",
+      "size": 8074,
       "mode": "100644"
     },
     {
@@ -521,8 +545,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "07fa52bac0b5eef991c0bab635e25a1784db0b03c814e46e61c6ef21b274f1bb",
-      "size": 21992,
+      "sha256": "88d198d1c3a1e23a5c8ab6d10be2ec21d34cc3694114d6416c31c24563d01801",
+      "size": 40535,
       "mode": "100644"
     },
     {
@@ -541,6 +565,18 @@
       "path": "weapp_container_ios/pubspec.yaml",
       "sha256": "8d4e92011573d3ea84e687d7bbbb71add6b876bb92fa3487a58a5a0f373f32c1",
       "size": 390,
+      "mode": "100644"
+    },
+    {
+      "path": "weapp_container_ios/tests/LayoutCoherenceChecks.swift",
+      "sha256": "e9a14a5e64c13b844f7ebd8607fac683f3c772fc3afec7bfb2b063343b990252",
+      "size": 21423,
+      "mode": "100644"
+    },
+    {
+      "path": "weapp_container_ios/tests/test_layout_coherence.py",
+      "sha256": "b00c7c0491210badbd38aa5ff9aa5656e48b8ec94de050850908a797bfaa762e",
+      "size": 3368,
       "mode": "100644"
     },
     {
