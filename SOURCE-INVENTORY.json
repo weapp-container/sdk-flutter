@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.4",
-  "sourceBaseCommit": "803422e4c87ee8d6f5819c5e73d5f989af81c99b",
-  "review": "Review actual preview.4 runtime archive pins: ten locally produced, size/SHA-256 verified archives from clean core bf9b8cf86461485969d4f6d71d8b66e4de8d6519. Publication, download and device acceptance require separate evidence.",
+  "sourceBaseCommit": "d011e76f09a799e5938237ab2cabf4c7e05f0cdd",
+  "review": "Review actual preview.4 runtime archive pins and standalone package preflight fixture updated to supply the complete source-inventory dependency and real reviewed Git provenance; installed native bytes remain ignored.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -269,8 +269,8 @@
     },
     {
       "path": "tests/prepare-native.test.mjs",
-      "sha256": "b36a7ba1f31c1c780df1ba3a6304f3c19aadadf9ed03b48aae4e9b5bebb0e65a",
-      "size": 9709,
+      "sha256": "f3d68f3ad47fb97e1f9176637fb41f20322aee7bd2e0ed7bde5eddd9d2e894a3",
+      "size": 10831,
       "mode": "100644"
     },
     {
