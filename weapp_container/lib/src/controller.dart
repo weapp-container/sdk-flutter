@@ -325,12 +325,17 @@ class WeappContainerController {
     required Map<String, Object?> observation,
     required Map<String, Object?> chrome,
     required String layoutRevision,
+    Map<String, Object?>? restartAttempt,
   }) async =>
       Map<String, Object?>.from((await _invoke<Map>('prepareHostLayout', {
         'observation': observation,
         'chrome': chrome,
         'layoutRevision': layoutRevision,
         'coordinateSpace': 'flutterClient',
+        // This is only a measurement claim. Native code verifies the current
+        // owner journal and health; it never grants input or presentation.
+        if (restartAttempt != null)
+          'restartAttempt': _layoutCopy(restartAttempt),
       }))!);
 
   Future<void> updateHostLayout({

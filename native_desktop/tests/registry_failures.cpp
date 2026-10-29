@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <thread>
 using namespace weapp::flutter;
 struct weapp_container_sdk_session {
@@ -22,6 +23,10 @@ static int host_attach_failures = 0, host_observe_failures = 0;
 static std::vector<std::pair<std::string, Json>> operations;
 static Json native_config;
 static bool presentation_required = false, ack_advances_frame = false;
+// Passive responses can be independently corrupted without mutating an SDK
+// session, creating an observation or executing a guest in these checks.
+static Json passive_state, passive_attempt;
+static bool passive_query_failure = false;
 static int32_t response(weapp_container_sdk_buffer *out, Json value,
                         bool ok = true, const char *code = "ERR_INJECTED") {
   auto bytes =
@@ -98,6 +103,10 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
     s->attempts[id] = receipt;
     return response(b, receipt);
   }
+  if (op == "queryDevPackAttempt" && passive_query_failure)
+    return response(b, nullptr, false, "ERR_TIMEOUT");
+  if (op == "queryDevPackAttempt" && !passive_attempt.is_null())
+    return response(b, passive_attempt);
   if (op == "queryDevPackAttempt")
     return response(b, s->attempts.at(arguments.at("attemptId").get<std::string>()));
   if (op == "applyDevPackAttempt") {
@@ -176,6 +185,8 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
     s->closed = true;
     return response(b, {{"pending", false}});
   }
+  if (op == "state" && !passive_state.is_null())
+    return response(b, passive_state);
   if (op == "state" || op == "presented")
     return response(b, {{"hostSurface", s->host_surface}, {"pendingHostLayout", s->pending_layout},
                         {"acceptedLayout", s->accepted_layout}, {"acceptedPackIdentity", s->accepted_pack},
@@ -193,9 +204,12 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
     s->events = Json::array();
     return response(b, events);
   }
-  if (op == "capabilities")
-    return response(b,
-                    {{"pack", {{"devReload", {{"protocolVersion", "1.0"}}}}}});
+  if (op == "capabilities") {
+    Json caps = {{"pack", {{"devReload", {{"protocolVersion", "1.0"}}}}}};
+    caps["chrome"] = {{"nativeMarker", "retained"},
+      {"atomicLayout", {{"protocolVersion", "1.0"}}}};
+    return response(b, caps);
+  }
   return response(b, nullptr);
 }
 int32_t weapp_container_sdk_session_destroy(weapp_container_sdk_session **s,
@@ -302,6 +316,13 @@ static Json call(Registry &r, const char *method, Json args,
   assert(bool(status) == success);
   return result;
 }
+static Status call_status(Registry &r, const char *method, Json args) {
+  bool done = false;
+  Status status;
+  r.invoke(method, args, [&](Status value, Json) { done = true; status = value; });
+  assert(done);
+  return status;
+}
 static Json metrics(int64_t id) {
   return {{"id", id},
           {"windowWidth", 320},
@@ -352,6 +373,17 @@ int main() {
         {"bottom", 40},
         {"width", 88},
         {"height", 32}}}};
+  {
+    auto window = metrics(prepared_id); window.erase("id");
+    const Json observation{{"schemaVersion", 1}, {"ownerId", "3"},
+      {"surfaceGeneration", "2"}, {"observationId", "10"}, {"windowMetrics", window}};
+    const auto prior_operations = operations.size();
+    const auto malformed = call_status(*r, "prepareHostLayout", {{"id", prepared_id},
+      {"observation", observation}, {"chrome", geometry}, {"layoutRevision", "20"},
+      {"restartAttempt", nullptr}});
+    assert(!malformed && malformed.code == "ERR_PROTOCOL_VERSION");
+    assert(operations.size() == prior_operations && live_sessions == 0);
+  }
   auto geometry_args = geometry;
   geometry_args["id"] = prepared_id;
   auto prospective = geometry;
@@ -373,11 +405,19 @@ int main() {
             [&](Status status, Json result) {
               assert(status &&
                      result["pack"]["devReload"]["protocolVersion"] == "1.0");
+              assert(result["chrome"]["atomicLayout"]["preparedRestartMeasurement"] == "1.0");
+              assert(result["chrome"]["nativeMarker"] == "retained");
               prepared = true;
             });
   assert(!prepared && live_sessions == 0 && guest_loads == 0);
   call(*r, "attach", metrics(prepared_id));
   assert(prepared && live_sessions == 1 && guest_loads == 0);
+  for (const auto *method : {"prepareView", "capabilities"}) {
+    const auto caps = call(*r, method, {{"id", prepared_id}});
+    assert(caps["chrome"]["atomicLayout"]["preparedRestartMeasurement"] == "1.0");
+    assert(caps["chrome"]["atomicLayout"]["protocolVersion"] == "1.0");
+    assert(caps["chrome"]["nativeMarker"] == "retained");
+  }
   assert(native_config["host"]["windowWidth"] == 320);
   assert(native_config["host"]["windowHeight"] == 440);
   assert(native_config["host"]["displayMetrics"]["pixelRatio"] == 2);
@@ -796,6 +836,217 @@ int main() {
     assert(lifecycle_count() == before_visibility + (fault_cover ? 0 : 1));
     call(*r, "close", {{"id", id}}); r.reset();
     assert(live_sessions == 0 && probe->live == 0);
+  }
+  // A restart proof authorizes preparation only after passive native journal
+  // and current-state checks. It never creates/commits a layout or clears a
+  // fault. The legacy no-proof behavior is deliberately unchanged.
+  {
+    r = make(); call(*r, "initialize", {{"clientEpoch", "prepared-restart"}});
+    id = call(*r, "create", {{"storageKey", nullptr},
+      {"hostLayout", {{"protocolVersion", "1.0"}, {"atomic", true}}}})["id"].get<int64_t>();
+    call(*r, "attach", metrics(id)); call(*r, "prepareView", {{"id", id}});
+    auto observed = call(*r, "state", {{"id", id}}).at("pendingHostLayout");
+    observed["sessionId"] = "current-session"; observed["pageId"] = 1;
+    const Json accepted{{"root", std::string(64, 'a')}, {"acceptedPackRevision", "9"}, {"sessionId", "current-session"}};
+    const Json proof{{"schemaVersion", 1}, {"ownerId", observed.at("ownerId")},
+      {"attemptId", "7"}, {"targetRoot", std::string(64, 'b')}, {"expectedAccepted", accepted}};
+    const Json receipt{{"schemaVersion", 1}, {"ownerId", proof.at("ownerId")}, {"attemptId", "7"},
+      {"status", "prepared"}, {"operation", "load"}, {"reloadKind", "restart"},
+      {"targetRoot", proof.at("targetRoot")}, {"expectedAccepted", accepted}, {"acceptedPackIdentity", accepted}};
+    const Json health{{"schemaVersion", 1}, {"requiresRestart", false},
+      {"appServiceFault", nullptr}, {"viewFault", nullptr}, {"navigationFault", nullptr}};
+    const Json state{{"schemaVersion", 1}, {"status", "ready"}, {"ownerId", observed.at("ownerId")},
+      {"hostSurface", {{"ownerId", observed.at("ownerId")}, {"surfaceGeneration", observed.at("surfaceGeneration")}}},
+      {"sessionId", "current-session"}, {"page", {{"id", 1}}}, {"pendingHostLayout", observed},
+      {"acceptedLayout", nullptr}, {"acceptedPackIdentity", accepted}, {"executionHealth", health},
+      {"pendingNavigation", nullptr}, {"inputEnabled", false}, {"presentationEnabled", false}};
+    auto faulted = state;
+    faulted["executionHealth"]["requiresRestart"] = true;
+    faulted["executionHealth"]["viewFault"] = {{"domain", "view"}, {"code", "ERR_TIMEOUT"},
+      {"message", "deadline"}, {"requiresRestart", true}};
+    auto proof_geometry = geometry;
+    proof_geometry["contentRect"]["top"] = observed.at("windowMetrics").at("screenTop");
+    const Json request{{"id", id}, {"observation", observed}, {"chrome", proof_geometry},
+      {"layoutRevision", "20"}, {"restartAttempt", proof}};
+    const auto before_loads = guest_loads;
+    std::size_t checked = 0;
+    auto check = [&](const Json &arguments, const Json &current, const Json &journal,
+                     const char *error = nullptr, const char *method = "prepareHostLayout") {
+      passive_state = current; passive_attempt = journal;
+      const auto start = operations.size();
+      bool done = false;
+      r->invoke(method, arguments, [&](Status status, Json result) {
+        done = true;
+        if (error) assert(!status && status.code == error);
+        else {
+          assert(status && result.at("observationId") == arguments.at("observation").at("observationId"));
+          assert(result.at("windowMetrics") == arguments.at("observation").at("windowMetrics"));
+          auto expected_chrome = arguments.at("chrome");
+          for (const auto *field : {"sessionId", "pageId", "observationId"}) expected_chrome.erase(field);
+          for (const auto *field : {"sessionId", "pageId"})
+            if (arguments.at("observation").contains(field)) expected_chrome[field] = arguments.at("observation").at(field);
+          assert(result.at("chrome") == expected_chrome);
+        }
+      });
+      assert(done && passive_state == current && passive_attempt == journal);
+      for (auto i = start; i < operations.size(); ++i)
+        assert(operations[i].first == "queryDevPackAttempt" || operations[i].first == "state");
+      if (operations.size() != start) {
+        assert(operations[start].first == "queryDevPackAttempt");
+        const auto &lookup = arguments.at("restartAttempt");
+        assert(operations[start].second == Json({{"ownerId", lookup.at("ownerId")}, {"attemptId", lookup.at("attemptId")}}));
+        assert(operations.size() - start == (passive_query_failure ? 1 : 2));
+        if (!passive_query_failure)
+          assert(operations[start + 1].first == "state" && operations[start + 1].second == Json::object());
+      }
+      assert(guest_loads == before_loads && live_sessions == 1);
+      ++checked;
+    };
+    for (const auto *operation : {"load", "applyDevPack"}) {
+      auto journal = receipt; journal["operation"] = operation;
+      check(request, faulted, journal);
+      check(request, state, journal);
+    }
+    for (const auto *field : {"schemaVersion", "ownerId", "attemptId", "targetRoot", "expectedAccepted"}) {
+      auto malformed = request; malformed["restartAttempt"].erase(field);
+      const auto start = operations.size();
+      check(malformed, faulted, receipt, "ERR_PROTOCOL_VERSION");
+      assert(operations.size() == start);
+    }
+    for (const auto &entry : std::vector<std::pair<std::string, Json>>{
+      {"schemaVersion", true}, {"ownerId", "03"}, {"ownerId", "18446744073709551616"},
+      {"attemptId", 7}, {"targetRoot", std::string(64, 'B')}, {"extra", true},
+      {"expectedAccepted", {{"root", std::string(64, 'a')}, {"acceptedPackRevision", "09"}, {"sessionId", "current-session"}}}}) {
+      auto malformed = request; malformed["restartAttempt"][entry.first] = entry.second;
+      check(malformed, faulted, receipt, "ERR_PROTOCOL_VERSION");
+    }
+    for (const auto *field : {"root", "acceptedPackRevision", "sessionId"}) {
+      auto malformed = request; malformed["restartAttempt"]["expectedAccepted"].erase(field);
+      check(malformed, faulted, receipt, "ERR_PROTOCOL_VERSION");
+    }
+    auto malformed_identity = request;
+    malformed_identity["restartAttempt"]["expectedAccepted"]["extra"] = true;
+    check(malformed_identity, faulted, receipt, "ERR_PROTOCOL_VERSION");
+    for (const auto &context : {Json(), proof}) {
+      auto generic = request; generic["restartAttempt"] = context;
+      const auto start = operations.size();
+      check(generic, faulted, receipt, "ERR_PROTOCOL_VERSION", "hostLayout");
+      assert(operations.size() == start);
+    }
+    for (const auto *status : {"applying", "accepted", "rejected", "cancelled", "notSeen", "notRetained"}) {
+      auto journal = receipt; journal["status"] = status;
+      check(request, faulted, journal, "ERR_CANCELLED");
+    }
+    for (const auto &entry : std::vector<std::pair<std::string, Json>>{
+      {"schemaVersion", true}, {"ownerId", "4"}, {"attemptId", "8"}, {"targetRoot", std::string(64, 'c')},
+      {"operation", "navigate"}, {"reloadKind", "inPlace"}, {"expectedAccepted", nullptr}, {"acceptedPackIdentity", nullptr}}) {
+      auto journal = receipt; journal[entry.first] = entry.second;
+      check(request, faulted, journal, "ERR_CANCELLED");
+    }
+    for (const auto *field : {"expectedAccepted", "acceptedPackIdentity"}) {
+      auto journal = receipt; journal.erase(field);
+      check(request, faulted, journal, "ERR_CANCELLED");
+    }
+    for (const auto *field : {"root", "acceptedPackRevision", "sessionId"}) {
+      auto current = faulted; current["acceptedPackIdentity"][field] = field == std::string("root") ? std::string(64, 'c') : "10";
+      check(request, current, receipt, "ERR_CANCELLED");
+    }
+    auto current = faulted; current["ownerId"] = "4";
+    check(request, current, receipt, "ERR_CANCELLED");
+    std::vector<Json> invalid;
+    for (const auto *field : {"pendingNavigation", "pendingHostLayout", "executionHealth", "sessionId", "page"}) {
+      current = faulted; current.erase(field); invalid.push_back(current);
+    }
+    current = faulted; current["pendingNavigation"] = {{"ticket", "8"}}; invalid.push_back(current);
+    current = faulted; current["acceptedLayout"] = observed; current["pendingHostLayout"] = nullptr; invalid.push_back(current);
+    current = faulted; current["hostSurface"]["ownerId"] = "4"; invalid.push_back(current);
+    current = faulted; current["hostSurface"]["surfaceGeneration"] = "99"; invalid.push_back(current);
+    current = faulted; current["sessionId"] = "other"; invalid.push_back(current);
+    current = faulted; current["page"]["id"] = 2; invalid.push_back(current);
+    for (const auto *field : {"observationId", "ownerId", "surfaceGeneration", "sessionId", "pageId"}) {
+      current = faulted; current["pendingHostLayout"][field] = field == std::string("pageId") ? Json(2) : Json("99"); invalid.push_back(current);
+    }
+    current = faulted; current["pendingHostLayout"]["windowMetrics"]["screenTop"] = 3; invalid.push_back(current);
+    for (const auto *field : {"inputEnabled", "presentationEnabled"}) {
+      current = faulted; current[field] = true; invalid.push_back(current);
+      current = faulted; current.erase(field); invalid.push_back(current);
+    }
+    for (const auto *field : {"appServiceFault", "navigationFault"}) {
+      current = faulted; current["executionHealth"][field] = {{"domain", "appService"}}; invalid.push_back(current);
+      current = faulted; current["executionHealth"].erase(field); invalid.push_back(current);
+    }
+    for (const auto &entry : std::vector<std::pair<std::string, Json>>{
+      {"domain", "appService"}, {"requiresRestart", 1}, {"requiresRestart", false}, {"code", "BAD"},
+      {"code", "ERR_bad"}, {"message", ""}, {"message", 1}}) {
+      current = faulted; current["executionHealth"]["viewFault"][entry.first] = entry.second; invalid.push_back(current);
+    }
+    current = faulted; current["executionHealth"]["requiresRestart"] = 1; invalid.push_back(current);
+    current = faulted; current["executionHealth"]["schemaVersion"] = true; invalid.push_back(current);
+    for (const auto &value : invalid) check(request, value, receipt, "ERR_NOT_READY");
+    auto stale = request; stale["observation"]["windowMetrics"]["screenTop"] = 3;
+    current = faulted; current["pendingHostLayout"] = stale["observation"];
+    check(stale, current, receipt, "ERR_NOT_READY");
+    for (const auto &entry : std::vector<std::pair<std::string, Json>>{
+      {"width", 0}, {"width", 320.51}, {"height", 440.51}, {"top", 0.51},
+      {"left", std::numeric_limits<double>::infinity()}, {"height", true}}) {
+      auto bad_geometry = request; bad_geometry["chrome"]["contentRect"][entry.first] = entry.second;
+      check(bad_geometry, faulted, receipt, "ERR_NOT_READY");
+    }
+    for (const auto &entry : std::vector<std::pair<std::string, Json>>{
+      {"width", 0}, {"right", 313}, {"bottom", 41}, {"left", "224"},
+      {"top", std::numeric_limits<double>::quiet_NaN()}}) {
+      auto bad_geometry = request; bad_geometry["chrome"]["menuButtonRect"][entry.first] = entry.second;
+      check(bad_geometry, faulted, receipt, "ERR_NOT_READY");
+    }
+    for (const auto *field : {"contentRect", "menuButtonRect"}) {
+      auto bad_geometry = request; bad_geometry["chrome"].erase(field);
+      check(bad_geometry, faulted, receipt, "ERR_NOT_READY");
+    }
+    auto subpixel = request;
+    subpixel["chrome"]["contentRect"]["width"] = 320.5;
+    subpixel["chrome"]["contentRect"]["height"] = 439.5;
+    subpixel["chrome"]["contentRect"]["top"] = 0.5;
+    // Caller chrome ownership is intentionally replaced from the exact SDK
+    // observation, as in Android/iOS; it is never used as authorization.
+    subpixel["chrome"]["observationId"] = "stale-caller-value";
+    subpixel["chrome"]["sessionId"] = "stale-caller-session";
+    subpixel["chrome"]["pageId"] = 999;
+    check(subpixel, faulted, receipt);
+    auto empty_request = request; empty_request["restartAttempt"]["expectedAccepted"] = nullptr;
+    for (const auto *field : {"sessionId", "pageId"}) empty_request["observation"].erase(field);
+    auto empty = state; empty["status"] = "empty";
+    for (const auto *field : {"executionHealth", "sessionId", "page", "acceptedPackIdentity", "acceptedLayout"}) empty[field] = nullptr;
+    empty["pendingHostLayout"] = empty_request["observation"];
+    auto empty_receipt = receipt; empty_receipt["expectedAccepted"] = nullptr; empty_receipt["acceptedPackIdentity"] = nullptr;
+    check(empty_request, empty, empty_receipt);
+    for (const auto *field : {"sessionId", "pageId"}) {
+      empty_request["observation"][field] = nullptr; empty["pendingHostLayout"][field] = nullptr;
+    }
+    check(empty_request, empty, empty_receipt);
+    current = faulted; current["acceptedPackIdentity"] = nullptr;
+    check(empty_request, current, empty_receipt, "ERR_NOT_READY");
+    passive_query_failure = true;
+    check(request, faulted, receipt, "ERR_TIMEOUT");
+    passive_query_failure = false;
+    auto legacy = request; legacy.erase("restartAttempt");
+    const auto prior_queries = operations.size();
+    check(legacy, faulted, receipt);
+    legacy["chrome"]["contentRect"]["width"] = 0;
+    check(legacy, faulted, receipt);
+    assert(operations.size() == prior_queries);
+    passive_state = nullptr; passive_attempt = nullptr;
+    call(*r, "close", {{"id", id}}); r.reset();
+    assert(live_sessions == 0 && probe->live == 0);
+    // A valid proof cannot initialize an unmeasured native owner as a side effect.
+    r = make(); call(*r, "initialize", {{"clientEpoch", "proof-no-ensure"}});
+    id = call(*r, "create", {{"storageKey", nullptr}})["id"].get<int64_t>();
+    auto unmeasured = request; unmeasured["id"] = id;
+    const auto before_unmeasured = operations.size();
+    const auto absent_owner = call_status(*r, "prepareHostLayout", unmeasured);
+    assert(!absent_owner && absent_owner.code == "ERR_NOT_LOADED");
+    assert(live_sessions == 0 && operations.size() == before_unmeasured);
+    call(*r, "close", {{"id", id}}); r.reset();
+    std::cout << "PASS " << checked << " prepared restart proof checks, exact passive journal/CAS/tuple, typed View fault, empty owner and legacy isolation\n";
   }
   PresentationFeedback bounded;
   auto older = bounded.submitted({1, 1}), newer = bounded.submitted({1, 2});

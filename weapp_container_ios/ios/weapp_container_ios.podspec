@@ -4,7 +4,7 @@ unless File.file?(native_framework)
 end
 Pod::Spec.new do |s|
   s.name = 'weapp_container_ios'
-  s.version = '0.1.0-preview.5.1'
+  s.version = '0.1.0-preview.5.2'
   s.summary = 'Native Weapp Container SDK for Flutter iOS'
   s.homepage = 'https://github.com/weapp-container/sdk-flutter'
   s.license = { :type => 'Apache-2.0', :file => '../LICENSE' }

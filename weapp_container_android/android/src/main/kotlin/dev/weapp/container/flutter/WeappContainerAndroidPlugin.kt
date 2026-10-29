@@ -156,9 +156,9 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 "setForeground" -> session.setForeground(args["foreground"] as Boolean)
                 "flushStorage" -> session.flushStorage()
                 "state" -> session.state()
-                "capabilities" -> session.capabilities()
+                "capabilities" -> session.capabilities().thenApply(::preparedRestartCapabilities)
                 "observeHostLayout" -> session.requestHostLayoutObservation()
-                "prepareView" -> session.prepareView()
+                "prepareView" -> session.prepareView().thenApply(::preparedRestartCapabilities)
                 "detachView" -> retireView(entry)
                 "close" -> closeEntry(id, entry)
                 "completeHostCall" -> {
@@ -204,17 +204,29 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
     private fun measureLayout(entry: Entry, supplied: JSONObject, prepareOnly: Boolean): CompletableFuture<JSONObject> {
         val observation = JSONObject(supplied.getJSONObject("observation").toString())
         val revision = supplied.getString("layoutRevision")
-        val coherence = HostLayoutCoherence(codec(observation) as Map<*, *>, revision, SystemClock.uptimeMillis(), prepareOnly = prepareOnly)
+        if (supplied.has("restartAttempt") && !prepareOnly) throw ContainerException("ERR_PROTOCOL_VERSION", "restartAttempt is valid only for prepareHostLayout")
+        val restartAttempt = if (supplied.has("restartAttempt")) supplied.optJSONObject("restartAttempt")
+            ?: throw ContainerException("ERR_PROTOCOL_VERSION", "restartAttempt must be an explicit versioned object") else null
+        val proof = restartAttempt?.let { codec(it) as Map<*, *> }
+        if (proof != null && !HostLayoutCoherence.validRestartProof(proof)) throw ContainerException("ERR_PROTOCOL_VERSION", "Invalid prepared restart measurement proof")
+        val coherence = HostLayoutCoherence(codec(observation) as Map<*, *>, revision, SystemClock.uptimeMillis(), prepareOnly = prepareOnly, restartAttempt = proof)
         val chrome = JSONObject(supplied.getJSONObject("chrome").toString())
         chrome.put("coordinateSpace", supplied.optString("coordinateSpace", "screen")); chrome.remove("observationId")
         // The atomic shell already moved this native view. Match its current
         // size and origin; old accepted chrome belongs to the previous shell.
-        return measureChrome(entry, chrome, false, coherence).thenApply { measured ->
+        return measureChrome(entry, chrome, false, coherence, restartAttempt).thenApply { measured ->
             for (key in listOf("sessionId", "pageId")) { measured.remove(key); if (observation.has(key)) measured.put(key, observation.get(key)) }
             JSONObject().put("schemaVersion", 1).put("layoutRevision", revision)
                 .put("ownerId", observation.getString("ownerId")).put("surfaceGeneration", observation.getString("surfaceGeneration"))
                 .put("observationId", observation.getString("observationId")).put("windowMetrics", observation.getJSONObject("windowMetrics")).put("chrome", measured)
         }
+    }
+    private fun preparedRestartCapabilities(value: JSONObject): JSONObject {
+        val result = JSONObject(value.toString())
+        val chrome = result.optJSONObject("chrome") ?: JSONObject().also { result.put("chrome", it) }
+        val atomic = chrome.optJSONObject("atomicLayout") ?: JSONObject().also { chrome.put("atomicLayout", it) }
+        atomic.put("preparedRestartMeasurement", "1.0")
+        return result
     }
     private fun updateChrome(entry: Entry, payload: JSONObject): CompletableFuture<Unit> {
         val raw=JSONObject(payload.toString())
@@ -242,7 +254,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
             .put("screenTop", origin[1] / density).put("deviceOrientation", if (view.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) "landscape" else "portrait")
         return NativeChromeMeasurement(view, origin[0], origin[1], density, metrics)
     }
-    private fun measureChrome(entry: Entry, supplied: JSONObject, prospective: Boolean, coherence: HostLayoutCoherence? = null): CompletableFuture<JSONObject> {
+    private fun measureChrome(entry: Entry, supplied: JSONObject, prospective: Boolean, coherence: HostLayoutCoherence? = null, restartAttempt: JSONObject? = null): CompletableFuture<JSONObject> {
         val source = JSONObject(supplied.toString())
         val coordinates = source.optString("coordinateSpace", "screen")
         source.remove("coordinateSpace")
@@ -295,29 +307,43 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                     val measurement = measureNativeChrome(entry.view)
                     val payload = measurement?.let(::translated)
                     if (payload == null) retry() else result.complete(payload)
-                } else entry.session.state().whenComplete { state, failure ->
-                    if (!stopIfExpiredOrRetired()) {
-                        if (failure != null) result.completeExceptionally(failure)
-                        else try {
-                            // state() is the read-only owner-thread command.
-                            // Re-measure after its asynchronous reply; no UI
-                            // lock or old measured rectangle survives the wait.
-                            val measurement = measureNativeChrome(entry.view)
-                            val decision = coherence.decide(SystemClock.uptimeMillis(), measurement?.let { codec(it.metrics) as Map<*, *> }, codec(state) as Map<*, *>)
-                            when (decision) {
-                                HostLayoutCoherence.Decision.SUPERSEDED -> result.completeExceptionally(ContainerException("ERR_CANCELLED", "layout does not match the exact native observation and page owner"))
-                                HostLayoutCoherence.Decision.READY -> {
-                                    val payload = measurement?.let(::translated)
-                                    val content = payload?.getJSONObject("contentRect")
-                                    // Screen callers also pass this boundary;
-                                    // never return an internally mixed layout.
-                                    if (payload == null || content == null ||
-                                        !coherence.contentMatches(codec(content) as Map<*, *>, measurement.x / measurement.density, measurement.y / measurement.density)) retry()
-                                    else result.complete(payload)
-                                }
-                                else -> retry()
+                } else {
+                    fun assess(snapshot: JSONObject, finalProof: Boolean) {
+                        if (stopIfExpiredOrRetired()) return
+                        val state = snapshot.getJSONObject("state")
+                        val receipt = snapshot.optJSONObject("journalReceipt")
+                        // Every poll re-reads both journal and state in one
+                        // passive native-owner task. Re-measure only after its
+                        // reply; no geometry or healthy result is cached.
+                        val measurement = measureNativeChrome(entry.view)
+                        val decision = coherence.decide(SystemClock.uptimeMillis(), measurement?.let { codec(it.metrics) as Map<*, *> }, codec(state) as Map<*, *>, journalReceipt = receipt?.let { codec(it) as Map<*, *> })
+                        when (decision) {
+                            HostLayoutCoherence.Decision.SUPERSEDED -> result.completeExceptionally(ContainerException("ERR_CANCELLED", "layout does not match the exact native observation and page owner"))
+                            HostLayoutCoherence.Decision.CANCELLED -> result.completeExceptionally(ContainerException("ERR_CANCELLED", "Prepared restart journal authority changed before native measurement"))
+                            HostLayoutCoherence.Decision.READY -> {
+                                val payload = measurement?.let(::translated)
+                                val content = payload?.getJSONObject("contentRect")
+                                if (payload == null || content == null ||
+                                    !coherence.contentMatches(codec(content) as Map<*, *>, measurement.x / measurement.density, measurement.y / measurement.density)) retry()
+                                else if (restartAttempt != null && !finalProof) {
+                                    // A cancellation/replacement between polls
+                                    // cannot be hidden by an earlier receipt.
+                                    entry.session.hostLayoutPreparationState(restartAttempt).whenComplete { latest, error ->
+                                        if (!stopIfExpiredOrRetired()) {
+                                            if (error != null) result.completeExceptionally(error)
+                                            else try { assess(latest, true) } catch (failure: Throwable) { result.completeExceptionally(failure) }
+                                        }
+                                    }
+                                } else result.complete(payload)
                             }
-                        } catch (error: Throwable) { result.completeExceptionally(error) }
+                            else -> retry()
+                        }
+                    }
+                    entry.session.hostLayoutPreparationState(restartAttempt).whenComplete { snapshot, failure ->
+                        if (!stopIfExpiredOrRetired()) {
+                            if (failure != null) result.completeExceptionally(failure)
+                            else try { assess(snapshot, false) } catch (error: Throwable) { result.completeExceptionally(error) }
+                        }
                     }
                 }
             } catch (error: Throwable) { result.completeExceptionally(error) }

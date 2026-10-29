@@ -56,9 +56,9 @@ function provenance() {
   if (revision.status || dirty.status) throw new Error('Unable to record source provenance');
   return { sourceCommit: revision.stdout.trim(), sourceDirty: Boolean(dirty.stdout.trim()), sourceInventorySha256: reviewedSource.inventorySha256 };
 }
-function receipt(path, status) {
+function receipt(path, status, producerVersion = SDK_VERSION) {
   const value = JSON.parse(readFileSync(path, 'utf8'));
-  if (value.status !== status || value.sdkVersion !== '0.1.0-preview.5.1') throw new Error(`Invalid SDK receipt ${path}`);
+  if (value.status !== status || value.sdkVersion !== producerVersion) throw new Error(`Invalid SDK receipt ${path}`);
   if (value.native) {
     if (!value.native.length || value.native.some(r => r.status !== 'built' || r.sourceDirty !== false || !/^[a-f0-9]{40}$/.test(r.sourceCommit))) throw new Error(`Native SDK lacks clean committed provenance: ${path}`);
   } else if (value.sourceDirty !== false || !/^[a-f0-9]{40}$/.test(value.sourceCommit)) throw new Error(`SDK lacks clean committed provenance: ${path}`);
@@ -90,7 +90,7 @@ if (!args.includes('--skip-packages')) {
   prepare(status, 'android', () => {
     const maven = join(nativeInstallation('android'), 'maven');
     verifyNativeInstallation(dirname(maven), 'android', manifestPath);
-    const source = resolve(option('--android-receipt', join(dirname(maven), 'validation.json')));
+    const source = resolve(option('--android-receipt', join(dirname(maven), 'distribution.json')));
     const value = receipt(source, 'passed'); verifyFiles(maven, value.mavenArtifacts);
     cpSync(maven, join(packages, 'weapp_container_android/native/maven'), { recursive: true });
     return { source, receiptSha256: hash(source), sourceCommit: value.sourceCommit, artifactCount: value.mavenArtifacts.length };
@@ -106,7 +106,7 @@ if (!args.includes('--skip-packages')) {
     prepare(status, target, () => {
       const native = nativeInstallation(target);
       verifyNativeInstallation(native, target, manifestPath);
-      const source = join(native, 'package.json'); const value = receipt(source, 'verified'); verifyFiles(native, value.artifacts);
+      const source = join(native, 'package.json'); const value = receipt(source, 'verified', '0.1.0-preview.5.1'); verifyFiles(native, value.artifacts);
       run(process.execPath, [join(packages, 'native_desktop/prepare.mjs'), '--target', target, '--from', native]);
       return { source, receiptSha256: hash(source), nativeSourceCommits: value.native.map(r => r.sourceCommit), artifactCount: value.artifacts.length };
     });
@@ -117,7 +117,7 @@ if (!args.includes('--skip-packages')) {
   if (existsSync(finalPackages)) renameSync(finalPackages, previous);
   renameSync(packages, finalPackages); packages = finalPackages;
   rmSync(previous, { recursive: true, force: true });
-  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: '0.1.0-preview.5.1', ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
+  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: SDK_VERSION, ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
 }
 if (!existsSync(join(consumer, 'pubspec.yaml'))) {
   run(flutter, ['create', '--no-pub', '--platforms=android,ios,macos,windows,linux', '--org', 'dev.weapp', '--project-name', 'weapp_sdk_consumer', consumer]);

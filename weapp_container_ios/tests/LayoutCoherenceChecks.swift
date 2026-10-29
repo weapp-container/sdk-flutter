@@ -38,19 +38,194 @@ import Foundation
         "menuButtonRect": ["left": 280, "right": 360, "top": 44, "bottom": 76, "width": 80, "height": 32],
     ] }
     static var native: IOSLayoutMeasurement.Native { .init(windowMetrics: metrics, left: 0, top: 88) }
-    static func gate(_ old: [String: Any] = observation, revision: String = "20", preparing: Bool = false) throws -> IOSLayoutMeasurement {
-        try .init(observation: old, layoutRevision: revision, preparingNavigation: preparing, nowNanoseconds: 100)
+    static var acceptedIdentity: [String: Any] { [
+        "root": String(repeating: "a", count: 64), "acceptedPackRevision": "9", "sessionId": "current-session",
+    ] }
+    static var restartAttempt: [String: Any] { [
+        "schemaVersion": 1, "ownerId": "3", "attemptId": "7", "targetRoot": String(repeating: "b", count: 64),
+        "expectedAccepted": acceptedIdentity,
+    ] }
+    static var preparedReceipt: [String: Any] { [
+        "schemaVersion": 1, "ownerId": "3", "attemptId": "7", "status": "prepared", "operation": "load",
+        "targetRoot": String(repeating: "b", count: 64), "expectedAccepted": acceptedIdentity,
+        "acceptedPackIdentity": acceptedIdentity, "reloadKind": "restart",
+    ] }
+    static var poisonedState: [String: Any] {
+        var current = state, broken = health
+        broken["requiresRestart"] = true
+        broken["viewFault"] = ["domain": "view", "code": "ERR_TIMEOUT", "message": "deadline", "requiresRestart": true]
+        current["executionHealth"] = broken; current["acceptedPackIdentity"] = acceptedIdentity
+        current["inputEnabled"] = false; current["presentationEnabled"] = false
+        return current
+    }
+    static func gate(_ old: [String: Any] = observation, revision: String = "20", preparing: Bool = false,
+                     restart: [String: Any]? = nil) throws -> IOSLayoutMeasurement {
+        try .init(observation: old, layoutRevision: revision, preparingNavigation: preparing,
+                  restartAttempt: restart, nowNanoseconds: 100)
     }
     static func decision(_ gate: IOSLayoutMeasurement, _ current: [String: Any] = state,
                          native: IOSLayoutMeasurement.Native = native, chrome: [String: Any] = chrome,
-                         now: UInt64 = 101, alive: Bool = true) -> IOSLayoutMeasurement.Decision {
-        gate.decision(nowNanoseconds: now, ownerCurrent: alive, state: current, native: native, chrome: chrome)
+                         now: UInt64 = 101, alive: Bool = true, receipt: [String: Any]? = nil) -> IOSLayoutMeasurement.Decision {
+        gate.decision(nowNanoseconds: now, ownerCurrent: alive, state: current, native: native, chrome: chrome,
+                      restartReceipt: receipt)
     }
     static func accepted(revision: String = "20") -> [String: Any] {
         var value = observation; value.removeValue(forKey: "sessionId"); value.removeValue(forKey: "pageId")
         value["layoutRevision"] = revision; value["chrome"] = chrome; return value
     }
     static func main() throws {
+        try check("restart-capability-preserves-core-fields-and-requires-enabled-atomic-layout") {
+            let base: [String: Any] = ["engine": "quickjs", "chrome": ["protocolVersion": "1.0", "atomicLayout": ["enabled": true, "protocolVersion": "1.0"]]]
+            let merged = IOSLayoutMeasurement.mergeAdapterCapabilities(base)
+            try expect(merged["engine"] as? String == "quickjs")
+            let chrome = merged["chrome"] as! [String: Any], atomic = chrome["atomicLayout"] as! [String: Any]
+            try expect(atomic["protocolVersion"] as? String == "1.0" && atomic["preparedRestartMeasurement"] as? String == "1.0")
+            for enabled in [false as Any, 1, NSNull()] {
+                let value = IOSLayoutMeasurement.mergeAdapterCapabilities(["chrome": ["atomicLayout": ["enabled": enabled, "preparedRestartMeasurement": "forged"]]])
+                let chrome = value["chrome"] as! [String: Any], atomic = chrome["atomicLayout"] as! [String: Any]
+                try expect(atomic["preparedRestartMeasurement"] == nil)
+            }
+            try expect(IOSLayoutMeasurement.mergeAdapterCapabilities(["legacy": true])["legacy"] as? Bool == true)
+        }
+        try check("prepared-restart-can-measure-view-only-fault-without-clearing-it") {
+            let before = try IOSLayoutMeasurement.snapshot(poisonedState)
+            let frozen = try gate(preparing: true, restart: restartAttempt)
+            try expect(decision(frozen, poisonedState, receipt: preparedReceipt) == .ready)
+            try expect(NSDictionary(dictionary: poisonedState).isEqual(to: before))
+            var apply = preparedReceipt; apply["operation"] = "applyDevPack"
+            try expect(decision(frozen, poisonedState, receipt: apply) == .ready)
+        }
+        try check("generic-and-navigation-preparation-never-inherit-restart-permission") {
+            try expect(decision(try gate(), poisonedState) == .wait)
+            try expect(decision(try gate(preparing: true), poisonedState) == .wait)
+            do { _ = try gate(restart: restartAttempt); throw Failure(message: "Generic proof was accepted") }
+            catch IOSLayoutMeasurementError.invalidSnapshot {}
+            var navigating = poisonedState; navigating["pendingNavigation"] = ["ticket": "8"]
+            try expect(decision(try gate(preparing: true, restart: restartAttempt), navigating, receipt: preparedReceipt) == .wait)
+        }
+        try check("prepared-restart-requires-live-native-journal-not-caller-claim") {
+            let frozen = try gate(preparing: true, restart: restartAttempt)
+            try expect(decision(frozen, poisonedState) == .wait)
+            for status in ["applying", "accepted", "rejected", "cancelled", "notSeen", "notRetained"] {
+                var receipt = preparedReceipt; receipt["status"] = status
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+            }
+            for (field, value) in [("ownerId", "4"), ("attemptId", "8"), ("targetRoot", String(repeating: "c", count: 64)),
+                                   ("operation", "navigate"), ("reloadKind", "inPlace")] {
+                var receipt = preparedReceipt; receipt[field] = value
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+            }
+        }
+        try check("prepared-restart-pins-receipt-and-current-accepted-cas") {
+            let frozen = try gate(preparing: true, restart: restartAttempt)
+            for field in ["expectedAccepted", "acceptedPackIdentity"] {
+                var receipt = preparedReceipt; receipt[field] = ["root": String(repeating: "c", count: 64), "acceptedPackRevision": "10", "sessionId": "other"]
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+            }
+            for key in ["root", "acceptedPackRevision", "sessionId"] {
+                var current = poisonedState, identity = acceptedIdentity
+                identity[key] = key == "root" ? String(repeating: "c", count: 64) : "10"
+                current["acceptedPackIdentity"] = identity
+                try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+            }
+        }
+        try check("healthy-and-explicit-empty-restarts-still-require-authentic-context") {
+            var current = state; current["acceptedPackIdentity"] = acceptedIdentity
+            let frozen = try gate(preparing: true, restart: restartAttempt)
+            try expect(decision(frozen, current, receipt: preparedReceipt) == .ready)
+            var context = restartAttempt; context["expectedAccepted"] = NSNull()
+            var receipt = preparedReceipt; receipt["expectedAccepted"] = NSNull(); receipt["acceptedPackIdentity"] = NSNull()
+            var observed = observation; observed.removeValue(forKey: "sessionId"); observed.removeValue(forKey: "pageId")
+            current = state; current["status"] = "empty"; current["executionHealth"] = NSNull()
+            current["sessionId"] = NSNull(); current["page"] = NSNull(); current["acceptedPackIdentity"] = NSNull()
+            current["pendingHostLayout"] = observed
+            try expect(decision(try gate(observed, preparing: true, restart: context), current, receipt: receipt) == .ready)
+            receipt["status"] = "cancelled"
+            try expect(decision(try gate(observed, preparing: true, restart: context), current, receipt: receipt) == .cancelled)
+        }
+        try check("restart-proof-is-immutable-and-receipt-fields-are-explicit") {
+            let identity = NSMutableDictionary(dictionary: acceptedIdentity)
+            var context = restartAttempt; context["expectedAccepted"] = identity
+            let frozen = try gate(preparing: true, restart: context)
+            identity["sessionId"] = "mutated-after-call"; context["attemptId"] = "99"
+            try expect(decision(frozen, poisonedState, receipt: preparedReceipt) == .ready)
+            for key in ["schemaVersion", "ownerId", "attemptId", "targetRoot", "expectedAccepted", "acceptedPackIdentity", "operation", "reloadKind", "status"] {
+                var receipt = preparedReceipt; receipt.removeValue(forKey: key)
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+            }
+            var receipt = preparedReceipt; receipt["schemaVersion"] = true
+            try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+        }
+        try check("prepared-restart-rejects-malformed-context-and-empty-fault-bypass") {
+            var malformed: [[String: Any]] = []
+            for key in ["schemaVersion", "ownerId", "attemptId", "targetRoot", "expectedAccepted"] {
+                var value = restartAttempt; value.removeValue(forKey: key); malformed.append(value)
+            }
+            for (key, value) in [("schemaVersion", true as Any), ("ownerId", "03"), ("attemptId", 7),
+                                 ("targetRoot", String(repeating: "A", count: 64)), ("extra", true)] {
+                var context = restartAttempt; context[key] = value; malformed.append(context)
+            }
+            for value in malformed {
+                do { _ = try gate(preparing: true, restart: value); throw Failure(message: "Malformed restart accepted") }
+                catch IOSLayoutMeasurementError.invalidSnapshot {}
+            }
+            var empty = restartAttempt; empty["expectedAccepted"] = NSNull()
+            var receipt = preparedReceipt; receipt["expectedAccepted"] = NSNull(); receipt["acceptedPackIdentity"] = NSNull()
+            var current = poisonedState; current["acceptedPackIdentity"] = NSNull()
+            try expect(decision(try gate(preparing: true, restart: empty), current, receipt: receipt) == .cancelled)
+        }
+        try check("prepared-restart-cannot-bypass-other-or-malformed-execution-faults") {
+            let frozen = try gate(preparing: true, restart: restartAttempt)
+            var invalid: [[String: Any]] = []
+            for domain in ["appServiceFault", "navigationFault"] {
+                var current = poisonedState, broken = current["executionHealth"] as! [String: Any]
+                broken[domain] = ["domain": domain, "code": "ERR_ENGINE", "requiresRestart": true]
+                current["executionHealth"] = broken; invalid.append(current)
+            }
+            for (key, value) in [("domain", "appService" as Any), ("requiresRestart", 1), ("requiresRestart", false), ("code", "BAD"), ("message", " \n\t")] {
+                var current = poisonedState, broken = current["executionHealth"] as! [String: Any], view = broken["viewFault"] as! [String: Any]
+                view[key] = value; broken["viewFault"] = view; current["executionHealth"] = broken; invalid.append(current)
+            }
+            for key in ["appServiceFault", "navigationFault", "schemaVersion", "requiresRestart", "viewFault"] {
+                var current = poisonedState, broken = current["executionHealth"] as! [String: Any]
+                broken.removeValue(forKey: key); current["executionHealth"] = broken; invalid.append(current)
+            }
+            for key in ["inputEnabled", "presentationEnabled"] {
+                var current = poisonedState; current[key] = true; invalid.append(current)
+                current = poisonedState; current.removeValue(forKey: key); invalid.append(current)
+            }
+            for current in invalid { try expect(decision(frozen, current, receipt: preparedReceipt) == .wait) }
+        }
+        try check("prepared-restart-keeps-exact-pending-native-owner-and-measurement") {
+            let frozen = try gate(preparing: true, restart: restartAttempt)
+            for (key, value) in [("sessionId", "other-session" as Any), ("pageId", 2), ("surfaceGeneration", "3"),
+                                 ("observationId", "11"), ("ownerId", "4")] {
+                var current = poisonedState, pending = observation; pending[key] = value; current["pendingHostLayout"] = pending
+                try expect(decision(frozen, current, receipt: preparedReceipt) != .ready)
+            }
+            var current = poisonedState; current["pendingHostLayout"] = NSNull(); current["acceptedLayout"] = accepted()
+            try expect(decision(frozen, current, receipt: preparedReceipt) == .wait)
+            current = poisonedState; current["sessionId"] = "other-session"
+            try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+            current = poisonedState; current["page"] = ["id": 2]
+            try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+            for key in ["sessionId", "page"] {
+                current = poisonedState; current.removeValue(forKey: key)
+                try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+            }
+            var wrongSubject = observation; wrongSubject["sessionId"] = "other-session"
+            try expect(decision(try gate(wrongSubject, preparing: true, restart: restartAttempt), poisonedState, receipt: preparedReceipt) == .cancelled)
+            var moved = metrics; moved["screenTop"] = 90
+            try expect(decision(frozen, poisonedState, native: .init(windowMetrics: moved, left: 0, top: 90), receipt: preparedReceipt) == .wait)
+        }
+        try check("prepared-restart-authority-cannot-survive-terminal-race-or-new-deadline") {
+            let frozen = try gate(preparing: true, restart: restartAttempt)
+            try expect(decision(frozen, poisonedState, receipt: preparedReceipt) == .ready)
+            var cancelled = preparedReceipt; cancelled["status"] = "cancelled"
+            try expect(decision(frozen, poisonedState, receipt: cancelled) == .cancelled)
+            try expect(decision(frozen, poisonedState, now: frozen.deadlineNanoseconds, receipt: preparedReceipt) == .expired)
+            try expect(decision(frozen, poisonedState, alive: false, receipt: preparedReceipt) == .cancelled)
+        }
         try check("exact-pending-tuple-and-native-measurement-ready") { try expect(decision(try gate()) == .ready) }
         try check("old-observation-new-sized-view-never-ready") {
             var next = metrics; next["windowWidth"] = 700

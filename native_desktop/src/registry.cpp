@@ -4,6 +4,193 @@
 #include <utility>
 
 namespace weapp::flutter {
+namespace {
+bool schema_one(const Json &value) { return value.is_number() && value == 1; }
+bool decimal_identity(const Json &value) {
+  if (!value.is_string()) return false;
+  const auto &text = value.get_ref<const std::string &>();
+  constexpr const char *maximum = "18446744073709551615";
+  if (text.empty() || text.size() > 20 || text.front() == '0') return false;
+  for (const auto digit : text) if (digit < '0' || digit > '9') return false;
+  return text.size() < 20 || text <= maximum;
+}
+bool root_identity(const Json &value) {
+  if (!value.is_string()) return false;
+  const auto &text = value.get_ref<const std::string &>();
+  if (text.size() != 64) return false;
+  for (const auto digit : text)
+    if (!((digit >= '0' && digit <= '9') || (digit >= 'a' && digit <= 'f'))) return false;
+  return true;
+}
+bool exact_keys(const Json &value, std::initializer_list<const char *> keys) {
+  if (!value.is_object() || value.size() != keys.size()) return false;
+  for (const auto *key : keys) if (!value.contains(key)) return false;
+  return true;
+}
+bool accepted_identity(const Json &value) {
+  return exact_keys(value, {"root", "acceptedPackRevision", "sessionId"}) &&
+    root_identity(value.at("root")) && decimal_identity(value.at("acceptedPackRevision")) &&
+    value.at("sessionId").is_string() && !value.at("sessionId").get_ref<const std::string &>().empty();
+}
+bool explicit_null(const Json &value, const char *key) {
+  return value.contains(key) && value.at(key).is_null();
+}
+bool same_optional(const Json &left, const Json &right, const char *key) {
+  const auto a = left.find(key), b = right.find(key);
+  const bool absent_a = a == left.end() || a->is_null();
+  const bool absent_b = b == right.end() || b->is_null();
+  return absent_a || absent_b ? absent_a && absent_b : *a == *b;
+}
+bool valid_metrics(const Json &metrics) {
+  if (!metrics.is_object() || metrics.size() < 8 || metrics.size() > 9) return false;
+  for (const auto *key : {"windowWidth", "windowHeight", "screenWidth", "screenHeight",
+                         "pixelRatio", "statusBarHeight", "screenTop"}) {
+    if (!metrics.contains(key) || !metrics.at(key).is_number() ||
+        !std::isfinite(metrics.at(key).get<double>())) return false;
+  }
+  for (const auto *key : {"windowWidth", "windowHeight", "screenWidth", "screenHeight"}) {
+    const auto number = metrics.at(key).get<double>();
+    if (number <= 0 || number > 16384 || std::floor(number) != number) return false;
+  }
+  if (metrics.at("pixelRatio").get<double>() <= 0 || metrics.at("statusBarHeight").get<double>() < 0 ||
+      !metrics.contains("deviceOrientation") ||
+      (metrics.at("deviceOrientation") != "portrait" && metrics.at("deviceOrientation") != "landscape")) return false;
+  if (metrics.size() == 9 && !metrics.contains("safeArea")) return false;
+  if (metrics.contains("safeArea") && !metrics.at("safeArea").is_null()) {
+    const auto &area = metrics.at("safeArea");
+    if (!exact_keys(area, {"left", "top", "right", "bottom", "width", "height"})) return false;
+    for (const auto &field : area.items())
+      if (!field.value().is_number() || !std::isfinite(field.value().get<double>())) return false;
+    if (area.at("width").get<double>() < 0 || area.at("height").get<double>() < 0) return false;
+  }
+  return true;
+}
+bool valid_restart_proof(const Json &proof) {
+  return exact_keys(proof, {"schemaVersion", "ownerId", "attemptId", "targetRoot", "expectedAccepted"}) &&
+    schema_one(proof.at("schemaVersion")) && decimal_identity(proof.at("ownerId")) &&
+    decimal_identity(proof.at("attemptId")) && root_identity(proof.at("targetRoot")) &&
+    (proof.at("expectedAccepted").is_null() || accepted_identity(proof.at("expectedAccepted")));
+}
+bool restart_geometry_matches(const Json &chrome, const Metrics &metrics) {
+  if (!chrome.is_object() || !chrome.contains("contentRect") || !chrome.contains("menuButtonRect")) return false;
+  const auto &content = chrome.at("contentRect"), &menu = chrome.at("menuButtonRect");
+  for (const auto *rectangle : {&content, &menu}) {
+    if (!rectangle->is_object()) return false;
+    for (const auto *key : {"left", "top", "width", "height"})
+      if (!rectangle->contains(key) || !rectangle->at(key).is_number() ||
+          !std::isfinite(rectangle->at(key).get<double>())) return false;
+    for (const auto *key : {"width", "height"})
+      if (rectangle->at(key).get<double>() <= 0 || rectangle->at(key).get<double>() > 16384) return false;
+  }
+  for (const auto *key : {"right", "bottom"})
+    if (!menu.contains(key) || !menu.at(key).is_number() || !std::isfinite(menu.at(key).get<double>())) return false;
+  if (std::abs(menu.at("right").get<double>() - menu.at("left").get<double>() - menu.at("width").get<double>()) > 1e-6 ||
+      std::abs(menu.at("bottom").get<double>() - menu.at("top").get<double>() - menu.at("height").get<double>()) > 1e-6) return false;
+  // Registry metrics contain the current native-derived screenTop, but no
+  // independently measured screen X origin. Never claim X-origin proof here.
+  return std::abs(content.at("width").get<double>() - metrics.value.at("windowWidth").get<double>()) <= 0.5 &&
+    std::abs(content.at("height").get<double>() - metrics.value.at("windowHeight").get<double>()) <= 0.5 &&
+    std::abs(content.at("top").get<double>() - metrics.value.at("screenTop").get<double>()) <= 0.5;
+}
+bool healthy(const Json &health) {
+  return health.is_object() && health.contains("schemaVersion") && schema_one(health.at("schemaVersion")) &&
+    health.contains("requiresRestart") && health.at("requiresRestart") == false &&
+    explicit_null(health, "appServiceFault") && explicit_null(health, "viewFault") && explicit_null(health, "navigationFault");
+}
+bool view_fault_only(const Json &state, const Json &expected) {
+  if (!accepted_identity(expected) || !state.contains("inputEnabled") || state.at("inputEnabled") != false ||
+      !state.contains("presentationEnabled") || state.at("presentationEnabled") != false ||
+      !state.contains("executionHealth")) return false;
+  const auto &health = state.at("executionHealth");
+  if (!health.is_object() || !health.contains("schemaVersion") || !schema_one(health.at("schemaVersion")) ||
+      !health.contains("requiresRestart") || health.at("requiresRestart") != true ||
+      !explicit_null(health, "appServiceFault") || !explicit_null(health, "navigationFault") ||
+      !health.contains("viewFault") || !health.at("viewFault").is_object()) return false;
+  const auto &fault = health.at("viewFault");
+  if (!fault.contains("domain") || fault.at("domain") != "view" || !fault.contains("requiresRestart") || fault.at("requiresRestart") != true ||
+      !fault.contains("code") || !fault.at("code").is_string() ||
+      !fault.contains("message") || !fault.at("message").is_string() || fault.at("message").get_ref<const std::string &>().empty()) return false;
+  const auto &code = fault.at("code").get_ref<const std::string &>();
+  if (code.size() <= 4 || code.compare(0, 4, "ERR_") != 0) return false;
+  for (std::size_t i = 4; i < code.size(); ++i)
+    if (!((code[i] >= 'A' && code[i] <= 'Z') || (code[i] >= '0' && code[i] <= '9') || code[i] == '_')) return false;
+  return true;
+}
+Status prepared_restart_layout(weapp_container_sdk_session *native, const Metrics &metrics,
+                               const Json &payload) {
+  const auto &proof = payload.at("restartAttempt");
+  if (!valid_restart_proof(proof))
+    return Status::error("ERR_PROTOCOL_VERSION", "Invalid prepared restart measurement proof");
+  const auto &old = payload.at("observation");
+  if (!old.is_object() || !old.contains("schemaVersion") || !schema_one(old.at("schemaVersion")) ||
+      !old.contains("ownerId") || !decimal_identity(old.at("ownerId")) ||
+      !old.contains("surfaceGeneration") || !decimal_identity(old.at("surfaceGeneration")) ||
+      !old.contains("observationId") || !decimal_identity(old.at("observationId")) ||
+      !payload.contains("layoutRevision") || !decimal_identity(payload.at("layoutRevision")) ||
+      !old.contains("windowMetrics") || !valid_metrics(old.at("windowMetrics")))
+    return Status::error("ERR_PROTOCOL_VERSION", "Invalid prepared restart observation");
+  // Pure metadata queries on the already existing owner. In particular, do
+  // not ensure, observe, drain, clear a fault or present while authorizing a
+  // prospective restart rectangle. The copied caller proof is only a key.
+  Json receipt, state;
+  auto status = command(native, "queryDevPackAttempt", {
+    {"ownerId", proof.at("ownerId")}, {"attemptId", proof.at("attemptId")}}, &receipt);
+  if (status) status = command(native, "state", Json::object(), &state);
+  if (!status) return status;
+  if (!receipt.is_object() || !receipt.contains("schemaVersion") || !schema_one(receipt.at("schemaVersion")) ||
+      !receipt.contains("status") || receipt.at("status") != "prepared" ||
+      !receipt.contains("reloadKind") || receipt.at("reloadKind") != "restart" ||
+      !receipt.contains("operation") || (receipt.at("operation") != "load" && receipt.at("operation") != "applyDevPack"))
+    return Status::error("ERR_CANCELLED", "Prepared restart attempt is no longer current");
+  for (const auto *key : {"ownerId", "attemptId", "targetRoot", "expectedAccepted"})
+    if (!receipt.contains(key) || receipt.at(key) != proof.at(key))
+      return Status::error("ERR_CANCELLED", "Prepared restart attempt identity changed");
+  const auto &expected = proof.at("expectedAccepted");
+  if (!state.is_object() || !state.contains("schemaVersion") || !schema_one(state.at("schemaVersion")) ||
+      !state.contains("ownerId") || state.at("ownerId") != proof.at("ownerId") ||
+      !state.contains("acceptedPackIdentity") || state.at("acceptedPackIdentity") != expected ||
+      !receipt.contains("acceptedPackIdentity") || receipt.at("acceptedPackIdentity") != expected)
+    return Status::error("ERR_CANCELLED", "Prepared restart accepted owner changed");
+  const auto not_ready = Status::error("ERR_NOT_READY", "Prepared restart requires its exact current pending layout");
+  if (!explicit_null(state, "pendingNavigation") || !state.contains("hostSurface") ||
+      !state.at("hostSurface").is_object() || !state.contains("pendingHostLayout") || !state.at("pendingHostLayout").is_object()) return not_ready;
+  const auto &surface = state.at("hostSurface"), &pending = state.at("pendingHostLayout");
+  for (const auto *key : {"ownerId", "surfaceGeneration"})
+    if (!surface.contains(key) || surface.at(key) != old.at(key)) return not_ready;
+  if (old.at("ownerId") != proof.at("ownerId") || !pending.contains("schemaVersion") || !schema_one(pending.at("schemaVersion"))) return not_ready;
+  for (const auto *key : {"ownerId", "surfaceGeneration", "observationId", "windowMetrics"})
+    if (!pending.contains(key) || pending.at(key) != old.at(key)) return not_ready;
+  for (const auto *key : {"sessionId", "pageId"})
+    if (!same_optional(pending, old, key)) return not_ready;
+  if (old.at("windowMetrics") != metrics.value || !payload.contains("chrome") ||
+      !restart_geometry_matches(payload.at("chrome"), metrics)) return not_ready;
+  if (state.contains("status") && state.at("status") == "empty") {
+    for (const auto *key : {"executionHealth", "sessionId", "page", "acceptedPackIdentity", "acceptedLayout"})
+      if (!explicit_null(state, key)) return not_ready;
+    for (const auto *key : {"sessionId", "pageId"})
+      if ((old.contains(key) && !old.at(key).is_null()) || (pending.contains(key) && !pending.at(key).is_null())) return not_ready;
+  } else {
+    if (!state.contains("status") || state.at("status") != "ready" || !accepted_identity(expected) ||
+        !state.contains("sessionId") || state.at("sessionId") != expected.at("sessionId") ||
+        !old.contains("sessionId") || old.at("sessionId") != state.at("sessionId") ||
+        !state.contains("page") || !state.at("page").is_object() || !state.at("page").contains("id") ||
+        !old.contains("pageId") || old.at("pageId").is_null() || old.at("pageId") != state.at("page").at("id") ||
+        !state.contains("executionHealth") || (!healthy(state.at("executionHealth")) && !view_fault_only(state, expected))) return not_ready;
+  }
+  return {};
+}
+Status prepared_restart_capabilities(Json &value) {
+  if (!value.is_object()) return Status::error("ERR_PROTOCOL_VERSION", "Invalid native capabilities");
+  auto &chrome = value["chrome"];
+  if (chrome.is_null()) chrome = Json::object();
+  if (!chrome.is_object()) return Status::error("ERR_PROTOCOL_VERSION", "Invalid chrome capabilities");
+  auto &atomic = chrome["atomicLayout"];
+  if (atomic.is_null()) atomic = Json::object();
+  if (!atomic.is_object()) return Status::error("ERR_PROTOCOL_VERSION", "Invalid atomic layout capabilities");
+  atomic["preparedRestartMeasurement"] = "1.0";
+  return {};
+}
+} // namespace
 Status Buffer::read(int32_t result, Json *out) {
   try {
     if (!value.data)
@@ -618,6 +805,12 @@ void Registry::invoke(const std::string &method, const Json &args,
     Json payload = args;
     payload.erase("id");
     if (method == "prepareHostLayout" || method == "hostLayout") {
+      if (payload.contains("restartAttempt")) {
+        const auto status = method == "prepareHostLayout"
+          ? prepared_restart_layout(e->native, e->metrics, payload)
+          : Status::error("ERR_PROTOCOL_VERSION", "restartAttempt is valid only for prepareHostLayout");
+        if (!status) { reply(status, {}); return; }
+      }
       const auto &observation = payload.at("observation");
       auto chrome = payload.at("chrome");
       chrome.erase("observationId");
@@ -827,6 +1020,7 @@ void Registry::invoke(const std::string &method, const Json &args,
           if (prepared)
             prepared = command(e->native, "capabilities", Json::object(),
                                &capabilities);
+          if (prepared) prepared = prepared_restart_capabilities(capabilities);
           for (auto &pending : prepares)
             pending(prepared, capabilities);
         }
@@ -862,6 +1056,7 @@ void Registry::invoke(const std::string &method, const Json &args,
       if (status)
         status =
             command(e->native, "capabilities", Json::object(), &capabilities);
+      if (status) status = prepared_restart_capabilities(capabilities);
       reply(status, capabilities);
       return;
     }
@@ -958,6 +1153,7 @@ void Registry::invoke(const std::string &method, const Json &args,
     }
     Json result;
     auto s = command(e->native, method.c_str(), payload, &result);
+    if (s && method == "capabilities") s = prepared_restart_capabilities(result);
     if (s && method == "clearDevStorage") {
       s = command(e->native, "flushStorage", Json::object(), &result);
       if (s && result.value("pending", false)) {

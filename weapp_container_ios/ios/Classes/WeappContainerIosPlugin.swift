@@ -20,15 +20,26 @@ struct IOSLayoutMeasurement {
     let observation: [String: Any]?
     let layoutRevision: String?
     let preparingNavigation: Bool
+    let restartAttempt: [String: Any]?
 
     init(observation: [String: Any]? = nil, layoutRevision: String? = nil,
-         preparingNavigation: Bool = false, nowNanoseconds: UInt64,
+         preparingNavigation: Bool = false, restartAttempt: [String: Any]? = nil, nowNanoseconds: UInt64,
          budgetNanoseconds: UInt64 = Self.budgetNanoseconds) throws {
         let sum = nowNanoseconds.addingReportingOverflow(budgetNanoseconds)
         deadlineNanoseconds = sum.overflow ? UInt64.max : sum.partialValue
         self.observation = try observation.map(Self.snapshot)
         self.layoutRevision = layoutRevision
         self.preparingNavigation = preparingNavigation
+        self.restartAttempt = try restartAttempt.map(Self.snapshot)
+        if let context = self.restartAttempt {
+            guard preparingNavigation, self.observation != nil,
+                  Set(context.keys) == Set(["schemaVersion", "ownerId", "attemptId", "targetRoot", "expectedAccepted"]),
+                  Self.schemaOne(context["schemaVersion"]), Self.sequence(context["ownerId"]) != nil,
+                  Self.sequence(context["attemptId"]) != nil, Self.root(context["targetRoot"]),
+                  context["expectedAccepted"] is NSNull || Self.acceptedIdentity(context["expectedAccepted"]) else {
+                throw IOSLayoutMeasurementError.invalidSnapshot
+            }
+        }
         if let value = self.observation {
             guard Self.schemaOne(value["schemaVersion"]), Self.sequence(value["ownerId"]) != nil,
                   Self.sequence(value["surfaceGeneration"]) != nil, Self.sequence(value["observationId"]) != nil,
@@ -47,6 +58,15 @@ struct IOSLayoutMeasurement {
         }
         return result
     }
+    static func mergeAdapterCapabilities(_ value: [String: Any]) -> [String: Any] {
+        var result = value
+        guard var chrome = result["chrome"] as? [String: Any],
+              var atomic = chrome["atomicLayout"] as? [String: Any] else { return result }
+        if trueBoolean(atomic["enabled"]) { atomic["preparedRestartMeasurement"] = "1.0" }
+        else { atomic.removeValue(forKey: "preparedRestartMeasurement") }
+        chrome["atomicLayout"] = atomic; result["chrome"] = chrome
+        return result
+    }
     static func sequence(_ value: Any?) -> UInt64? {
         guard let raw = value as? String, !raw.isEmpty, raw.utf8.count <= 20,
               raw.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }),
@@ -63,6 +83,21 @@ struct IOSLayoutMeasurement {
         guard let value = value as? NSNumber, CFGetTypeID(value) == CFBooleanGetTypeID() else { return false }
         return !value.boolValue
     }
+    private static func trueBoolean(_ value: Any?) -> Bool {
+        guard let value = value as? NSNumber, CFGetTypeID(value) == CFBooleanGetTypeID() else { return false }
+        return value.boolValue
+    }
+    private static func root(_ value: Any?) -> Bool {
+        guard let value = value as? String, value.utf8.count == 64 else { return false }
+        return value.utf8.allSatisfy { ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102) }
+    }
+    private static func acceptedIdentity(_ value: Any?) -> Bool {
+        guard let value = value as? [String: Any],
+              Set(value.keys) == Set(["root", "acceptedPackRevision", "sessionId"]),
+              root(value["root"]), sequence(value["acceptedPackRevision"]) != nil,
+              let session = value["sessionId"] as? String, !session.isEmpty else { return false }
+        return true
+    }
     private static func absent(_ value: Any?) -> Bool { value == nil || value is NSNull }
     private static func equal(_ left: Any?, _ right: Any?) -> Bool {
         if absent(left) || absent(right) { return absent(left) && absent(right) }
@@ -75,6 +110,46 @@ struct IOSLayoutMeasurement {
         guard let health = state["executionHealth"] as? [String: Any], schemaOne(health["schemaVersion"]),
               falseBoolean(health["requiresRestart"]) else { return false }
         return ["appServiceFault", "viewFault", "navigationFault"].allSatisfy { absent(health[$0]) }
+    }
+    /// A caller-supplied context is only a lookup key. The SDK journal receipt
+    /// is fetched again after every suspension; it alone grants preparation.
+    private func matchesRestartReceipt(_ receipt: [String: Any], state: [String: Any]) -> Bool {
+        guard let context = restartAttempt,
+              Self.schemaOne(receipt["schemaVersion"]), receipt["status"] as? String == "prepared",
+              receipt["reloadKind"] as? String == "restart",
+              let operation = receipt["operation"] as? String, ["load", "applyDevPack"].contains(operation),
+              receipt.keys.contains("expectedAccepted"), receipt.keys.contains("acceptedPackIdentity"),
+              state.keys.contains("acceptedPackIdentity"),
+              state["ownerId"] as? String == context["ownerId"] as? String else { return false }
+        for key in ["ownerId", "attemptId", "targetRoot", "expectedAccepted"] {
+            guard Self.equal(receipt[key], context[key]) else { return false }
+        }
+        guard Self.equal(receipt["acceptedPackIdentity"], context["expectedAccepted"]),
+              Self.equal(state["acceptedPackIdentity"], context["expectedAccepted"]),
+              let observed = observation else { return false }
+        if context["expectedAccepted"] is NSNull {
+            return state["sessionId"] is NSNull && state["page"] is NSNull
+                && Self.absent(observed["sessionId"]) && Self.absent(observed["pageId"])
+        }
+        guard let expected = context["expectedAccepted"] as? [String: Any],
+              let pageID = Self.number(observed["pageId"]), pageID > 0, pageID.rounded() == pageID,
+              Self.equal(expected["sessionId"], observed["sessionId"]),
+              Self.equal(state["sessionId"], observed["sessionId"]),
+              let page = state["page"] as? [String: Any], Self.equal(page["id"], observed["pageId"]) else { return false }
+        return true
+    }
+    private func viewFaultMayPrepareRestart(_ state: [String: Any]) -> Bool {
+        guard let context = restartAttempt, Self.acceptedIdentity(context["expectedAccepted"]),
+              let health = state["executionHealth"] as? [String: Any], Self.schemaOne(health["schemaVersion"]),
+              Self.trueBoolean(health["requiresRestart"]), health["appServiceFault"] is NSNull,
+              health["navigationFault"] is NSNull, state["pendingNavigation"] is NSNull,
+              Self.falseBoolean(state["inputEnabled"]), Self.falseBoolean(state["presentationEnabled"]),
+              let fault = health["viewFault"] as? [String: Any], fault["domain"] as? String == "view",
+              Self.trueBoolean(fault["requiresRestart"]), let code = fault["code"] as? String,
+              code.range(of: #"^ERR_[A-Z0-9_]+$"#, options: .regularExpression) != nil,
+              let message = fault["message"] as? String,
+              !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        return true
     }
     private static func typedEmpty(_ state: [String: Any], observation: [String: Any]) -> Bool {
         // HostLayoutObservation omits None session/page Options on the Rust
@@ -152,7 +227,22 @@ struct IOSLayoutMeasurement {
         // Readiness still needs its exact pending tuple; cancellation instead
         // requires the strict newer pending proof checked by superseded(by:).
         let emptyStartup = Self.typedEmpty(state, observation: old) && pending != nil
-        guard (state["status"] as? String == "ready" && Self.healthy(state)) || emptyStartup else { return false }
+        let ready = state["status"] as? String == "ready"
+            && (Self.healthy(state) || viewFaultMayPrepareRestart(state))
+        guard ready || emptyStartup else { return false }
+        if restartAttempt != nil {
+            // A prepared restart measures a fresh, exact pending observation,
+            // never an old accepted rectangle or a navigation ticket.
+            guard state["pendingNavigation"] is NSNull, pending != nil else { return false }
+            if !emptyStartup {
+                guard let session = old["sessionId"] as? String, !session.isEmpty,
+                      let pageID = Self.number(old["pageId"]), pageID > 0, pageID.rounded() == pageID,
+                      Self.equal(state["sessionId"], old["sessionId"]),
+                      let page = state["page"] as? [String: Any], Self.equal(page["id"], old["pageId"]),
+                      let identity = state["acceptedPackIdentity"] as? [String: Any],
+                      Self.equal(identity["sessionId"], old["sessionId"]) else { return false }
+            }
+        }
         // Generic hostLayout must never consume a native navigation ticket.
         // A prepared payload is committed later by completeNavigationLayout.
         if !preparingNavigation && !Self.absent(state["pendingNavigation"]) { return false }
@@ -194,11 +284,16 @@ struct IOSLayoutMeasurement {
         return true
     }
     func decision(nowNanoseconds: UInt64, ownerCurrent: Bool, state: [String: Any]? = nil,
-                  native: Native? = nil, chrome: [String: Any]? = nil) -> Decision {
+                  native: Native? = nil, chrome: [String: Any]? = nil,
+                  restartReceipt: [String: Any]? = nil) -> Decision {
         if !ownerCurrent { return .cancelled }
         if nowNanoseconds >= deadlineNanoseconds { return .expired }
         guard observation != nil else { return .ready }
         guard let state else { return .wait }
+        if restartAttempt != nil {
+            guard let restartReceipt else { return .wait }
+            if !matchesRestartReceipt(restartReceipt, state: state) { return .cancelled }
+        }
         if superseded(by: state) { return .cancelled }
         guard matchesCurrentTuple(state), let native, let chrome, matchesNative(native, chrome: chrome) else { return .wait }
         return .ready
@@ -369,9 +464,11 @@ import UIKit
             try session.setForeground(active)
         case "flushStorage": try await session.flushStorage()
         case "state": return codec(try session.state())
-        case "capabilities": return codec(try session.capabilities())
+        case "capabilities": return try mergeAdapterCapabilities(session.capabilities())
         case "observeHostLayout": _ = try await session.requestHostLayoutObservation()
-        case "prepareView": return codec(try await session.prepareView())
+        case "prepareView":
+            let capabilities = try await session.prepareView()
+            return try mergeAdapterCapabilities(capabilities)
         case "detachView":
             try await retireView(entry)
         case "close": try await close(id, entry)
@@ -391,6 +488,10 @@ import UIKit
         }
         return nil
     }
+    private func mergeAdapterCapabilities(_ value: WeappJSON) throws -> [String: Any] {
+        guard let raw = codec(value) as? [String: Any] else { throw fail("Missing native capabilities") }
+        return IOSLayoutMeasurement.mergeAdapterCapabilities(raw)
+    }
     private func retireView(_ entry: Entry) async throws {
         entry.measurementLifetime = UUID()
         if let pending = entry.retiringView { return try await pending.value }
@@ -409,8 +510,14 @@ import UIKit
         let frozen = try IOSLayoutMeasurement.snapshot(supplied)
         guard let observation = frozen["observation"] as? [String: Any], var chrome = frozen["chrome"] as? [String: Any],
               let revision = frozen["layoutRevision"] as? String else { throw fail("Expected complete host layout observation, chrome and revision") }
+        let restartAttempt: [String: Any]?
+        if let context = frozen["restartAttempt"] {
+            guard preparing, let value = context as? [String: Any] else { throw IOSLayoutMeasurementError.invalidSnapshot }
+            restartAttempt = value
+        } else { restartAttempt = nil }
         let measurement = try IOSLayoutMeasurement(observation: observation, layoutRevision: revision,
-                                                   preparingNavigation: preparing, nowNanoseconds: started)
+                                                   preparingNavigation: preparing, restartAttempt: restartAttempt,
+                                                   nowNanoseconds: started)
         let lifetime = entry.measurementLifetime
         chrome["coordinateSpace"] = frozen["coordinateSpace"]
         chrome.removeValue(forKey: "observationId")
@@ -462,6 +569,15 @@ import UIKit
         ]
         return IOSLayoutMeasurement.Native(windowMetrics: metrics, left: Double(inScreen.minX), top: Double(inScreen.minY))
     }
+    private func restartMeasurementSnapshot(_ entry: Entry, _ measurement: IOSLayoutMeasurement) throws -> (receipt: [String: Any], state: [String: Any])? {
+        guard let context = measurement.restartAttempt else { return nil }
+        guard let owner = context["ownerId"] as? String, let attempt = context["attemptId"] as? String,
+              let snapshot = codec(try entry.session.queryDevPackAttemptForLayout(ownerId: owner, attemptId: attempt)) as? [String: Any],
+              let receipt = snapshot["receipt"] as? [String: Any], let state = snapshot["state"] as? [String: Any] else {
+            throw IOSLayoutMeasurementError.invalidSnapshot
+        }
+        return (receipt, state)
+    }
     private func measureChrome(_ entry: Entry, _ supplied: [String: Any], prospective: Bool,
                                measurement suppliedMeasurement: IOSLayoutMeasurement? = nil,
                                lifetime suppliedLifetime: UUID? = nil) async throws -> [String: Any] {
@@ -478,9 +594,16 @@ import UIKit
             if coordinates == "screen", measurement.observation == nil { return payload }
             // Every atomic payload, even at unchanged dimensions, must still
             // belong to the exact immutable native observation and page owner.
-            let state = measurement.observation == nil ? nil : codec(try entry.session.state()) as? [String: Any]
+            // The exact receipt is read from native metadata on each poll.
+            // Never treat the copied Dart proof as an authorization receipt.
+            let restartSnapshot = try restartMeasurementSnapshot(entry, measurement)
+            let state: [String: Any]?
+            if let restartSnapshot { state = restartSnapshot.state }
+            else if measurement.observation != nil { state = codec(try entry.session.state()) as? [String: Any] }
+            else { state = nil }
             try requireMeasurement(measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
-                                                       ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state))
+                                                       ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state,
+                                                       restartReceipt: restartSnapshot?.receipt))
             if let view = entry.view, let window = view.window,
                view.bounds.width.isFinite, view.bounds.height.isFinite, view.bounds.width > 0, view.bounds.height > 0 {
                 let native = nativeMeasurement(view, window)
@@ -503,10 +626,20 @@ import UIKit
                     && abs(width! - Double(view.bounds.width.rounded())) <= 0.5
                     && abs(height! - Double(view.bounds.height.rounded())) <= 0.5)
                 let decision = measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
-                    ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state, native: native, chrome: measured)
+                    ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state, native: native, chrome: measured,
+                    restartReceipt: restartSnapshot?.receipt)
                 try requireMeasurement(decision)
                 if sizeReady && decision == .ready {
-                    return measured
+                    // Re-read the journal and owner immediately before returning
+                    // a prepared layout. No cancelled/replaced attempt can use
+                    // a receipt cached before a suspended measurement poll.
+                    if let final = try restartMeasurementSnapshot(entry, measurement) {
+                        let finalDecision = measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
+                            ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: final.state,
+                            native: native, chrome: measured, restartReceipt: final.receipt)
+                        try requireMeasurement(finalDecision)
+                        if finalDecision == .ready { return measured }
+                    } else { return measured }
                 }
             }
             let remaining = measurement.remainingNanoseconds(now: DispatchTime.now().uptimeNanoseconds)

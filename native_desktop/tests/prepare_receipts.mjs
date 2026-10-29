@@ -6,6 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { SDK_VERSION } from '../../tools/runtime-artifacts.mjs';
+// The new wrapper bundle retains its independently produced desktop/native SDK.
+const desktopProducerVersion = '0.1.0-preview.5.1';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = await mkdtemp(path.join(tmpdir(), 'weapp-flutter-receipt-'));
@@ -24,9 +26,9 @@ try {
   await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), bytes);
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const receipt = {
-    schemaVersion: 1, sdkVersion: SDK_VERSION, platform: 'macos-universal',
+    schemaVersion: 1, sdkVersion: desktopProducerVersion, platform: 'macos-universal',
     sourceCommit: 'a'.repeat(40), sourceDirty: false, status: 'verified',
-    native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: SDK_VERSION, platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
+    native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: desktopProducerVersion, platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
     artifacts: [{ file: 'lib/libweapp_container_sdk.a', sha256 }],
   };
   const run = async (value, success) => {
@@ -35,6 +37,9 @@ try {
     assert.equal(result.status === 0, success, result.stderr);
   };
   await run(receipt, true);
+  assert.notEqual(SDK_VERSION, desktopProducerVersion);
+  await run({ ...receipt, sdkVersion: SDK_VERSION }, false);
+  await run({ ...receipt, native: [{ ...receipt.native[0], sdkVersion: SDK_VERSION }] }, false);
   const prepared = JSON.parse(await readFile(path.join(plugin, 'vendor/prepared.json'), 'utf8'));
   assert.equal(prepared.archiveSha256, sha256);
   assert.deepEqual(prepared.packageReceipt, receipt);

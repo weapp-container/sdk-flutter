@@ -721,12 +721,36 @@ void main() {
       );
       expect(prepared['layoutRevision'], '9007199254740996');
       expect(prepared['observationId'], observation['observationId']);
+      final proof = <String, Object?>{
+        'schemaVersion': 1,
+        'ownerId': '9007199254740993',
+        'attemptId': '18446744073709551614',
+        'targetRoot': List.filled(64, 'a').join(),
+        'expectedAccepted': <String, Object?>{
+          'root': List.filled(64, 'b').join(),
+          'acceptedPackRevision': '9007199254740994',
+          'sessionId': 'accepted-session',
+        },
+      };
+      final measuring = controller.prepareHostLayout(
+        observation: observation,
+        chrome: geometry,
+        layoutRevision: '9007199254740997',
+        restartAttempt: proof,
+      );
+      (proof['expectedAccepted'] as Map)['sessionId'] = 'caller-mutated';
+      await measuring;
+      final sentProof = platform.requests.last.$2['restartAttempt'] as Map;
+      expect(sentProof['attemptId'], '18446744073709551614');
+      expect((sentProof['expectedAccepted'] as Map)['sessionId'],
+          'accepted-session');
       await controller.updateHostLayout(
         observation: observation,
         chrome: geometry,
         layoutRevision: '9007199254740996',
       );
       expect(platform.requests.last.$1, 'hostLayout');
+      expect(platform.requests.last.$2.containsKey('restartAttempt'), false);
       expect(platform.requests.last.$2['observation'], observation);
       final receipt = await controller.beginDevPackAttempt(
         '/verified/pack',

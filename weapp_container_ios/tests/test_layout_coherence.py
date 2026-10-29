@@ -56,6 +56,27 @@ class LayoutCoherenceTests(unittest.TestCase):
             body = source.split(start, 1)[1].split(end, 1)[0]
             self.assertIn("entry.measurementLifetime = UUID()", body)
 
+    def test_restart_authority_is_native_metadata_and_rechecked_before_return(self):
+        source = PLUGIN.read_text()
+        measure = source.split("private func measureLayout(", 1)[1].split("private func updateChrome(", 1)[0]
+        self.assertIn('if let context = frozen["restartAttempt"]', measure)
+        self.assertIn('guard preparing, let value = context as? [String: Any]', measure)
+        self.assertIn('restartAttempt: restartAttempt', measure)
+        polling = source.split("private func measureChrome(", 1)[1].split("private func close(", 1)[0]
+        self.assertEqual(polling.count('restartMeasurementSnapshot(entry, measurement)'), 2)
+        self.assertIn('state: final.state', polling)
+        self.assertIn('restartReceipt: final.receipt', polling)
+        metadata = source.split("private func restartMeasurementSnapshot(", 1)[1].split("private func measureChrome(", 1)[0]
+        self.assertIn('entry.session.queryDevPackAttemptForLayout(ownerId: owner, attemptId: attempt)', metadata)
+        self.assertNotIn('executeCommand(', metadata)
+        self.assertIn('case "capabilities": return try mergeAdapterCapabilities(session.capabilities())', source)
+        prepare = source.split('case "prepareView":', 1)[1].split('case "detachView":', 1)[0]
+        self.assertIn('return try mergeAdapterCapabilities(capabilities)', prepare)
+        self.assertIn('atomic["preparedRestartMeasurement"] = "1.0"', source)
+        self.assertIn('if trueBoolean(atomic["enabled"])', source)
+        returned = measure.split('var layout:', 1)[1]
+        self.assertNotIn('restartAttempt', returned)
+
 
 if __name__ == "__main__":
     unittest.main()

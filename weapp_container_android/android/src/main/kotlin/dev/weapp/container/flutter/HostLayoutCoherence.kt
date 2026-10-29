@@ -12,20 +12,33 @@ internal class HostLayoutCoherence(
     startedAtMillis: Long,
     timeoutMillis: Long = 10_000,
     private val prepareOnly: Boolean = false,
+    restartAttempt: Map<*, *>? = null,
 ) {
-    enum class Decision { READY, WAIT, SUPERSEDED, EXPIRED, RETIRED }
+    enum class Decision { READY, WAIT, SUPERSEDED, CANCELLED, EXPIRED, RETIRED }
     private val submitted = copy(observation) as Map<*, *>
+    private val restartProof = restartAttempt?.let { copy(it) as Map<*, *> }
     val deadlineMillis: Long
     init {
         require(startedAtMillis >= 0 && timeoutMillis > 0)
         deadlineMillis = if (startedAtMillis > Long.MAX_VALUE - timeoutMillis) Long.MAX_VALUE else startedAtMillis + timeoutMillis
     }
-    fun decide(nowMillis: Long, measuredMetrics: Map<*, *>?, state: Map<*, *>?, retired: Boolean = false): Decision {
+    fun decide(nowMillis: Long, measuredMetrics: Map<*, *>?, state: Map<*, *>?, retired: Boolean = false, journalReceipt: Map<*, *>? = null): Decision {
         if (retired) return Decision.RETIRED
         if (nowMillis >= deadlineMillis) return Decision.EXPIRED
+        // Journal authority is independent from viewport readiness. A terminal,
+        // foreign or replaced attempt must fail immediately, without consuming
+        // the original measurement deadline or claiming a newer observation.
+        if (restartProof != null) {
+            if (!prepareOnly || !validRestartProof(restartProof)) return Decision.CANCELLED
+            if (state == null || journalReceipt == null) return Decision.WAIT
+            if (!preparedRestartAuthority(state, journalReceipt)) return Decision.CANCELLED
+        }
         if (state == null || !validState(state)) return Decision.WAIT
-        if ((healthy(state) || emptyPending(state)) && superseded(state)) return Decision.SUPERSEDED
-        if (!healthy(state) && !emptyBeforeGuest(state)) return Decision.WAIT
+        if (restartProof != null && (state["pendingHostLayout"] !is Map<*, *> ||
+            !state.containsKey("pendingNavigation") || state["pendingNavigation"] != null)) return Decision.WAIT
+        val recoveringView = restartProof != null && viewFaultOnly(state)
+        if ((healthy(state) || emptyPending(state) || recoveringView) && superseded(state)) return Decision.SUPERSEDED
+        if (!healthy(state) && !emptyBeforeGuest(state) && !recoveringView) return Decision.WAIT
         if (!currentObservation(state)) return Decision.WAIT
         if (!prepareOnly && state["pendingNavigation"] != null) return Decision.WAIT
         val expected = submitted["windowMetrics"] as? Map<*, *> ?: return Decision.WAIT
@@ -59,6 +72,38 @@ internal class HostLayoutCoherence(
         val health = state["executionHealth"] as? Map<*, *> ?: return false
         return health["schemaVersion"] == 1 && health["requiresRestart"] == false &&
             health["appServiceFault"] == null && health["viewFault"] == null && health["navigationFault"] == null
+    }
+    private fun preparedRestartAuthority(state: Map<*, *>?, receipt: Map<*, *>?): Boolean {
+        val proof = restartProof ?: return false
+        if (!prepareOnly || !validRestartProof(proof) || receipt == null || state == null) return false
+        if (receipt["schemaVersion"] != 1 || receipt["status"] != "prepared" ||
+            receipt["reloadKind"] != "restart" || receipt["operation"] !in setOf("load", "applyDevPack")) return false
+        for (field in listOf("ownerId", "attemptId", "targetRoot", "expectedAccepted")) {
+            if (!receipt.containsKey(field) || !equal(receipt[field], proof[field])) return false
+        }
+        if (proof["ownerId"] != state["ownerId"] || !state.containsKey("acceptedPackIdentity") ||
+            !equal(proof["expectedAccepted"], state["acceptedPackIdentity"]) ||
+            !receipt.containsKey("acceptedPackIdentity") || !equal(receipt["acceptedPackIdentity"], state["acceptedPackIdentity"])) return false
+        val accepted = proof["expectedAccepted"] as? Map<*, *>
+        if (accepted == null && !emptyBeforeGuest(state)) return false
+        if (accepted != null && (accepted["sessionId"] != state["sessionId"] || state["sessionId"] != submitted["sessionId"] ||
+            !equal((state["page"] as? Map<*, *>)?.get("id"), submitted["pageId"]))) return false
+        return true
+    }
+    private fun viewFaultOnly(state: Map<*, *>): Boolean {
+        if (!prepareOnly || state["status"] != "ready" ||
+            state["inputEnabled"] != false || state["presentationEnabled"] != false ||
+            !state.containsKey("pendingNavigation") || state["pendingNavigation"] != null ||
+            state["pendingHostLayout"] !is Map<*, *> ||
+            restartProof?.get("expectedAccepted") !is Map<*, *>) return false
+        val health = state["executionHealth"] as? Map<*, *> ?: return false
+        if (health["schemaVersion"] != 1 || health["requiresRestart"] != true ||
+            !health.containsKey("appServiceFault") || health["appServiceFault"] != null ||
+            !health.containsKey("navigationFault") || health["navigationFault"] != null) return false
+        val fault = health["viewFault"] as? Map<*, *> ?: return false
+        return fault["domain"] == "view" && fault["requiresRestart"] == true &&
+            (fault["code"] as? String)?.matches(Regex("ERR_[A-Z0-9_]+")) == true &&
+            (fault["message"] as? String)?.isNotBlank() == true
     }
     private fun emptyBeforeGuest(state: Map<*, *>): Boolean = state["status"] == "empty" &&
         listOf("executionHealth", "sessionId", "page", "acceptedPackIdentity", "acceptedLayout").all { state.containsKey(it) && state[it] == null } &&
@@ -109,6 +154,17 @@ internal class HostLayoutCoherence(
         private val canonical = Regex("[1-9][0-9]{0,19}")
         private val maximum = BigInteger("18446744073709551615")
         private val metricFields = setOf("windowWidth", "windowHeight", "pixelRatio", "screenWidth", "screenHeight", "statusBarHeight", "screenTop", "deviceOrientation")
+        internal fun validRestartProof(proof: Map<*, *>): Boolean {
+            if (proof.keys != setOf("schemaVersion", "ownerId", "attemptId", "targetRoot", "expectedAccepted") ||
+                proof["schemaVersion"] != 1 || decimal(proof["ownerId"]) == null || decimal(proof["attemptId"]) == null ||
+                (proof["targetRoot"] as? String)?.matches(Regex("[a-f0-9]{64}")) != true) return false
+            val raw = proof["expectedAccepted"] ?: return true
+            val accepted = raw as? Map<*, *> ?: return false
+            return accepted.keys == setOf("root", "acceptedPackRevision", "sessionId") &&
+                (accepted["root"] as? String)?.matches(Regex("[a-f0-9]{64}")) == true &&
+                decimal(accepted["acceptedPackRevision"]) != null &&
+                (accepted["sessionId"] as? String)?.isNotBlank() == true
+        }
         private fun decimal(value: Any?): BigInteger? {
             val text = value as? String ?: return null
             if (!canonical.matches(text)) return null
