@@ -50,6 +50,17 @@ and allows retry; engine teardown retains unfinished resources in a platform
 thread cleanup task until GPU/texture/session retirement succeeds. Errors remain
 visible in the platform log. It never terminates the host to handle cleanup.
 
+Windows/Linux `WeappContainerView.nativeChrome` descriptors may include an
+optional `accessibilityLabels` object with `more`, `close`, `back`, `navigation`
+and `tabs` strings. These localize only host controls; mini-program titles and
+tab text remain application-owned. Each supplied label must be nonempty UTF-8
+text, at most 1024 bytes, without embedded NULs. Omitted labels retain the English
+defaults for existing consumers. Label changes are applied at the current chrome
+geometry revision without resizing, detaching or restarting the guest. This is
+Flutter-to-native presentation metadata and does not alter the core runtime ABI.
+The label parser and Dart delivery are covered by local contract/widget tests;
+Windows/Linux accessibility in real windows requires separate platform evidence.
+
 The tests include `registry_failures.cpp` (fault-injected retirement),
 `prepare_receipts.mjs` (native provenance, hash rejection and clean restaging),
 `macos_texture.mm` (real QuickJS/Skia/Metal with an instrumented Flutter registrar)

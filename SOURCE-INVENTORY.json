@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.4",
-  "sourceBaseCommit": "fc9553fb4eb5ce279d557d3a0c9bc1a4e96d9af8",
-  "review": "Review Android physical-to-logical viewport quantization, fixed-field startup diagnostics and native capsule contrast; preserve runtime ABI and historical origin.",
+  "sourceBaseCommit": "36cdaa59f4ab2edae3b2253286fedc55b0ded3c8",
+  "review": "Review optional localized Windows/Linux native chrome labels and value-based presentation updates without guest geometry or session changes",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -101,14 +101,14 @@
     },
     {
       "path": "native_desktop/README.md",
-      "sha256": "2dba0f1823d3911a337b9de81751ff70cd8566fc7ba563efded4ad22d0ba4986",
-      "size": 4159,
+      "sha256": "c732100586e36d1ba674ab93fd558270ea6603b88464c3c796d55942060a7818",
+      "size": 4957,
       "mode": "100644"
     },
     {
       "path": "native_desktop/include/native_chrome_overlay.hpp",
-      "sha256": "148414642ed14c334cc752861ed0682b0116ba153a78cfdbf9148201fcdbac98",
-      "size": 32621,
+      "sha256": "05bf629b7fab8b5cf93d17e1b18355ae27ebd274ec317dee1d59189395d8ffdf",
+      "size": 34769,
       "mode": "100644"
     },
     {
@@ -161,8 +161,8 @@
     },
     {
       "path": "native_desktop/tests/chrome_palette.cpp",
-      "sha256": "e95ec980911ea5842aebc8832c9dd6cffd53e5f8b7709f2bdd6594f370df6bae",
-      "size": 702,
+      "sha256": "77804c46c8847a84254863bb57508ea2955998e8758aa14369d814cc43f84f5b",
+      "size": 2431,
       "mode": "100644"
     },
     {
@@ -389,8 +389,8 @@
     },
     {
       "path": "weapp_container/lib/src/view.dart",
-      "sha256": "f1a1f7bec9f46b1ee0fa81c386a0103b056537e39788da28d74a5a6996b0b69a",
-      "size": 16906,
+      "sha256": "0b28bf41bac19de67c9a4d1bb0bf7a3c30fcc2c06847f640ad4f8bf319183411",
+      "size": 17532,
       "mode": "100644"
     },
     {
@@ -407,8 +407,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "8b3bf7b60c79f3e3a6672eba6c00852a848922d5114dd7b9c8f2051692f5cfdd",
-      "size": 17939,
+      "sha256": "f2bb7ce1c35965ab91401c70e742b0ac6986f30d39d617c0b45f6fd5b9063903",
+      "size": 21131,
       "mode": "100644"
     },
     {

@@ -233,6 +233,89 @@ void main() {
     await tester.runAsync(controller.close);
     debugDefaultTargetPlatformOverride = null;
   });
+  for (final target in [TargetPlatform.windows, TargetPlatform.linux]) {
+    testWidgets(
+        '$target host label changes preserve guest geometry and surface',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = target;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final creating = WeappContainerController.create(storageKey: null);
+      await tester.pump();
+      final controller = await creating;
+      const geometry = <String, Object?>{
+        'schemaVersion': 1,
+        'revision': 4,
+      };
+      final labels = <String, Object?>{
+        'more': 'More',
+        'close': 'Close mini-program',
+        'back': 'Back',
+        'navigation': 'Mini-program navigation',
+        'tabs': 'Mini-program tabs',
+      };
+      final native = <String, Object?>{
+        'schemaVersion': 1,
+        'revision': 4,
+        'accessibilityLabels': labels,
+        'chrome': {
+          'title': 'Guest title',
+          'tabBar': {
+            'list': [
+              {'text': 'Guest tab'}
+            ]
+          }
+        },
+      };
+      Widget view() => Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+              width: 390,
+              height: 700,
+              child: WeappContainerView(
+                  controller: controller,
+                  hostChrome: geometry,
+                  nativeChrome: native)));
+      await tester.pumpWidget(view());
+      await tester.pump();
+      await tester.pump();
+      expect(platform.requests.where((r) => r.$1 == 'attach'), hasLength(1));
+      expect(
+          platform.requests.where((r) => r.$1 == 'hostChrome'), hasLength(1));
+      expect(
+          platform.requests.where((r) => r.$1 == 'nativeChrome'), hasLength(1));
+      final accepted =
+          platform.requests.lastWhere((r) => r.$1 == 'nativeChrome');
+      final before = platform.requests.length;
+      // Deliberately mutate the same map: the SDK captures descriptor values,
+      // not caller map identity or geometry revision alone.
+      labels.addAll({
+        'more': '更多',
+        'close': '关闭小程序',
+        'back': '返回',
+        'navigation': '小程序导航',
+        'tabs': '小程序标签栏',
+      });
+      await tester.pumpWidget(view());
+      await tester.pump();
+      await tester.pump();
+      final updates = platform.requests.skip(before).toList();
+      expect(updates.map((r) => r.$1), ['nativeChrome']);
+      expect(updates.single.$2['revision'], 4);
+      expect(updates.single.$2['accessibilityLabels'], labels);
+      expect((accepted.$2['accessibilityLabels'] as Map)['more'], 'More',
+          reason: 'A queued descriptor must not borrow caller-owned maps');
+      expect(updates.single.$2['chrome'], native['chrome']);
+      final unchanged = platform.requests.length;
+      await tester.pumpWidget(view());
+      await tester.pump();
+      expect(platform.requests.length, unchanged);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.runAsync(controller.close);
+      expect(tester.takeException(), isNull);
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
   test(
       'GPU opt-in reaches the native owner and development updates preserve result identity',
       () async {

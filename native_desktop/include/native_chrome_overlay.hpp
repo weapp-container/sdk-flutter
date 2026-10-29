@@ -26,6 +26,40 @@ public:
   virtual void visible(bool) = 0;
 };
 namespace chrome_detail {
+struct AccessibilityLabels {
+  std::string more = "More", close = "Close mini-program", back = "Back",
+              navigation = "Mini-program navigation",
+              tabs = "Mini-program tabs";
+};
+inline AccessibilityLabels accessibility_labels(const Json &descriptor) {
+  AccessibilityLabels labels;
+  const auto value = descriptor.find("accessibilityLabels");
+  if (value == descriptor.end())
+    return labels;
+  if (!value->is_object())
+    throw std::invalid_argument(
+        "native chrome accessibility labels must be an object");
+  auto read = [&](const char *name, std::string &target) {
+    auto item = value->find(name);
+    if (item == value->end())
+      return;
+    if (!item->is_string())
+      throw std::invalid_argument(
+          "native chrome accessibility label must be text");
+    const auto text = item->get<std::string>();
+    if (text.empty() || text.size() > 1024 ||
+        text.find('\0') != std::string::npos)
+      throw std::invalid_argument(
+          "native chrome accessibility label is empty or unbounded");
+    target = text;
+  };
+  read("more", labels.more);
+  read("close", labels.close);
+  read("back", labels.back);
+  read("navigation", labels.navigation);
+  read("tabs", labels.tabs);
+  return labels;
+}
 struct Rect {
   double x = 0, y = 0, width = 0, height = 0;
 };
@@ -89,6 +123,7 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
   HWND parent_;
   Plane toolbar_{this, nullptr, false}, tabs_{this, nullptr, true};
   Json value_;
+  chrome_detail::AccessibilityLabels labels_;
   std::function<void(Json)> action_;
   bool shown_ = true;
   double scale_ = 1;
@@ -318,11 +353,12 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
     } else {
       const auto pill = chrome_detail::rect(value_.at("menuButtonRect"));
       const auto left = pill.x - outer.x, top = pill.y - outer.y;
-      add(100, L"More", left + 1, top + 1, pill.width / 2 - 2, pill.height - 2);
-      add(101, L"Close mini-program", left + pill.width / 2 + 1, top + 1,
+      add(100, wide(labels_.more), left + 1, top + 1, pill.width / 2 - 2,
+          pill.height - 2);
+      add(101, wide(labels_.close), left + pill.width / 2 + 1, top + 1,
           pill.width / 2 - 2, pill.height - 2);
       if (!custom() && chrome.value("canGoBack", false))
-        add(102, L"Back", 0, 0, 44, outer.height);
+        add(102, wide(labels_.back), 0, 0, 44, outer.height);
     }
   }
   void paint(Plane &plane) {
@@ -438,15 +474,19 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
       c.lpszClassName = L"WeappContainerNativeChrome";
       c.hCursor = LoadCursor(nullptr, IDC_ARROW);
       RegisterClassW(&c);
-      plane.window = CreateWindowExW(WS_EX_CONTROLPARENT, c.lpszClassName,
-                                     plane.tabs ? L"Mini-program tabs"
-                                                : L"Mini-program navigation",
-                                     WS_CHILD | WS_TABSTOP, 0, 0, 1, 1, parent_,
-                                     nullptr, c.hInstance, &plane);
+      const auto label = wide(plane.tabs ? labels_.tabs : labels_.navigation);
+      plane.window =
+          CreateWindowExW(WS_EX_CONTROLPARENT, c.lpszClassName, label.c_str(),
+                          WS_CHILD | WS_TABSTOP, 0, 0, 1, 1, parent_, nullptr,
+                          c.hInstance, &plane);
       if (!plane.window)
         return Status::error("ERR_RENDER",
                              "could not create native chrome HWND");
     }
+    const auto label = wide(plane.tabs ? labels_.tabs : labels_.navigation);
+    if (!SetWindowTextW(plane.window, label.c_str()))
+      return Status::error("ERR_RENDER",
+                           "could not update native chrome label");
     auto r = plane_rect(plane.tabs);
     auto extended = GetWindowLongPtrW(plane.window, GWL_EXSTYLE);
     const bool floating = !plane.tabs && custom();
@@ -502,8 +542,10 @@ public:
       if (!value_.is_null() && value.at("revision").get<uint64_t>() <
                                    value_.at("revision").get<uint64_t>())
         return Status::error("ERR_CANCELLED", "stale native chrome revision");
+      auto labels = chrome_detail::accessibility_labels(value);
       load_icons(value.at("chrome").at("tabBar"));
       value_ = value;
+      labels_ = std::move(labels);
       action_ = std::move(action);
       scale_ = GetDpiForWindow(parent_) / 96.0;
       auto status = position(toolbar_);
@@ -536,6 +578,7 @@ public:
 class GtkChromeOverlay final : public NativeChromeOverlay {
   GtkWidget *parent_, *fixed_ = nullptr;
   Json value_;
+  chrome_detail::AccessibilityLabels labels_;
   std::function<void(Json)> action_;
   bool shown_ = true;
   using Pixbuf = std::shared_ptr<GdkPixbuf>;
@@ -640,8 +683,10 @@ public:
       if (!GTK_IS_OVERLAY(parent_))
         return Status::error("ERR_RENDER",
                              "native chrome requires GTK overlay parent");
+      auto labels = chrome_detail::accessibility_labels(value);
       load_icons(value.at("chrome").at("tabBar"));
       value_ = value;
+      labels_ = std::move(labels);
       action_ = std::move(action);
       if (fixed_)
         gtk_widget_destroy(fixed_);
@@ -654,6 +699,8 @@ public:
           chrome.value("navigationStyle", "default") == "custom";
       if (!custom) {
         auto *header = gtk_event_box_new();
+        atk_object_set_name(gtk_widget_get_accessible(header),
+                            labels_.navigation.c_str());
         style(header, "* {background-color:" +
                           chrome.value("backgroundColor", "#ffffff") +
                           "; color:" + chrome.value("frontColor", "#000000") +
@@ -661,7 +708,7 @@ public:
         auto *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
         gtk_container_add(GTK_CONTAINER(header), row);
         if (chrome.value("canGoBack", false)) {
-          auto *back = button("‹", "Back", "back");
+          auto *back = button("‹", labels_.back.c_str(), "back");
           gtk_widget_set_size_request(back, 44,
                                       static_cast<int>(toolbar.height));
           gtk_box_pack_start(GTK_BOX(row), back, FALSE, FALSE, 0);
@@ -676,6 +723,8 @@ public:
         put(header, toolbar);
       }
       auto *capsule = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+      atk_object_set_name(gtk_widget_get_accessible(capsule),
+                          labels_.navigation.c_str());
       const auto backplate = chrome_detail::light_capsule_foreground(chrome)
                                  ? "rgba(24,24,24,0.84)"
                                  : "rgba(255,255,255,0.90)";
@@ -683,17 +732,20 @@ public:
             std::string("* {border-radius:16px; background-image:none; ") +
                 "background-color:" + backplate +
                 "; color:" + chrome.value("frontColor", "#000000") + ";}");
-      gtk_box_pack_start(GTK_BOX(capsule), button("···", "More", "more"), TRUE,
+      gtk_box_pack_start(GTK_BOX(capsule),
+                         button("···", labels_.more.c_str(), "more"), TRUE,
                          TRUE, 0);
       gtk_box_pack_start(GTK_BOX(capsule),
-                         button("⊙", "Close mini-program", "close"), TRUE, TRUE,
-                         0);
+                         button("⊙", labels_.close.c_str(), "close"), TRUE,
+                         TRUE, 0);
       put(capsule, pill);
       const auto &bar = chrome.at("tabBar");
       if (value.contains("tabBarRect") && !value["tabBarRect"].is_null() &&
           bar.value("visible", false)) {
         auto r = chrome_detail::rect(value.at("tabBarRect"));
         auto *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+        atk_object_set_name(gtk_widget_get_accessible(row),
+                            labels_.tabs.c_str());
         style(row, "* {background-color:" +
                        bar.value("backgroundColor", "#ffffff") + ";}");
         int index = 0;

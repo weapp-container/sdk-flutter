@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -27,6 +28,10 @@ class WeappContainerView extends StatefulWidget {
   /// Presentation/input suspension only. App lifecycle and timers keep running.
   final bool occluded;
   final Map<String, Object?>? hostChrome;
+
+  /// Native Windows/Linux host controls. Optional `accessibilityLabels` accepts
+  /// `more`, `close`, `back`, `navigation` and `tabs` host-localized strings;
+  /// omitted labels retain English defaults. This never changes guest content.
   final Map<String, Object?>? nativeChrome;
   final ValueChanged<int>? onHostChromeApplied;
   final void Function(Object error, StackTrace stack)? onError;
@@ -49,7 +54,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
   Map<String, Object?>? _pendingMetrics;
   Map<String, Object?>? _metrics;
   int? _hostChromeRevision;
-  int? _nativeChromeRevision;
+  String? _nativeChromeSignature;
   bool _occluded = false;
   bool _nativeOccluded = false;
   Future<void> _chromeSync = Future.value();
@@ -125,17 +130,23 @@ class _WeappContainerViewState extends State<WeappContainerView>
     final geometry = widget.hostChrome;
     final native = widget.nativeChrome;
     final geometryRevision = geometry?['revision'] as int?;
-    final nativeRevision = native?['revision'] as int?;
+    final nativeSupported = defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+    // Locale is presentation metadata, independent of guest geometry revision.
+    // Capture by value so callers cannot mutate a queued native update.
+    final nativeSignature =
+        native != null && nativeSupported ? jsonEncode(native) : null;
     final geometryChanged =
         geometry != null && geometryRevision != _hostChromeRevision;
-    final nativeChanged = native != null &&
-        nativeRevision != _nativeChromeRevision &&
-        (defaultTargetPlatform == TargetPlatform.windows ||
-            defaultTargetPlatform == TargetPlatform.linux);
+    final nativeChanged =
+        nativeSignature != null && nativeSignature != _nativeChromeSignature;
+    final nativeSnapshot = nativeChanged
+        ? (jsonDecode(nativeSignature) as Map).cast<String, Object?>()
+        : null;
     final occlusionChanged = widget.occluded != _occluded;
     if (!geometryChanged && !nativeChanged && !occlusionChanged) return;
     if (geometryChanged) _hostChromeRevision = geometryRevision;
-    if (nativeChanged) _nativeChromeRevision = nativeRevision;
+    if (nativeChanged) _nativeChromeSignature = nativeSignature;
     final occluded = widget.occluded;
     _occluded = occluded;
     _chromeSync =
@@ -178,7 +189,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
           widget.onHostChromeApplied?.call(geometryRevision);
         }
       }
-      if (nativeChanged) await _controller.updateNativeChrome(native);
+      if (nativeChanged) await _controller.updateNativeChrome(nativeSnapshot!);
       if (!occluded && _nativeOccluded) {
         await _controller.setPreviewOccluded(false);
         _nativeOccluded = false;
