@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { SDK_VERSION } from '../../tools/runtime-artifacts.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = await mkdtemp(path.join(tmpdir(), 'weapp-flutter-receipt-'));
@@ -23,9 +24,9 @@ try {
   await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), bytes);
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const receipt = {
-    schemaVersion: 1, sdkVersion: '0.1.0-preview.4', platform: 'macos-universal',
+    schemaVersion: 1, sdkVersion: SDK_VERSION, platform: 'macos-universal',
     sourceCommit: 'a'.repeat(40), sourceDirty: false, status: 'verified',
-    native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: '0.1.0-preview.4', platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
+    native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: SDK_VERSION, platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
     artifacts: [{ file: 'lib/libweapp_container_sdk.a', sha256 }],
   };
   const run = async (value, success) => {

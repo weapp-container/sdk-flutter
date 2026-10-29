@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.5",
-  "sourceBaseCommit": "beb0d92714a6ddbe50f2e807be424d64ebc78f51",
-  "review": "Reviewed preview.5 atomic host layout, fault-safe reload coordination and wrapper metadata; preserved historical ORIGIN and preview.4 artifact bytes.",
+  "sourceBaseCommit": "2a6f0de26184d78e7b532d755e5824f10b1eec19",
+  "review": "Align synthetic fixture receipts and federated package assertions with shared preview.5 SDK_VERSION; preserve historical preview.4 runtime lock and ORIGIN without artifact claims.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -209,8 +209,8 @@
     },
     {
       "path": "native_desktop/tests/prepare_receipts.mjs",
-      "sha256": "84d0f39cff6450e938d999931e144a6335e30870a4d5778c0e9a75742f638945",
-      "size": 6703,
+      "sha256": "11c36837d8eaf58089ea04cdf1bf926dd9c380e159361d3f47112722c07ee193",
+      "size": 6756,
       "mode": "100644"
     },
     {
@@ -281,8 +281,8 @@
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "e1663110039da7ae71a65a63a8c50daa59aa118060a0dcce1582697840d90ce7",
-      "size": 7786,
+      "sha256": "72d597b21fab86a4dd4c46c551da0b941d880a57e956b8e81357699bebceeb7f",
+      "size": 7802,
       "mode": "100644"
     },
     {

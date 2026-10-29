@@ -6,7 +6,7 @@ import { dirname, join, resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { downloadRuntimeArtifact, selectArtifact } from '../tools/runtime-artifacts.mjs';
+import { downloadRuntimeArtifact, selectArtifact, SDK_VERSION } from '../tools/runtime-artifacts.mjs';
 import { makeFixture } from '../example/shared/make-fixture.mjs';
 import { verifyNativeInstallation } from '../tools/verify-native.mjs';
 import { verifySourceInventory } from '../tools/source-inventory.mjs';
@@ -62,7 +62,7 @@ test('native package verification rejects modified installed bytes', async () =>
     assert.equal(result.status, 0, result.stderr);
     const bytes = await readFile(archive), sha256 = createHash('sha256').update(bytes).digest('hex');
     const manifestPath = join(temp, 'lock.json');
-    await writeFile(manifestPath, JSON.stringify({ schemaVersion: 1, runtimeVersion: '0.1.0-preview.4', abiVersion: 1, source: {repository: 'weapp-container/runtime-artifacts', releaseTag: 'runtime-v0.1.0-preview.4'}, artifacts: [{component: 'android-sdk', platform: 'android', arch: 'universal', architectures: ['arm64-v8a', 'x86_64'], fileName: 'android.tar.gz', size: bytes.length, sha256}] }));
+    await writeFile(manifestPath, JSON.stringify({ schemaVersion: 1, runtimeVersion: SDK_VERSION, abiVersion: 1, source: {repository: 'weapp-container/runtime-artifacts', releaseTag: `runtime-v${SDK_VERSION}`}, artifacts: [{component: 'android-sdk', platform: 'android', arch: 'universal', architectures: ['arm64-v8a', 'x86_64'], fileName: 'android.tar.gz', size: bytes.length, sha256}] }));
     await downloadRuntimeArtifact({ manifestPath, platform: 'android', arch: 'universal', component: 'android-sdk', outDirectory: cache, installDirectory: installed, artifactDirectory: temp });
     assert.equal(verifyNativeInstallation(installed, 'android', manifestPath, cache).archiveSha256, sha256);
     await writeFile(join(installed, 'native.txt'), 'changed');
@@ -78,7 +78,7 @@ test('all seven federated packages preserve their version and local dependency c
   for (const name of packages) {
     const text = await readFile(join(root, name, 'pubspec.yaml'), 'utf8');
     assert.match(text, new RegExp(`^name: ${name}$`, 'm'));
-    assert.match(text, /^version: 0\.1\.0-preview\.4$/m);
+    assert.equal(text.match(/^version: (.+)$/m)?.[1], SDK_VERSION);
     for (const match of text.matchAll(/path:\s*(\.\.[^\s]*)/g)) await readFile(resolve(root, name, match[1], 'pubspec.yaml'));
   }
   assert.doesNotMatch(await readFile(join(root, '.gitignore'), 'utf8'), /^\/?lib\/$/m);
