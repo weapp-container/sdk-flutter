@@ -17,14 +17,14 @@ async function sourceFiles() {
   inventory ??= verifySourceInventory(root).files;
   return inventory;
 }
-test('artifact lock matches the reviewed preview.5 archive coordinates', async () => {
-  assert.equal(createHash('sha256').update(await readFile(join(root, 'runtime-artifacts.lock.json'))).digest('hex'), '413ecc39ee09f19a807720716e8d8b0657eddeb4bc40e6bfd473b9527e81323d');
+test('artifact lock matches the reviewed preview.5.1 archive coordinates', async () => {
+  assert.equal(createHash('sha256').update(await readFile(join(root, 'runtime-artifacts.lock.json'))).digest('hex'), 'bc2bf8a79ebb1ea1b7bcf2b5a4749271f2022c9b103773bd7be6ebc3b94271cd');
   const lock = await json('runtime-artifacts.lock.json');
-  assert.equal(lock.runtimeVersion, '0.1.0-preview.5');
+  assert.equal(lock.runtimeVersion, '0.1.0-preview.5.1');
   assert.equal(lock.artifacts.length, 10);
   assert.equal(lock.abiVersion, 1);
   assert.equal(lock.source.repository, 'weapp-container/runtime-artifacts');
-  assert.equal(lock.source.releaseTag, 'runtime-v0.1.0-preview.5');
+  assert.equal(lock.source.releaseTag, 'runtime-v0.1.0-preview.5.1');
   if (lock.artifacts.length === 0) assert.throws(() => selectArtifact(lock, { version: lock.runtimeVersion, platform: 'android', arch: 'universal', component: 'android-sdk' }), { code: 'ERR_RUNTIME_MANIFEST' });
   for (const entry of lock.artifacts) assert.equal(selectArtifact(lock, { version: lock.runtimeVersion, abiVersion: lock.abiVersion, platform: entry.platform, arch: entry.arch, component: entry.component }).sha256, entry.sha256);
 });
