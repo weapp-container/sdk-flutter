@@ -46,8 +46,9 @@ inline void translate_chrome(Json &payload, double dx, double dy) {
 }
 struct PresentationStamp {
   uint64_t generation = 0, revision = 0;
+  Json layout = nullptr;
   bool operator==(const PresentationStamp &other) const {
-    return generation == other.generation && revision == other.revision;
+    return generation == other.generation && revision == other.revision && layout == other.layout;
   }
 };
 // Raster/GPU callbacks only record immutable receipts. Session commands remain
@@ -175,8 +176,8 @@ private:
     weapp_container_sdk_session *native = nullptr;
     std::shared_ptr<Texture> texture;
     bool closing = false, closed = false, retiring = false, foreground = true,
-         occluded = false;
-    Json host_chrome, native_chrome;
+         occluded = false, host_layout_observed = false;
+    Json host_chrome, native_chrome, host_surface;
     Json load;
     Reply pending_load;
     std::vector<Reply> pending_prepares;
@@ -200,6 +201,7 @@ private:
   std::vector<Reply> initializers_;
   static bool cleanup(const std::shared_ptr<Entry> &, const Log &);
   Status ensure(Entry &);
+  Status observe_layout(Entry &, const Metrics &);
   Status foreground(Entry &);
   void load(Entry &, const Json &, Reply);
   void detach(const std::shared_ptr<Entry> &, Reply);

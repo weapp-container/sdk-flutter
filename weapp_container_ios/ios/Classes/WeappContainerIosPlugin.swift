@@ -80,6 +80,10 @@ import UIKit
                 guard let enabled = value as? Bool else { throw fail("devDiagnostics must be a boolean") }
                 configuration.devDiagnostics = enabled
             }
+            if let layout = args["hostLayout"] as? [String: Any] {
+                guard layout["protocolVersion"] as? String == "1.0", layout["atomic"] as? Bool == true else { throw fail("hostLayout requires atomic protocol 1.0") }
+                configuration.atomicHostLayout = true
+            }
             let id = nextID; nextID += 1
             let entry = Entry(WeappContainerSession(configuration: configuration)); entries[id] = entry
             entry.session.onEvent = { [weak self] event in self?.event(id, event) }
@@ -111,11 +115,23 @@ import UIKit
                 })
             }
         case "load":
-            try await session.load(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]))
+            try await session.load(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]), initialHostLayout: args["initialHostLayout"] == nil ? nil : try object(args["initialHostLayout"]))
             acceptPreparedChrome(entry,args)
         case "applyDevPack":
-            let value=try await session.applyDevPack(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]))
+            let value=try await session.applyDevPack(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]), initialHostLayout: args["initialHostLayout"] == nil ? nil : try object(args["initialHostLayout"]))
             acceptPreparedChrome(entry,args);return codec(value)
+        case "command":
+            let operation = try string(args, "operation")
+            let value = try await session.executeCommand(operation, object(args["payload"]))
+            if operation == "applyDevPackAttempt", value["status"].string == "accepted", let raw = entry.preparedClientChrome {
+                entry.clientChrome = raw; entry.preparedClientChrome = nil
+            }
+            return codec(value)
+        case "prepareHostLayout", "hostLayout":
+            let raw = args.filter { $0.key != "id" }
+            let value = try await measureLayout(entry, raw)
+            if call.method == "prepareHostLayout" { entry.preparedClientChrome = raw["chrome"] as? [String: Any]; return value }
+            _ = try await session.executeCommand("hostLayout", object(value)); entry.clientChrome = raw["chrome"] as? [String: Any]
         case "devState": return codec(try session.devState())
         case "clearDevStorage": try await session.clearDevStorage()
         case "navigate": try session.navigate(route: string(args, "route"), query: object(args["query"]), replace: args["replace"] as? Bool ?? false)
@@ -137,6 +153,7 @@ import UIKit
         case "flushStorage": try await session.flushStorage()
         case "state": return codec(try session.state())
         case "capabilities": return codec(try session.capabilities())
+        case "observeHostLayout": _ = try await session.requestHostLayoutObservation()
         case "prepareView": return codec(try await session.prepareView())
         case "detachView":
             try await retireView(entry)
@@ -169,6 +186,21 @@ import UIKit
               (initial["revision"] as? NSNumber)?.uint64Value == (raw["revision"] as? NSNumber)?.uint64Value else { return }
         entry.clientChrome=raw;entry.preparedClientChrome=nil
     }
+    private func measureLayout(_ entry: Entry, _ supplied: [String: Any]) async throws -> [String: Any] {
+        guard let observation = supplied["observation"] as? [String: Any], var chrome = supplied["chrome"] as? [String: Any],
+              let revision = supplied["layoutRevision"] as? String else { throw fail("Expected complete host layout observation, chrome and revision") }
+        chrome["coordinateSpace"] = supplied["coordinateSpace"]
+        chrome.removeValue(forKey: "observationId")
+        // Atomic layout measures the native view already mounted in this
+        // shell. The prior accepted clientChrome is not its coordinate anchor.
+        chrome = try await measureChrome(entry, chrome, prospective: false)
+        for key in ["sessionId", "pageId"] { chrome.removeValue(forKey: key); if let value = observation[key] { chrome[key] = value } }
+        var layout: [String: Any] = ["schemaVersion": 1, "chrome": chrome, "layoutRevision": revision]
+        for key in ["ownerId", "surfaceGeneration", "observationId", "windowMetrics"] {
+            guard let value = observation[key] else { throw fail("Missing layout observation field") }; layout[key] = value
+        }
+        return layout
+    }
     private func updateChrome(_ entry: Entry, _ supplied: [String: Any]) async throws {
         let measured=try await measureChrome(entry,supplied,prospective:false)
         try entry.session.updateHostChrome(object(measured));entry.clientChrome=supplied
@@ -185,7 +217,7 @@ import UIKit
                 throw WeappContainerError(code: "ERR_CANCELLED", message: "Chrome owner retired before native measurement")
             }
             if let view = entry.view, let window = view.window, view.bounds.width > 0, view.bounds.height > 0 {
-                guard let content = (prospective ? entry.clientChrome?["contentRect"] : payload["contentRect"]) as? [String: Any],
+                guard let content = (prospective ? (entry.clientChrome?["contentRect"] ?? payload["contentRect"]) : payload["contentRect"]) as? [String: Any],
                       let left = content["left"] as? NSNumber, let top = content["top"] as? NSNumber else { throw fail("Missing content rectangle") }
                 if !prospective, let width=content["width"] as? NSNumber,let height=content["height"] as? NSNumber,
                    abs(Double(view.bounds.width)-width.doubleValue)>1 || abs(Double(view.bounds.height)-height.doubleValue)>1 {
@@ -226,6 +258,7 @@ import UIKit
         case .ready(let value): emit(id, merged(value, type: "ready"))
         case .navigation(let value): emit(id, merged(value, type: "navigation"))
         case .chrome(let value): emit(id, merged(value, type: "chrome"))
+        case .raw(let value): if let fields = codec(value) as? [String: Any] { emit(id, fields) }
         case .message(let value): emit(id, ["type": "message", "message": codec(value)])
         case .error(let error): emit(id, ["type": "error", "code": error.code, "message": error.message])
         case .closed(let error): emit(id, ["type": "closed", "ok": error == nil, "error": error.map { ["code": $0.code, "message": $0.message] as Any } ?? NSNull()])

@@ -18,6 +18,8 @@ class WeappContainerView extends StatefulWidget {
     this.foreground = true,
     this.occluded = false,
     this.hostChrome,
+    this.hostLayoutObservation,
+    this.prepareOnly = false,
     this.nativeChrome,
     this.onHostChromeApplied,
     this.onError,
@@ -28,6 +30,10 @@ class WeappContainerView extends StatefulWidget {
   /// Presentation/input suspension only. App lifecycle and timers keep running.
   final bool occluded;
   final Map<String, Object?>? hostChrome;
+  final Map<String, Object?>? hostLayoutObservation;
+
+  /// Measure a prospective shell without changing the accepted guest environment.
+  final bool prepareOnly;
 
   /// Native Windows/Linux host controls. Optional `accessibilityLabels` accepts
   /// `more`, `close`, `back`, `navigation` and `tabs` host-localized strings;
@@ -54,6 +60,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
   Map<String, Object?>? _pendingMetrics;
   Map<String, Object?>? _metrics;
   int? _hostChromeRevision;
+  String? _hostObservationId;
   String? _nativeChromeSignature;
   bool _occluded = false;
   bool _nativeOccluded = false;
@@ -130,14 +137,19 @@ class _WeappContainerViewState extends State<WeappContainerView>
     final geometry = widget.hostChrome;
     final native = widget.nativeChrome;
     final geometryRevision = geometry?['revision'] as int?;
+    final observation = widget.hostLayoutObservation;
+    final observationId = observation?['observationId'] as String?;
     final nativeSupported = defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
     // Locale is presentation metadata, independent of guest geometry revision.
     // Capture by value so callers cannot mutate a queued native update.
     final nativeSignature =
         native != null && nativeSupported ? jsonEncode(native) : null;
-    final geometryChanged =
-        geometry != null && geometryRevision != _hostChromeRevision;
+    final geometryChanged = !widget.prepareOnly &&
+        geometry != null &&
+        (!_controller.atomicHostLayout || observation != null) &&
+        (geometryRevision != _hostChromeRevision ||
+            observationId != _hostObservationId);
     final nativeChanged =
         nativeSignature != null && nativeSignature != _nativeChromeSignature;
     final nativeSnapshot = nativeChanged
@@ -145,7 +157,10 @@ class _WeappContainerViewState extends State<WeappContainerView>
         : null;
     final occlusionChanged = widget.occluded != _occluded;
     if (!geometryChanged && !nativeChanged && !occlusionChanged) return;
-    if (geometryChanged) _hostChromeRevision = geometryRevision;
+    if (geometryChanged) {
+      _hostChromeRevision = geometryRevision;
+      _hostObservationId = observationId;
+    }
     if (nativeChanged) _nativeChromeSignature = nativeSignature;
     final occluded = widget.occluded;
     _occluded = occluded;
@@ -161,12 +176,21 @@ class _WeappContainerViewState extends State<WeappContainerView>
       }
       if (geometryChanged) {
         try {
-          await _controller.updateHostChrome(geometry);
+          if (_controller.atomicHostLayout) {
+            await _controller.updateHostLayout(
+                observation: observation!,
+                chrome: geometry,
+                layoutRevision: geometryRevision.toString());
+          } else {
+            await _controller.updateHostChrome(geometry);
+          }
         } on PlatformException catch (error) {
           if (error.code == 'ERR_CANCELLED') {
             if (_disposed ||
                 !mounted ||
-                widget.hostChrome?['revision'] != geometryRevision) return;
+                widget.hostChrome?['revision'] != geometryRevision ||
+                widget.hostLayoutObservation?['observationId'] != observationId)
+              return;
             // Runtime navigation can win before Flutter consumes its chrome
             // event. Confirm the new owner instead of faulting a healthy page.
             final current = await _controller.state();

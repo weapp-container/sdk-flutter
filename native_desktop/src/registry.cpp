@@ -155,9 +155,24 @@ void Registry::report(int64_t id, Status status) {
           {{"type", "error"},
            {"error", {{"code", status.code}, {"message", status.message}}}}}});
 }
+Status Registry::observe_layout(Entry &e, const Metrics &metrics) {
+  if (e.host_surface.is_null()) {
+    auto status = command(e.native, "hostSurface", {{"action", "attach"}}, &e.host_surface);
+    if (!status) return status;
+    e.host_layout_observed = false;
+  }
+  Json observation;
+  auto status = command(e.native, "observeHostLayout", {
+    {"schemaVersion", 1}, {"ownerId", e.host_surface.at("ownerId")},
+    {"surfaceGeneration", e.host_surface.at("surfaceGeneration")},
+    {"windowMetrics", metrics.value}}, &observation);
+  if (status) e.host_layout_observed = true;
+  return status;
+}
 Status Registry::ensure(Entry &e) {
-  if (e.native)
-    return {};
+  if (e.native) {
+    return e.config.contains("hostLayout") && !e.host_layout_observed ? observe_layout(e, e.metrics) : Status{};
+  }
   if (!e.metrics.width)
     return Status::error("ERR_NOT_LAID_OUT",
                          "initial measured viewport is required");
@@ -182,7 +197,11 @@ Status Registry::ensure(Entry &e) {
     if (auto s = command(e.native, "registerHostMethod", {{"name", method}});
         !s)
       return s;
-  if (!e.host_chrome.is_null()) {
+  if (e.config.contains("hostLayout")) {
+    auto status = observe_layout(e, e.metrics);
+    if (!status) return status;
+  }
+  if (!e.config.contains("hostLayout") && !e.host_chrome.is_null()) {
     if (auto s = command(e.native, "hostChrome", e.host_chrome); !s)
       return s;
   }
@@ -264,6 +283,13 @@ void Registry::detach(const std::shared_ptr<Entry> &e, Reply reply) {
   if (!s) {
     reply(s, {});
     return;
+  }
+  if (e->native && !e->host_surface.is_null() && !e->closing) {
+    auto identity = e->host_surface; identity["action"] = "detach";
+    auto ended = command(e->native, "hostSurface", identity);
+    if (!ended) { reply(ended, {}); return; }
+    e->host_surface = nullptr;
+    e->host_layout_observed = false;
   }
   e->retiring = true;
   report(e->id, foreground(*e));
@@ -432,10 +458,11 @@ void Registry::tick() {
         Json accepted;
         auto status = command(e->native, "state", Json::object(), &accepted);
         if (status && accepted.value("presentationRequired", false)) {
-          status = command(e->native, "presented",
-                           {{"generation", consumed->generation},
-                            {"revision", consumed->revision}},
-                           &accepted);
+          Json receipt = {{"generation", consumed->generation}, {"revision", consumed->revision}};
+          if (consumed->layout.is_object())
+            for (const auto *key : {"ownerId", "surfaceGeneration", "observationId", "layoutRevision"})
+              receipt[key] = consumed->layout.at(key);
+          status = command(e->native, "presented", receipt, &accepted);
           // A newer accepted frame or detached surface intentionally cancels
           // this receipt. Never substitute the newly observed identity.
           if (!status && status.code != "ERR_CANCELLED")
@@ -455,7 +482,7 @@ void Registry::tick() {
              e->texture->present(
                  e->native, e->metrics,
                  PresentationStamp{state.value("generation", uint64_t(0)),
-                                   state.value("frameRevision", uint64_t(0))}));
+                                   state.value("frameRevision", uint64_t(0)), state.value("acceptedLayout", Json())}));
     drain(e);
   }
   ticking_ = false;
@@ -559,6 +586,7 @@ void Registry::invoke(const std::string &method, const Json &args,
         }
         e->config["devDiagnostics"] = args["devDiagnostics"];
       }
+      if (args.contains("hostLayout")) e->config["hostLayout"] = args.at("hostLayout");
       sessions_[e->id] = e;
       reply({}, {{"id", e->id}});
       return;
@@ -589,6 +617,54 @@ void Registry::invoke(const std::string &method, const Json &args,
     }
     Json payload = args;
     payload.erase("id");
+    if (method == "prepareHostLayout" || method == "hostLayout") {
+      const auto &observation = payload.at("observation");
+      auto chrome = payload.at("chrome");
+      chrome.erase("observationId");
+      chrome.erase("sessionId"); chrome.erase("pageId");
+      for (const auto *key : {"sessionId", "pageId"})
+        if (observation.contains(key)) chrome[key] = observation.at(key);
+      Json layout = {{"schemaVersion", 1}, {"ownerId", observation.at("ownerId")},
+        {"surfaceGeneration", observation.at("surfaceGeneration")},
+        {"observationId", observation.at("observationId")},
+        {"layoutRevision", payload.at("layoutRevision")},
+        {"windowMetrics", observation.at("windowMetrics")}, {"chrome", chrome}};
+      if (method == "prepareHostLayout") reply({}, layout);
+      else reply(command(e->native, "hostLayout", layout), nullptr);
+      return;
+    }
+    if (method == "command") {
+      auto status = ensure(*e);
+      Json result;
+      const auto operation = payload.at("operation").get<std::string>();
+      const auto body = payload.value("payload", Json::object());
+      bool suspended = false;
+      if (status && operation == "applyDevPackAttempt") {
+        Json attempt;
+        status = command(e->native, "queryDevPackAttempt", {
+          {"ownerId", body.at("ownerId")}, {"attemptId", body.at("attemptId")}}, &attempt);
+        if (status && attempt.value("status", "") == "prepared" &&
+            attempt.value("reloadKind", "") == "restart" && e->texture) {
+          e->texture->invalidate_presentation();
+          status = e->texture->suspend(e->native);
+          suspended = bool(status);
+        }
+      }
+      if (status) status = command(e->native, operation.c_str(), body, &result);
+      if (operation == "applyDevPackAttempt") {
+        auto lifecycle = foreground(*e);
+        if (status && !lifecycle) status = lifecycle;
+      }
+      if (e->texture && operation == "applyDevPackAttempt") {
+        e->texture->invalidate_presentation();
+        if (suspended) {
+          auto resumed = e->texture->resume(e->native);
+          if (status && !resumed) status = resumed;
+        }
+      }
+      reply(status, result);
+      return;
+    }
     if (method == "prepareHostChrome") {
       reply({}, payload);
       return;
@@ -669,7 +745,9 @@ void Registry::invoke(const std::string &method, const Json &args,
               {});
         return;
       }
-      if (e->native) {
+      if (e->native && e->config.contains("hostLayout")) {
+        s = observe_layout(*e, metrics);
+      } else if (e->native) {
         Json state;
         s = command(e->native, "state", Json::object(), &state);
         if (s && state.value("status", "") == "empty") {
@@ -763,6 +841,11 @@ void Registry::invoke(const std::string &method, const Json &args,
         reply(s, nullptr);
       }
       return;
+    }
+    if (method == "observeHostLayout") {
+      auto status = ensure(*e);
+      if (status) status = observe_layout(*e, e->metrics);
+      reply(status, nullptr); return;
     }
     if (method == "prepareView") {
       if (!e->metrics.width) {

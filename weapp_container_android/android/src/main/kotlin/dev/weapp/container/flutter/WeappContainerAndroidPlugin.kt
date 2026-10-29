@@ -91,7 +91,9 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 val id = nextId++
                 val gpuRequired = args["gpuRequired"]?.let { value -> require(value is Boolean) { "gpuRequired must be a boolean" }; value as Boolean }
                 val devDiagnostics = args["devDiagnostics"]?.let { value -> require(value is Boolean) { "devDiagnostics must be a boolean" }; value as Boolean } ?: false
-                val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics), devDiagnostics)
+                val layout = args["hostLayout"] as? Map<*, *>
+                if (layout != null) require(layout["protocolVersion"] == "1.0" && layout["atomic"] == true) { "hostLayout requires atomic protocol 1.0" }
+                val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics, atomicHostLayout = layout != null), devDiagnostics)
                 sessions[id] = entry
                 entry.session.eventListener = ContainerEventListener { emit(id, it) }
                 result.success(mapOf("id" to id)); return
@@ -114,8 +116,23 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                             "cancelToken" to hostCall.cancelToken))
                     })
                 }
-                "load" -> session.load(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
-                "applyDevPack" -> session.applyDevPack(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
+                "load" -> session.load(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) }, args["initialHostLayout"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
+                "applyDevPack" -> session.applyDevPack(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) }, args["initialHostLayout"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
+                "command" -> session.executeCommand(args["operation"] as String, jsonObject(args["payload"])).thenApply { value ->
+                    if (args["operation"] == "applyDevPackAttempt" && value is JSONObject && value.optString("status") == "accepted") {
+                        entry.preparedClientChrome?.let { entry.clientChrome = it }; entry.preparedClientChrome = null
+                    }
+                    value
+                }
+                "prepareHostLayout", "hostLayout" -> {
+                    val supplied = jsonObject(args.filterKeys { it != "id" })
+                    measureLayout(entry, supplied).thenCompose { value ->
+                        if (call.method == "prepareHostLayout") {
+                            entry.preparedClientChrome = supplied.getJSONObject("chrome")
+                            CompletableFuture.completedFuture(value)
+                        } else session.executeCommand("hostLayout", value).thenApply { entry.clientChrome = supplied.getJSONObject("chrome"); null }
+                    }
+                }
                 "devState" -> session.devState()
                 "clearDevStorage" -> session.clearDevStorage()
                 "navigate" -> session.navigate(args["route"] as String, jsonObject(args["query"]), args["replace"] as? Boolean ?: false)
@@ -133,6 +150,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 "flushStorage" -> session.flushStorage()
                 "state" -> session.state()
                 "capabilities" -> session.capabilities()
+                "observeHostLayout" -> session.requestHostLayoutObservation()
                 "prepareView" -> session.prepareView()
                 "detachView" -> retireView(entry)
                 "close" -> closeEntry(id, entry)
@@ -176,6 +194,19 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         if((initial["revision"] as? Number)?.toLong()==raw.optLong("revision"))entry.clientChrome=raw
         entry.preparedClientChrome=null
     }
+    private fun measureLayout(entry: Entry, supplied: JSONObject): CompletableFuture<JSONObject> {
+        val observation = supplied.getJSONObject("observation")
+        val chrome = JSONObject(supplied.getJSONObject("chrome").toString())
+        chrome.put("coordinateSpace", supplied.optString("coordinateSpace", "screen")); chrome.remove("observationId")
+        // The atomic shell already moved this native view. Match its current
+        // size and origin; old accepted chrome belongs to the previous shell.
+        return measureChrome(entry, chrome, false).thenApply { measured ->
+            for (key in listOf("sessionId", "pageId")) { measured.remove(key); if (observation.has(key)) measured.put(key, observation.get(key)) }
+            JSONObject().put("schemaVersion", 1).put("layoutRevision", supplied.getString("layoutRevision"))
+                .put("ownerId", observation.getString("ownerId")).put("surfaceGeneration", observation.getString("surfaceGeneration"))
+                .put("observationId", observation.getString("observationId")).put("windowMetrics", observation.getJSONObject("windowMetrics")).put("chrome", measured)
+        }
+    }
     private fun updateChrome(entry: Entry, payload: JSONObject): CompletableFuture<Unit> {
         val raw=JSONObject(payload.toString())
         return measureChrome(entry,payload,false).thenCompose { measured ->
@@ -204,7 +235,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 val origin = IntArray(2); view.getLocationOnScreen(origin)
                 val density = view.resources.displayMetrics.density.toDouble()
                 val content = if(prospective) entry.clientChrome?.getJSONObject("contentRect")
-                    ?: throw ContainerException("ERR_NOT_READY","A current native chrome origin is required for staging")
+                    ?: payload.getJSONObject("contentRect")
                     else payload.getJSONObject("contentRect")
                 if(!prospective&&(kotlin.math.abs(view.width/density-content.getDouble("width"))>1||kotlin.math.abs(view.height/density-content.getDouble("height"))>1)) {
                     if(SystemClock.uptimeMillis()>=deadline)throw ContainerException("ERR_NOT_READY","Native chrome viewport has not matched measured layout")

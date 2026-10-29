@@ -1,10 +1,10 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.4**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5**; native ABI: **1**.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
-This checkout and its default lock target **0.1.0-preview.4** for Dev Player.
+This checkout requires **0.1.0-preview.5** for atomic host layouts and durable Dev Player replacement attempts. A preview.4 runtime cannot satisfy this protocol; a reviewed preview.5 runtime lock must be generated before packaging. The historical preview.4 lock remains unchanged until those new bytes are verified.
 Preparation downloads the exact reviewed SDK archive from the private release or
 an authorized offline directory. Caches are isolated by version, platform,
 architecture and content hash. Prior preview.2 caches and reports remain intact;
@@ -95,7 +95,7 @@ After reviewing source or runtime-lock updates, stage all intended new files and
 
 ```sh
 git add <reviewed-files>
-node tools/source-inventory.mjs --write --version 0.1.0-preview.4 --reason "Describe the reviewed source changes"
+node tools/source-inventory.mjs --write --version 0.1.0-preview.5 --reason "Describe the reviewed source changes"
 git add SOURCE-INVENTORY.json
 node tools/source-inventory.mjs
 node --test tests/source-inventory.test.mjs tests/source-contract.test.mjs

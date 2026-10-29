@@ -364,7 +364,8 @@ private:
     NSView *view = _hostView;
     NSWindow *window = view.window;
     NSScreen *screen = window.screen;
-    const bool chromeMethod = [call.method isEqualToString:@"hostChrome"] || [call.method isEqualToString:@"prepareHostChrome"];
+    const bool layoutMethod = [call.method isEqualToString:@"hostLayout"] || [call.method isEqualToString:@"prepareHostLayout"];
+    const bool chromeMethod = layoutMethod || [call.method isEqualToString:@"hostChrome"] || [call.method isEqualToString:@"prepareHostChrome"];
     const bool clientChrome = chromeMethod && arguments.value("coordinateSpace", "screen") == "flutterClient";
     if (clientChrome && (!view || !window || !screen)) {
       result([FlutterError errorWithCode:@"ERR_NOT_READY" message:@"Chrome needs an attached native host window" details:nil]);
@@ -376,7 +377,7 @@ private:
       const double dx = inScreen.x - NSMinX(screen.frame), dy = NSMaxY(screen.frame) - inScreen.y;
       if (clientChrome) {
         arguments.erase("coordinateSpace");
-        translate_chrome(arguments, dx, dy);
+        translate_chrome(layoutMethod ? arguments.at("chrome") : arguments, dx, dy);
       }
       if ([call.method isEqualToString:@"attach"] || [call.method isEqualToString:@"resize"]) {
         arguments["screenTop"] = dy + arguments.value("previewY", 0.0);

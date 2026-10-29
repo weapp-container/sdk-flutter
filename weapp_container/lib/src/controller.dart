@@ -52,11 +52,23 @@ typedef WeappHostMethod = FutureOr<Object?> Function(WeappHostCall call);
 /// Own a session independently of its widget. Explicitly await close() to persist
 /// storage and release native resources. Detaching a widget keeps its JS isolate.
 class WeappContainerController {
-  WeappContainerController._(this.id, this._platform) {
+  WeappContainerController._(this.id, this._platform, this.atomicHostLayout) {
     _subscription =
         _platform.events.where((value) => value['id'] == id).listen((value) {
       final event =
           WeappContainerEvent(Map<String, Object?>.from(value['event'] as Map));
+      if (event.type == 'hostLayoutObservation' &&
+          event.fields['observation'] is Map) {
+        _pendingHostLayout =
+            Map<String, Object?>.from(event.fields['observation'] as Map);
+        _lastHostLayoutObservation = _pendingHostLayout;
+      } else if (event.type == 'hostLayoutAccepted') {
+        final accepted = event.fields['acceptedLayout'];
+        if (accepted is Map &&
+            accepted['observationId'] == _pendingHostLayout?['observationId']) {
+          _pendingHostLayout = null;
+        }
+      }
       if (event.type == 'hostCall') {
         unawaited(_hostCall(event.fields));
       } else if (event.type == 'hostCallCancelled') {
@@ -68,7 +80,8 @@ class WeappContainerController {
   static Future<WeappContainerController> create(
       {required String? storageKey,
       bool? gpuRequired,
-      bool? devDiagnostics}) async {
+      bool? devDiagnostics,
+      bool atomicHostLayout = false}) async {
     if (storageKey != null && storageKey.trim().isEmpty)
       throw ArgumentError.value(
           storageKey, 'storageKey', 'Must be nonblank, or null for memory');
@@ -78,11 +91,20 @@ class WeappContainerController {
       'storageKey': storageKey,
       if (gpuRequired != null) 'gpuRequired': gpuRequired,
       if (devDiagnostics != null) 'devDiagnostics': devDiagnostics,
+      if (atomicHostLayout)
+        'hostLayout': {'protocolVersion': '1.0', 'atomic': true},
     });
-    return WeappContainerController._(result!['id'] as int, platform);
+    return WeappContainerController._(
+        result!['id'] as int, platform, atomicHostLayout);
   }
 
   final int id;
+  final bool atomicHostLayout;
+  Map<String, Object?>? _pendingHostLayout;
+  Map<String, Object?>? _lastHostLayoutObservation;
+  Map<String, Object?>? get pendingHostLayout => _pendingHostLayout;
+  Map<String, Object?>? get lastHostLayoutObservation =>
+      _lastHostLayoutObservation;
   final WeappContainerPlatform _platform;
   final _events = StreamController<WeappContainerEvent>.broadcast();
   final _methods = <String, WeappHostMethod>{};
@@ -115,13 +137,15 @@ class WeappContainerController {
   Future<void> load(String packPath,
       {String? route,
       Map<String, Object?> options = const {},
-      Map<String, Object?>? initialHostChrome}) {
+      Map<String, Object?>? initialHostChrome,
+      Map<String, Object?>? initialHostLayout}) {
     _loadRequested = true;
     return _invoke<void>('load', {
       'packPath': packPath,
       if (route != null) 'route': route,
       'options': options,
       if (initialHostChrome != null) 'initialHostChrome': initialHostChrome,
+      if (initialHostLayout != null) 'initialHostLayout': initialHostLayout,
     });
   }
 
@@ -130,13 +154,15 @@ class WeappContainerController {
   Future<Map<String, Object?>> applyDevPack(String packPath,
       {String? route,
       Map<String, Object?> options = const {},
-      Map<String, Object?>? initialHostChrome}) async {
+      Map<String, Object?>? initialHostChrome,
+      Map<String, Object?>? initialHostLayout}) async {
     _loadRequested = true;
     return Map<String, Object?>.from((await _invoke<Map>('applyDevPack', {
       'packPath': packPath,
       if (route != null) 'route': route,
       'options': options,
       if (initialHostChrome != null) 'initialHostChrome': initialHostChrome,
+      if (initialHostLayout != null) 'initialHostLayout': initialHostLayout,
     }))!);
   }
 
@@ -174,6 +200,86 @@ class WeappContainerController {
           Map<String, Object?> geometry) async =>
       Map<String, Object?>.from((await _invoke<Map>('prepareHostChrome',
           {...geometry, 'coordinateSpace': 'flutterClient'}))!);
+
+  /// Correlated SDK command. Opaque owner/revision values remain strings.
+  Future<Map<String, Object?>> command(String operation,
+          [Map<String, Object?> payload = const {}]) async =>
+      Map<String, Object?>.from((await _invoke<Map>('command', {
+        'operation': operation,
+        'payload': payload,
+      }))!);
+
+  Future<Map<String, Object?>> beginDevPackAttempt(
+    String packPath, {
+    required String operation,
+    required Map<String, Object?>? expectedAccepted,
+    String? route,
+    Map<String, Object?> options = const {},
+  }) =>
+      command('beginDevPackAttempt', {
+        'operation': operation,
+        'packPath': packPath,
+        'expectedAccepted': expectedAccepted,
+        if (route != null) 'route': route,
+        'options': options,
+      });
+
+  Future<Map<String, Object?>> applyDevPackAttempt(
+    Map<String, Object?> receipt, {
+    required Map<String, Object?>? expectedAccepted,
+    Map<String, Object?>? initialHostLayout,
+  }) {
+    _loadRequested = true;
+    return command('applyDevPackAttempt', {
+      'ownerId': receipt['ownerId'],
+      'attemptId': receipt['attemptId'],
+      'expectedAccepted': expectedAccepted,
+      if (initialHostLayout != null) 'initialHostLayout': initialHostLayout,
+    });
+  }
+
+  Future<Map<String, Object?>> queryDevPackAttempt(
+          Map<String, Object?> receipt) =>
+      command('queryDevPackAttempt', {
+        'ownerId': receipt['ownerId'],
+        'attemptId': receipt['attemptId'],
+      });
+
+  Future<Map<String, Object?>> cancelDevPackAttempt(
+          Map<String, Object?> receipt) =>
+      command('cancelDevPackAttempt', {
+        'ownerId': receipt['ownerId'],
+        'attemptId': receipt['attemptId'],
+      });
+
+  Future<void> requestHostLayoutObservation() =>
+      _invoke<void>('observeHostLayout');
+
+  /// Native adapter supplies screen-coordinate conversion. No partial geometry
+  /// or guessed display metrics cross the atomic host layout boundary.
+  Future<Map<String, Object?>> prepareHostLayout({
+    required Map<String, Object?> observation,
+    required Map<String, Object?> chrome,
+    required String layoutRevision,
+  }) async =>
+      Map<String, Object?>.from((await _invoke<Map>('prepareHostLayout', {
+        'observation': observation,
+        'chrome': chrome,
+        'layoutRevision': layoutRevision,
+        'coordinateSpace': 'flutterClient',
+      }))!);
+
+  Future<void> updateHostLayout({
+    required Map<String, Object?> observation,
+    required Map<String, Object?> chrome,
+    required String layoutRevision,
+  }) =>
+      _invoke<void>('hostLayout', {
+        'observation': observation,
+        'chrome': chrome,
+        'layoutRevision': layoutRevision,
+        'coordinateSpace': 'flutterClient',
+      });
 
   /// Covering developer controls do not background or stop the mini-program.
   Future<void> setPreviewOccluded(bool occluded) =>

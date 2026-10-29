@@ -1,6 +1,6 @@
 name: weapp_container_platform_interface
 description: Embeddable Weapp Container SDK for Flutter.
-version: 0.1.0-preview.4
+version: 0.1.0-preview.5
 homepage: https://github.com/weapp-container/sdk-flutter
 environment:
   sdk: '>=3.3.0 <4.0.0'

@@ -45,6 +45,33 @@ class FakePlatform extends WeappContainerPlatform {
         ..remove('coordinateSpace');
       return value as T;
     }
+    if (method == 'prepareHostLayout') {
+      final observation = args['observation'] as Map;
+      return {
+        'schemaVersion': 1,
+        'ownerId': observation['ownerId'],
+        'surfaceGeneration': observation['surfaceGeneration'],
+        'observationId': observation['observationId'],
+        'layoutRevision': args['layoutRevision'],
+        'windowMetrics': observation['windowMetrics'],
+        'chrome': args['chrome']
+      } as T;
+    }
+    if (method == 'command') {
+      final payload = args['payload'] as Map;
+      final operation = args['operation'];
+      return {
+        'schemaVersion': 1,
+        'ownerId': payload['ownerId'] ?? '9007199254740993',
+        'attemptId': payload['attemptId'] ?? '18446744073709551614',
+        'status': operation == 'beginDevPackAttempt' ? 'prepared' : 'accepted',
+        'acceptedPackIdentity': {
+          'root': 'verified-root',
+          'acceptedPackRevision': '9007199254740994',
+          'sessionId': 'native'
+        },
+      } as T;
+    }
     if (method == 'prepareView')
       return {
         'pack': {
@@ -346,6 +373,117 @@ void main() {
     expect(platform.requests.last.$1, 'clearDevStorage');
     expect(platform.requests.last.$2, {'id': controller.id});
     await controller.close();
+  });
+
+  test('atomic layout and durable attempts preserve opaque decimal identities',
+      () async {
+    final controller = await WeappContainerController.create(
+        storageKey: null, atomicHostLayout: true);
+    expect(platform.requests.last.$2['hostLayout'],
+        {'protocolVersion': '1.0', 'atomic': true});
+    final observation = <String, Object?>{
+      'schemaVersion': 1,
+      'ownerId': '9007199254740993',
+      'surfaceGeneration': '18446744073709551614',
+      'observationId': '9007199254740995',
+      'windowMetrics': {'windowWidth': 390, 'windowHeight': 700}
+    };
+    final events = <String>[];
+    final subscription =
+        controller.events.listen((event) => events.add(event.type));
+    platform.emit(controller.id,
+        {'type': 'hostLayoutObservation', 'observation': observation});
+    platform.emit(controller.id, {
+      'type': 'navigationLayout',
+      'request': {'ticket': 'navigation-1'}
+    });
+    platform.emit(controller.id, {
+      'type': 'devPackAttempt',
+      'receipt': {'attemptId': '9007199254740999'}
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.pendingHostLayout, observation);
+    expect(events,
+        ['hostLayoutObservation', 'navigationLayout', 'devPackAttempt']);
+    const geometry = <String, Object?>{'schemaVersion': 1, 'revision': 1};
+    final prepared = await controller.prepareHostLayout(
+        observation: observation,
+        chrome: geometry,
+        layoutRevision: '9007199254740996');
+    expect(prepared['layoutRevision'], '9007199254740996');
+    expect(prepared['observationId'], observation['observationId']);
+    await controller.updateHostLayout(
+        observation: observation,
+        chrome: geometry,
+        layoutRevision: '9007199254740996');
+    expect(platform.requests.last.$1, 'hostLayout');
+    expect(platform.requests.last.$2['observation'], observation);
+    final receipt = await controller.beginDevPackAttempt('/verified/pack',
+        operation: 'load', expectedAccepted: null);
+    expect(platform.requests.last.$2['payload'], {
+      'operation': 'load',
+      'packPath': '/verified/pack',
+      'expectedAccepted': null,
+      'options': <String, Object?>{}
+    });
+    await controller.applyDevPackAttempt(receipt,
+        expectedAccepted: null, initialHostLayout: prepared);
+    expect((platform.requests.last.$2['payload'] as Map)['attemptId'],
+        '18446744073709551614');
+    await controller.queryDevPackAttempt(receipt);
+    expect((platform.requests.last.$2['payload'] as Map)['ownerId'],
+        '9007199254740993');
+    expect(
+        platform.requests
+            .where((r) => r.$1 == 'hostChrome' || r.$1 == 'prepareHostChrome'),
+        isEmpty);
+    await subscription.cancel();
+    await controller.close();
+  });
+
+  testWidgets('identical rectangles answer each full native observation',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final creating = WeappContainerController.create(
+        storageKey: null, atomicHostLayout: true);
+    await tester.pump();
+    final controller = await creating;
+    final observation = <String, Object?>{
+      'schemaVersion': 1,
+      'ownerId': '1',
+      'surfaceGeneration': '1',
+      'observationId': '1',
+      'windowMetrics': {'windowWidth': 390, 'windowHeight': 700}
+    };
+    Widget view() => Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+            width: 390,
+            height: 700,
+            child: WeappContainerView(
+                controller: controller,
+                hostLayoutObservation: Map.of(observation),
+                hostChrome: const {'schemaVersion': 1, 'revision': 1})));
+    await tester.pumpWidget(view());
+    await tester.pump();
+    await tester.pump();
+    expect(platform.requests.where((r) => r.$1 == 'hostLayout'), hasLength(1));
+    observation['observationId'] = '2';
+    await tester.pumpWidget(view());
+    await tester.pump();
+    await tester.pump();
+    final layouts =
+        platform.requests.where((r) => r.$1 == 'hostLayout').toList();
+    expect(layouts, hasLength(2));
+    expect((layouts.first.$2['observation'] as Map)['observationId'], '1');
+    expect((layouts.last.$2['observation'] as Map)['observationId'], '2');
+    expect(platform.requests.where((r) => r.$1 == 'hostChrome'), isEmpty);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.runAsync(controller.close);
+    expect(tester.takeException(), isNull);
+    debugDefaultTargetPlatformOverride = null;
   });
 
   test('cancellation wins while asynchronous host work is pending', () async {

@@ -1,3 +1,8 @@
+# 0.1.0-preview.5
+
+- Add correlated atomic native layout observations and durable development pack attempt transport.
+- Preserve real app lifecycle during preview faults and retain exact presentation identity.
+
 # 0.1.0-preview.3
 
 Dev Player development reload and explicit native GPU requirement. Current

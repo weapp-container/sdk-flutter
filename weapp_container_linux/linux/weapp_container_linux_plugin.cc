@@ -206,7 +206,8 @@ void methodCall(FlMethodChannel *, FlMethodCall *call, gpointer data) {
   try {
     Json arguments = fromValue(fl_method_call_get_args(call));
     const std::string method = fl_method_call_get_name(call);
-    const bool chrome_method=method=="hostChrome"||method=="prepareHostChrome";
+    const bool layout_method=method=="hostLayout"||method=="prepareHostLayout";
+    const bool chrome_method=layout_method||method=="hostChrome"||method=="prepareHostChrome";
     const bool client_chrome = chrome_method && arguments.value("coordinateSpace", "screen") == "flutterClient";
     if (client_chrome || method == "attach" || method == "resize") {
       auto *view = plugin->view.get();
@@ -225,7 +226,7 @@ void methodCall(FlMethodChannel *, FlMethodCall *call, gpointer data) {
         auto *monitor=gdk_display_get_monitor_at_window(display,window);GdkRectangle extent{};
         if(monitor)gdk_monitor_get_geometry(monitor,&extent);
         const double dx=x+offset_x-extent.x,dy=y+offset_y-extent.y;
-        if(client_chrome){arguments.erase("coordinateSpace");translate_chrome(arguments,dx,dy);}
+        if(client_chrome){arguments.erase("coordinateSpace");translate_chrome(layout_method ? arguments.at("chrome") : arguments,dx,dy);}
         else arguments["screenTop"]=dy+arguments.value("previewY",0.0);
       } else if(client_chrome) {
         reply(call, Status::error("ERR_NOT_READY", "Chrome needs a realized native X11 host window"), {}); return;

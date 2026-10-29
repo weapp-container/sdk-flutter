@@ -58,7 +58,7 @@ function provenance() {
 }
 function receipt(path, status) {
   const value = JSON.parse(readFileSync(path, 'utf8'));
-  if (value.status !== status || value.sdkVersion !== '0.1.0-preview.4') throw new Error(`Invalid SDK receipt ${path}`);
+  if (value.status !== status || value.sdkVersion !== '0.1.0-preview.5') throw new Error(`Invalid SDK receipt ${path}`);
   if (value.native) {
     if (!value.native.length || value.native.some(r => r.status !== 'built' || r.sourceDirty !== false || !/^[a-f0-9]{40}$/.test(r.sourceCommit))) throw new Error(`Native SDK lacks clean committed provenance: ${path}`);
   } else if (value.sourceDirty !== false || !/^[a-f0-9]{40}$/.test(value.sourceCommit)) throw new Error(`SDK lacks clean committed provenance: ${path}`);
@@ -117,7 +117,7 @@ if (!args.includes('--skip-packages')) {
   if (existsSync(finalPackages)) renameSync(finalPackages, previous);
   renameSync(packages, finalPackages); packages = finalPackages;
   rmSync(previous, { recursive: true, force: true });
-  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: '0.1.0-preview.4', ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
+  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: '0.1.0-preview.5', ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
 }
 if (!existsSync(join(consumer, 'pubspec.yaml'))) {
   run(flutter, ['create', '--no-pub', '--platforms=android,ios,macos,windows,linux', '--org', 'dev.weapp', '--project-name', 'weapp_sdk_consumer', consumer]);

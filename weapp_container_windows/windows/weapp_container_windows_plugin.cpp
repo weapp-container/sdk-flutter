@@ -298,7 +298,8 @@ public:
               std::shared_ptr<flutter::MethodResult<Value>>(std::move(result));
           try {
             Json arguments = call.arguments() ? fromValue(*call.arguments()) : Json();
-            const bool chrome_method=call.method_name()=="hostChrome"||call.method_name()=="prepareHostChrome";
+            const bool layout_method=call.method_name()=="hostLayout"||call.method_name()=="prepareHostLayout";
+            const bool chrome_method=layout_method||call.method_name()=="hostChrome"||call.method_name()=="prepareHostChrome";
             const bool client_chrome = chrome_method && arguments.value("coordinateSpace", "screen") == "flutterClient";
             if (client_chrome || call.method_name() == "attach" || call.method_name() == "resize") {
               auto *view = registrar->GetView();auto window = view ? view->GetNativeWindow() : nullptr;
@@ -309,7 +310,7 @@ public:
               } else {
                 const auto scale=GetDpiForWindow(window)/96.0;
                 const double dx=(origin.x-monitor.rcMonitor.left)/scale,dy=(origin.y-monitor.rcMonitor.top)/scale;
-                if(client_chrome){arguments.erase("coordinateSpace");translate_chrome(arguments,dx,dy);}
+                if(client_chrome){arguments.erase("coordinateSpace");translate_chrome(layout_method ? arguments.at("chrome") : arguments,dx,dy);}
                 else arguments["screenTop"]=dy+arguments.value("previewY",0.0);
               }
             }

@@ -7,13 +7,18 @@
 #include <thread>
 using namespace weapp::flutter;
 struct weapp_container_sdk_session {
-  bool ready = false, closed = false, input_enabled = false;
+  bool ready = false, closed = false, input_enabled = false, foreground = true;
   uint64_t generation = 0, revision = 0;
+  uint64_t surface_sequence = 9007199254740992ULL, observation_sequence = 9007199254740992ULL, attempt_sequence = 9007199254740992ULL, pack_sequence = 9007199254740992ULL;
+  bool atomic = false;
+  Json host_surface, pending_layout, accepted_layout, accepted_pack;
+  Json events = Json::array(), attempts = Json::object();
   std::thread::id owner = std::this_thread::get_id();
 };
 static int destroy_failures = 0, live_sessions = 0;
 static int ack_attempts = 0, successful_acks = 0;
 static int guest_loads = 0;
+static int host_attach_failures = 0, host_observe_failures = 0;
 static std::vector<std::pair<std::string, Json>> operations;
 static Json native_config;
 static bool presentation_required = false, ack_advances_frame = false;
@@ -41,6 +46,7 @@ int32_t weapp_container_sdk_session_new(const uint8_t *config, size_t length,
                                         weapp_container_sdk_buffer *b) {
   native_config = Json::parse(config, config + length);
   *s = new weapp_container_sdk_session;
+  (*s)->atomic = native_config.contains("hostLayout");
   ++live_sessions;
   return response(b, nullptr);
 }
@@ -53,6 +59,66 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
   std::string op(reinterpret_cast<const char *>(operation), length);
   operations.emplace_back(op, Json::parse(payload, payload + payload_length));
   assert(s->owner == std::this_thread::get_id());
+  const auto arguments = operations.back().second;
+  if (op == "hostSurface") {
+    if (arguments.at("action") == "attach") {
+      if (host_attach_failures > 0) { --host_attach_failures; return response(b, nullptr, false, "ERR_TRANSIENT_SURFACE"); }
+      s->host_surface = {{"ownerId", "9007199254740993"}, {"surfaceGeneration", std::to_string(++s->surface_sequence)}};
+      return response(b, s->host_surface);
+    }
+    s->host_surface = nullptr;
+    s->pending_layout = nullptr;
+    return response(b, nullptr);
+  }
+  if (op == "observeHostLayout") {
+    if (host_observe_failures > 0) { --host_observe_failures; return response(b, nullptr, false, "ERR_TRANSIENT_OBSERVATION"); }
+    s->pending_layout = {{"schemaVersion", 1}, {"ownerId", arguments.at("ownerId")},
+      {"surfaceGeneration", arguments.at("surfaceGeneration")},
+      {"observationId", std::to_string(++s->observation_sequence)},
+      {"windowMetrics", arguments.at("windowMetrics")}};
+    if (s->ready) {
+      s->pending_layout["sessionId"] = "runtime-" + std::to_string(s->generation);
+      s->pending_layout["pageId"] = s->generation;
+    }
+    s->events.push_back({{"type", "hostLayoutObservation"}, {"observation", s->pending_layout}});
+    return response(b, s->pending_layout);
+  }
+  if (op == "hostLayout") {
+    if (!s->pending_layout.is_object() || arguments.at("observationId") != s->pending_layout.at("observationId"))
+      return response(b, nullptr, false, "ERR_CANCELLED");
+    s->accepted_layout = arguments;
+    s->pending_layout = nullptr;
+    return response(b, nullptr);
+  }
+  if (op == "beginDevPackAttempt") {
+    const auto id = std::to_string(++s->attempt_sequence);
+    Json receipt = {{"schemaVersion", 1}, {"ownerId", "9007199254740993"}, {"attemptId", id},
+      {"status", "prepared"}, {"reloadKind", "restart"}, {"targetRoot", arguments.at("packPath")},
+      {"acceptedPackIdentity", s->accepted_pack}};
+    s->attempts[id] = receipt;
+    return response(b, receipt);
+  }
+  if (op == "queryDevPackAttempt")
+    return response(b, s->attempts.at(arguments.at("attemptId").get<std::string>()));
+  if (op == "applyDevPackAttempt") {
+    auto &receipt = s->attempts.at(arguments.at("attemptId").get<std::string>());
+    if (receipt.at("status") == "prepared") {
+      ++guest_loads; s->ready = true; s->foreground = true; ++s->generation; ++s->revision;
+      s->input_enabled = !presentation_required;
+      s->accepted_pack = {{"root", receipt.at("targetRoot")}, {"acceptedPackRevision", std::to_string(++s->pack_sequence)},
+        {"sessionId", "runtime-" + std::to_string(s->generation)}};
+      if (arguments.contains("initialHostLayout")) {
+        s->accepted_layout = arguments.at("initialHostLayout");
+        s->accepted_layout["chrome"]["sessionId"] = s->accepted_pack.at("sessionId");
+        s->accepted_layout["chrome"]["pageId"] = s->generation;
+        s->pending_layout = nullptr;
+      }
+      receipt["status"] = "accepted";
+      receipt["acceptedPackIdentity"] = s->accepted_pack;
+      s->events.push_back({{"type", "devPackAttempt"}, {"receipt", receipt}});
+    }
+    return response(b, receipt);
+  }
   if (op == "classifyDevPack") {
     const auto arguments = Json::parse(payload, payload + payload_length);
     const auto path = arguments.value("packPath", "");
@@ -75,9 +141,14 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
   if (op == "load") {
     ++guest_loads;
     s->ready = true;
+    s->foreground = true;
     ++s->generation;
     ++s->revision;
     s->input_enabled = !presentation_required;
+  }
+  if (op == "lifecycle") {
+    s->foreground = arguments.at("event") == "show";
+    return response(b, nullptr);
   }
   if (op == "navigate") {
     ++s->revision;
@@ -86,7 +157,11 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
   if (op == "presented") {
     ++ack_attempts;
     auto stamp = Json::parse(payload, payload + payload_length);
-    if (!presentation_required || stamp["generation"] != s->generation ||
+    bool stale_layout = false;
+    if (s->atomic)
+      for (const auto *key : {"ownerId", "surfaceGeneration", "observationId", "layoutRevision"})
+        stale_layout = stale_layout || !stamp.contains(key) || stamp.at(key) != s->accepted_layout.at(key);
+    if (!presentation_required || stale_layout || stamp["generation"] != s->generation ||
         stamp["revision"] != s->revision)
       return response(b, nullptr, false, "ERR_CANCELLED");
     ++successful_acks;
@@ -102,16 +177,22 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
     return response(b, {{"pending", false}});
   }
   if (op == "state" || op == "presented")
-    return response(b, {{"status", s->closed  ? "closed"
+    return response(b, {{"hostSurface", s->host_surface}, {"pendingHostLayout", s->pending_layout},
+                        {"acceptedLayout", s->accepted_layout}, {"acceptedPackIdentity", s->accepted_pack},
+                        {"chromeGeometryReady", !s->atomic || (s->accepted_layout.is_object() && s->pending_layout.is_null())},
+                        {"status", s->closed  ? "closed"
                                    : s->ready ? "ready"
                                               : "empty"},
-                        {"foreground", true},
+                        {"foreground", s->foreground},
                         {"generation", s->generation},
                         {"frameRevision", s->revision},
                         {"presentationRequired", presentation_required},
                         {"inputEnabled", s->input_enabled}});
-  if (op == "takeEvents")
-    return response(b, Json::array());
+  if (op == "takeEvents") {
+    const auto events = s->events;
+    s->events = Json::array();
+    return response(b, events);
+  }
   if (op == "capabilities")
     return response(b,
                     {{"pack", {{"devReload", {{"protocolVersion", "1.0"}}}}}});
@@ -147,7 +228,7 @@ int32_t weapp_container_sdk_frame_release(const weapp_container_sdk_frame **,
 }
 struct Probe {
   int suspend_failures = 0, retire_failures = 0, live = 0;
-  int suspended = 0, resumed = 0;
+  int suspended = 0, resumed = 0, resume_failures = 0;
   std::function<void(Status)> pending;
   bool async = false;
   bool visible = true;
@@ -181,6 +262,7 @@ public:
   }
   Status resume(weapp_container_sdk_session *) override {
     ++p_->resumed;
+    if (p_->resume_failures > 0) { --p_->resume_failures; return Status::error("ERR_GPU", "injected GPU resume failure"); }
     return {};
   }
   Status suspend(weapp_container_sdk_session *) override {
@@ -235,13 +317,14 @@ int main() {
   auto probe = std::make_shared<Probe>();
   std::vector<std::function<bool()>> retries;
   std::vector<Status> errors;
+  std::vector<Json> forwarded;
   auto make = [&] {
     return std::make_unique<Registry>(
         "macos", "/unused",
         [probe](Status &, std::function<void(Status)>) {
           return std::make_shared<TestTexture>(probe);
         },
-        [](Json) {},
+        [&](Json event) { forwarded.push_back(std::move(event)); },
         [&](std::function<bool()> retry) {
           retries.push_back(std::move(retry));
         },
@@ -568,6 +651,152 @@ int main() {
     assert(live_sessions == 0);
   }
   assert(live_sessions == 0 && probe->live == 0);
+  // A failed partial atomic preflight can retry on the same SDK owner. A
+  // failed surface attachment never feeds a null identity into observation.
+  r = make();
+  call(*r, "initialize", {{"clientEpoch", "atomic-setup-retry"}});
+  for (const auto failure : {"surface", "observation"}) {
+    id = call(*r, "create", {{"storageKey", nullptr},
+      {"hostLayout", {{"protocolVersion", "1.0"}, {"atomic", true}}}})["id"].get<int64_t>();
+    call(*r, "attach", metrics(id));
+    if (std::string(failure) == "surface") host_attach_failures = 1;
+    else host_observe_failures = 1;
+    Status failed_preflight;
+    r->invoke("prepareView", {{"id", id}}, [&](Status status, Json) { failed_preflight = status; });
+    assert(!failed_preflight && failed_preflight.code == (std::string(failure) == "surface" ? "ERR_TRANSIENT_SURFACE" : "ERR_TRANSIENT_OBSERVATION"));
+    assert(live_sessions == 1);
+    call(*r, "prepareView", {{"id", id}});
+    assert(live_sessions == 1);
+    const auto initial_surface = call(*r, "state", {{"id", id}}).at("hostSurface");
+    assert(initial_surface.at("surfaceGeneration") == "9007199254740993");
+    call(*r, "detach", {{"id", id}});
+    host_attach_failures = 1;
+    Status failed_reattach;
+    r->invoke("attach", metrics(id), [&](Status status, Json) { failed_reattach = status; });
+    assert(!failed_reattach && failed_reattach.code == "ERR_TRANSIENT_SURFACE");
+    call(*r, "attach", metrics(id));
+    assert(call(*r, "state", {{"id", id}}).at("hostSurface").at("surfaceGeneration") == "9007199254740994");
+    call(*r, "close", {{"id", id}});
+    assert(live_sessions == 0 && probe->live == 0);
+  }
+  r.reset();
+  // Atomic host layouts retain SDK owner-issued decimal identities through
+  // preflight, equal-size observations, attempts and actual texture receipts.
+  presentation_required = true;
+  r = make();
+  call(*r, "initialize", {{"clientEpoch", "atomic-layout"}});
+  const auto atomic_begin = operations.size();
+  const auto atomic_loads = guest_loads;
+  id = call(*r, "create", {{"storageKey", nullptr},
+    {"hostLayout", {{"protocolVersion", "1.0"}, {"atomic", true}}}})["id"].get<int64_t>();
+  bool atomic_prepared = false;
+  r->invoke("prepareView", {{"id", id}}, [&](Status status, Json) { assert(status); atomic_prepared = true; });
+  call(*r, "attach", metrics(id));
+  assert(atomic_prepared && live_sessions == 1 && guest_loads == atomic_loads);
+  assert(native_config["hostLayout"]["atomic"] == true);
+  auto atomic_state = call(*r, "state", {{"id", id}});
+  auto observation = atomic_state.at("pendingHostLayout");
+  assert(observation["ownerId"] == "9007199254740993");
+  assert(observation["observationId"] == "9007199254740993");
+  auto measured = geometry;
+  measured["sessionId"] = "stale-flutter-owner";
+  measured["pageId"] = 999;
+  measured["observationId"] = "stale-flutter-observation";
+  auto complete = call(*r, "prepareHostLayout", {{"id", id}, {"observation", observation},
+    {"chrome", measured}, {"layoutRevision", "9007199254740993"}});
+  assert(complete.at("windowMetrics") == observation.at("windowMetrics"));
+  assert(complete.at("observationId") == observation.at("observationId"));
+  assert(!complete.at("chrome").contains("sessionId") && !complete.at("chrome").contains("pageId"));
+  assert(!complete.at("chrome").contains("observationId"));
+  auto begun = call(*r, "command", {{"id", id}, {"operation", "beginDevPackAttempt"},
+    {"payload", {{"operation", "load"}, {"packPath", "/atomic-pack"}, {"expectedAccepted", nullptr}}}});
+  assert(begun["attemptId"] == "9007199254740993");
+  const Json attempt_identity{{"ownerId", begun.at("ownerId")}, {"attemptId", begun.at("attemptId")}};
+  auto submission = attempt_identity;
+  submission["expectedAccepted"] = nullptr;
+  submission["initialHostLayout"] = complete;
+  // A GPU exception after core acceptance must not hide the durable outcome.
+  probe->resume_failures = 1;
+  call(*r, "command", {{"id", id}, {"operation", "applyDevPackAttempt"}, {"payload", submission}}, false);
+  const auto accepted_attempt = call(*r, "command", {{"id", id},
+    {"operation", "queryDevPackAttempt"}, {"payload", attempt_identity}});
+  assert(accepted_attempt.at("status") == "accepted");
+  assert(accepted_attempt.at("acceptedPackIdentity").at("root") == "/atomic-pack");
+  assert(accepted_attempt.at("acceptedPackIdentity").at("acceptedPackRevision") == "9007199254740993");
+  assert(guest_loads == atomic_loads + 1 && live_sessions == 1);
+  assert(call(*r, "command", {{"id", id}, {"operation", "applyDevPackAttempt"},
+    {"payload", submission}}) == accepted_attempt);
+  assert(guest_loads == atomic_loads + 1);
+  r->tick();
+  auto atomic_receipt = probe->receipts.back();
+  assert(atomic_receipt.ticket.stamp.layout.at("observationId") == complete.at("observationId"));
+  const auto atomic_revision = call(*r, "state", {{"id", id}}).at("frameRevision");
+  call(*r, "observeHostLayout", {{"id", id}});
+  observation = call(*r, "state", {{"id", id}}).at("pendingHostLayout");
+  assert(observation.at("windowMetrics") == complete.at("windowMetrics"));
+  assert(observation.at("observationId") != complete.at("observationId"));
+  assert(call(*r, "state", {{"id", id}}).at("frameRevision") == atomic_revision);
+  auto fresh_layout = call(*r, "prepareHostLayout", {{"id", id}, {"observation", observation},
+    {"chrome", geometry}, {"layoutRevision", "9007199254740994"}});
+  assert(fresh_layout.at("chrome").at("sessionId") == observation.at("sessionId"));
+  assert(fresh_layout.at("chrome").at("pageId") == observation.at("pageId"));
+  call(*r, "hostLayout", {{"id", id}, {"observation", observation},
+    {"chrome", geometry}, {"layoutRevision", "9007199254740994"}});
+  r->tick();
+  const auto fresh_receipt = probe->receipts.back();
+  assert(fresh_receipt.ticket.stamp.revision == atomic_receipt.ticket.stamp.revision);
+  assert(!(fresh_receipt.ticket.stamp == atomic_receipt.ticket.stamp));
+  const auto before_atomic_acks = successful_acks;
+  consume(atomic_receipt); r->tick();
+  assert(successful_acks == before_atomic_acks);
+  consume(fresh_receipt); r->tick();
+  assert(successful_acks == before_atomic_acks + 1);
+  const auto &captured_ack = *std::find_if(operations.rbegin(), operations.rend(),
+    [](const auto &operation) { return operation.first == "presented"; });
+  for (const auto *key : {"ownerId", "surfaceGeneration", "observationId", "layoutRevision"})
+    assert(captured_ack.second.at(key) == fresh_layout.at(key));
+  assert(std::any_of(forwarded.begin(), forwarded.end(), [](const auto &event) {
+    return event.at("event").value("type", "") == "hostLayoutObservation";
+  }));
+  assert(std::any_of(forwarded.begin(), forwarded.end(), [](const auto &event) {
+    return event.at("event").value("type", "") == "devPackAttempt";
+  }));
+  const auto old_surface = fresh_layout.at("surfaceGeneration");
+  call(*r, "detach", {{"id", id}});
+  call(*r, "attach", metrics(id));
+  observation = call(*r, "state", {{"id", id}}).at("pendingHostLayout");
+  assert(observation.at("surfaceGeneration") != old_surface);
+  assert(guest_loads == atomic_loads + 1 && live_sessions == 1);
+  assert(std::none_of(operations.begin() + atomic_begin, operations.end(), [](const auto &operation) {
+    return operation.first == "windowMetrics" || operation.first == "hostChrome";
+  }));
+  call(*r, "close", {{"id", id}});
+  r.reset();
+  assert(live_sessions == 0 && probe->live == 0);
+  std::cout << "PASS atomic layout tuple, equal-size observation replies, retained owner, exact decimal IDs, durable attempts and GPU failure reconciliation\n";
+  // Real host suspension survives acceptance; a developer fault cover only
+  // suppresses input/presentation and never fabricates a background lifecycle.
+  for (const bool fault_cover : {false, true}) {
+    r = make(); call(*r, "initialize", {{"clientEpoch", fault_cover ? "fault-cover" : "suspended-load"}});
+    id = call(*r, "create", {{"storageKey", nullptr},
+      {"hostLayout", {{"protocolVersion", "1.0"}, {"atomic", true}}}})["id"].get<int64_t>();
+    call(*r, "attach", metrics(id)); call(*r, "prepareView", {{"id", id}});
+    const auto observed = call(*r, "state", {{"id", id}}).at("pendingHostLayout");
+    const auto layout = call(*r, "prepareHostLayout", {{"id", id}, {"observation", observed},
+      {"chrome", geometry}, {"layoutRevision", "9007199254740993"}});
+    if (fault_cover) call(*r, "setPreviewOccluded", {{"id", id}, {"occluded", true}});
+    else call(*r, "setForeground", {{"id", id}, {"foreground", false}});
+    const auto before_visibility = lifecycle_count();
+    const auto attempt = call(*r, "command", {{"id", id}, {"operation", "beginDevPackAttempt"},
+      {"payload", {{"operation", "load"}, {"packPath", "/visibility-pack"}, {"expectedAccepted", nullptr}}}});
+    const Json submitted{{"ownerId", attempt.at("ownerId")}, {"attemptId", attempt.at("attemptId")},
+      {"expectedAccepted", nullptr}, {"initialHostLayout", layout}};
+    call(*r, "command", {{"id", id}, {"operation", "applyDevPackAttempt"}, {"payload", submitted}});
+    assert(call(*r, "state", {{"id", id}}).at("foreground") == fault_cover);
+    assert(lifecycle_count() == before_visibility + (fault_cover ? 0 : 1));
+    call(*r, "close", {{"id", id}}); r.reset();
+    assert(live_sessions == 0 && probe->live == 0);
+  }
   PresentationFeedback bounded;
   auto older = bounded.submitted({1, 1}), newer = bounded.submitted({1, 2});
   bounded.consumed(newer);
