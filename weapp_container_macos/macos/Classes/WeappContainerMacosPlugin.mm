@@ -297,9 +297,11 @@ private:
   std::unique_ptr<Registry> _registry;
   NSTimer *_timer;
   FlutterEventSink _sink;
+  __weak NSView *_hostView;
 }
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
   WeappContainerMacosPlugin *plugin = [WeappContainerMacosPlugin new];
+  plugin->_hostView = registrar.view;
   __weak WeappContainerMacosPlugin *weak = plugin;
   __weak id<FlutterTextureRegistry> textures = registrar.textures;
   NSURL *support = [[NSFileManager defaultManager]
@@ -358,8 +360,31 @@ private:
 - (void)handleMethodCall:(FlutterMethodCall *)call
                   result:(FlutterResult)result {
   try {
+    Json arguments = fromObject(call.arguments);
+    NSView *view = _hostView;
+    NSWindow *window = view.window;
+    NSScreen *screen = window.screen;
+    const bool chromeMethod = [call.method isEqualToString:@"hostChrome"] || [call.method isEqualToString:@"prepareHostChrome"];
+    const bool clientChrome = chromeMethod && arguments.value("coordinateSpace", "screen") == "flutterClient";
+    if (clientChrome && (!view || !window || !screen)) {
+      result([FlutterError errorWithCode:@"ERR_NOT_READY" message:@"Chrome needs an attached native host window" details:nil]);
+      return;
+    }
+    if (view && window && screen) {
+      NSPoint top = [view convertPoint:NSMakePoint(NSMinX(view.bounds), view.isFlipped ? NSMinY(view.bounds) : NSMaxY(view.bounds)) toView:nil];
+      NSPoint inScreen = [window convertPointToScreen:top];
+      const double dx = inScreen.x - NSMinX(screen.frame), dy = NSMaxY(screen.frame) - inScreen.y;
+      if (clientChrome) {
+        arguments.erase("coordinateSpace");
+        translate_chrome(arguments, dx, dy);
+      }
+      if ([call.method isEqualToString:@"attach"] || [call.method isEqualToString:@"resize"]) {
+        arguments["screenTop"] = dy + arguments.value("previewY", 0.0);
+      }
+    }
+    if (chromeMethod) arguments.erase("coordinateSpace");
     _registry->invoke(
-        call.method.UTF8String, fromObject(call.arguments),
+        call.method.UTF8String, arguments,
         [result](Status status, Json value) {
           if (status)
             result(value.is_null() ? nil : toObject(value));

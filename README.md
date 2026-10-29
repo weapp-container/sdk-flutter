@@ -1,10 +1,10 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.3**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.4**; native ABI: **1**.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
-This checkout and its default lock target **0.1.0-preview.3** for Dev Player.
+This checkout and its default lock target **0.1.0-preview.4** for Dev Player.
 Preparation downloads the exact reviewed SDK archive from the private release or
 an authorized offline directory. Caches are isolated by version, platform,
 architecture and content hash. Prior preview.2 caches and reports remain intact;
@@ -16,7 +16,7 @@ acceptance.
 
 Use Node.js 24+, Python 3, and pinned Flutter **3.47.7** (framework `abaf9c523780a608bd46686fd5e53740a07077f8`, engine `deb287481e3ce9468f3434937ced4240a70539ca`). Native Android consumers require minSdk 26; iOS requires 16.0; macOS requires 12.0. Desktop tooling and platform SDK requirements are documented in `native_desktop/README.md`.
 
-`runtime-artifacts.lock.json` permits only exact version, component, platform, architecture, byte size and SHA-256 pins from the private `weapp-container/runtime-artifacts` release `runtime-v0.1.0-preview.3`. The current lock pins the reviewed Android universal SDK (arm64-v8a and x86_64), iOS universal SDK (arm64 device, arm64 simulator and x86_64 simulator), and macOS universal desktop SDK (arm64 and x86_64). The checked-in lock preserves all ten reviewed runtime/SDK assets; these tools consume the SDK entry for the selected platform. Targets without their exact reviewed SDK entry remain **blocked** and return an explicit missing-target error. No floating `latest`, placeholder digest, local core build or silent fallback is used.
+`runtime-artifacts.lock.json` permits only exact version, component, platform, architecture, byte size and SHA-256 pins from the private `weapp-container/runtime-artifacts` release `runtime-v0.1.0-preview.4`. The current lock pins the reviewed Android universal SDK (arm64-v8a and x86_64), iOS universal SDK (arm64 device, arm64 simulator and x86_64 simulator), and macOS universal desktop SDK (arm64 and x86_64). The checked-in lock preserves all ten reviewed runtime/SDK assets; these tools consume the SDK entry for the selected platform. Targets without their exact reviewed SDK entry remain **blocked** and return an explicit missing-target error. No floating `latest`, placeholder digest, local core build or silent fallback is used.
 
 For an available versioned GitHub release, grant `WEAPP_CONTAINER_RUNTIME_TOKEN` read access to that private repository, or set `WEAPP_CONTAINER_RUNTIME_ARTIFACT_DIR` to authorized offline `.tar.gz` assets. Never commit credentials or archives.
 
@@ -86,3 +86,19 @@ c++ -std=c++17 -Wall -Wextra -Werror -pthread -I native_desktop/include -I nativ
 `CONTRACT.md` defines the SDK protocol, including native GPU presentation receipts. Desktop textures carry the exact pre-submit generation/revision. Metal waits for completion and Flutter texture consumption; raster callbacks queue receipts, and the original runtime thread sends `presented` only when the SDK requires it. Stale/retired receipts do not unlock input. This proves texture consumption, not display vSync or hardware/device acceptance. Android/iOS use the native SDK view and inherit its presentation contract.
 
 `ORIGIN.json` records the private source revision, original per-file SHA-256, source paths and exported output hashes. `LICENSE` covers these bindings. The vendored nlohmann JSON header retains its MIT license and upstream `SOURCE.json`. Native archive notices are distributed with authorized artifacts; they are not replaced by this wrapper license. A pin identifies reviewed distribution bytes. Archive publication, consumer compilation, device/GPU results and registry publication require their own recorded validation; they are not implied by a source checkout.
+
+### Reviewing later SDK source changes
+
+`ORIGIN.json` remains the historical extraction receipt. `SOURCE-INVENTORY.json` separately pins the current reviewed wrapper source paths, SHA-256, sizes and executable modes, including the unchanged historical receipt. Neither file is build or device acceptance evidence. Source tests and package assembly require an independent Git checkout and reject untracked files, unreviewed tracked paths, changed bytes, symlinks, core sources, binary files and build caches.
+
+After reviewing source or runtime-lock updates, stage all intended new files and explicitly refresh the current inventory; do not rewrite `ORIGIN.json`:
+
+```sh
+git add <reviewed-files>
+node tools/source-inventory.mjs --write --version 0.1.0-preview.4 --reason "Describe the reviewed source changes"
+git add SOURCE-INVENTORY.json
+node tools/source-inventory.mjs
+node --test tests/source-inventory.test.mjs tests/source-contract.test.mjs
+```
+
+Commit the source and inventory together before assembling distributable packages. The inventory's `sourceBaseCommit` identifies the checkout on which the review was prepared; it does not bind later build or runtime evidence to that earlier commit. Runtime artifact locks must use actual published archive hashes and are reviewed independently.

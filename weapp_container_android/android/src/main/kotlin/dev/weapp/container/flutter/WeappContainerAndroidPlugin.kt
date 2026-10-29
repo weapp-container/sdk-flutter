@@ -3,6 +3,7 @@ package dev.weapp.container.flutter
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import com.sonofmagic.weapp.container.sdk.*
@@ -35,6 +36,8 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         var closing: CompletableFuture<Unit>? = null
         var retiringView: CompletableFuture<Unit>? = null
         val replies = mutableMapOf<String, HostReply>()
+        var clientChrome: JSONObject? = null
+        var preparedClientChrome: JSONObject? = null
     }
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         app = binding.applicationContext
@@ -111,12 +114,20 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                             "cancelToken" to hostCall.cancelToken))
                     })
                 }
-                "load" -> session.load(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"])))
-                "applyDevPack" -> session.applyDevPack(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"])))
+                "load" -> session.load(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
+                "applyDevPack" -> session.applyDevPack(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
                 "devState" -> session.devState()
                 "clearDevStorage" -> session.clearDevStorage()
                 "navigate" -> session.navigate(args["route"] as String, jsonObject(args["query"]), args["replace"] as? Boolean ?: false)
                 "back" -> session.back()
+                "switchTab" -> session.switchTab(args["route"] as String)
+                "inspectPackChrome" -> session.inspectPackChrome(PackSource.Directory(File(args["packPath"] as String)), args["route"] as? String)
+                "hostChrome" -> updateChrome(entry, jsonObject(args.filterKeys { it != "id" }))
+                "prepareHostChrome" -> {
+                    val raw=jsonObject(args.filterKeys { it != "id" })
+                    measureChrome(entry,JSONObject(raw.toString()),true).thenApply { value -> entry.preparedClientChrome=raw;value }
+                }
+                "setPreviewOccluded" -> session.setPreviewOccluded(args["occluded"] as Boolean)
                 "sendMessage" -> session.sendMessage(json(args["message"]))
                 "setForeground" -> session.setForeground(args["foreground"] as Boolean)
                 "flushStorage" -> session.flushStorage()
@@ -158,6 +169,59 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
             if (error == null) { epoch = next; done.complete(Unit) } else done.completeExceptionally(error)
         }
         return done
+    }
+    private fun acceptPreparedChrome(entry: Entry,args: Map<*,*>) {
+        val initial=args["initialHostChrome"] as? Map<*,*> ?: return
+        val raw=entry.preparedClientChrome ?: return
+        if((initial["revision"] as? Number)?.toLong()==raw.optLong("revision"))entry.clientChrome=raw
+        entry.preparedClientChrome=null
+    }
+    private fun updateChrome(entry: Entry, payload: JSONObject): CompletableFuture<Unit> {
+        val raw=JSONObject(payload.toString())
+        return measureChrome(entry,payload,false).thenCompose { measured ->
+            entry.session.updateHostChrome(measured).thenApply { entry.clientChrome=raw;Unit }
+        }
+    }
+    private fun measureChrome(entry: Entry, payload: JSONObject, prospective: Boolean): CompletableFuture<JSONObject> {
+        val coordinates = payload.optString("coordinateSpace", "screen")
+        payload.remove("coordinateSpace")
+        if (coordinates == "screen") return CompletableFuture.completedFuture(payload)
+        require(coordinates == "flutterClient") { "Unknown chrome coordinate space" }
+        val result = CompletableFuture<JSONObject>()
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        fun observe() {
+            if (result.isDone) return
+            if (detached || entry.closing != null || !sessions.containsValue(entry)) {
+                result.completeExceptionally(ContainerException("ERR_CANCELLED", "Chrome owner retired before native measurement")); return
+            }
+            val view = entry.view
+            if (view == null || !view.isAttachedToWindow || view.width <= 0 || view.height <= 0) {
+                if (SystemClock.uptimeMillis() >= deadline) result.completeExceptionally(ContainerException("ERR_NOT_READY", "Chrome needs an attached measured native view"))
+                else main.postDelayed({ observe() }, 16)
+                return
+            }
+            try {
+                val origin = IntArray(2); view.getLocationOnScreen(origin)
+                val density = view.resources.displayMetrics.density.toDouble()
+                val content = if(prospective) entry.clientChrome?.getJSONObject("contentRect")
+                    ?: throw ContainerException("ERR_NOT_READY","A current native chrome origin is required for staging")
+                    else payload.getJSONObject("contentRect")
+                if(!prospective&&(kotlin.math.abs(view.width/density-content.getDouble("width"))>1||kotlin.math.abs(view.height/density-content.getDouble("height"))>1)) {
+                    if(SystemClock.uptimeMillis()>=deadline)throw ContainerException("ERR_NOT_READY","Native chrome viewport has not matched measured layout")
+                    main.postDelayed({ observe() },16);return
+                }
+                val dx = origin[0] / density - content.getDouble("left")
+                val dy = origin[1] / density - content.getDouble("top")
+                for (name in listOf("contentRect", "menuButtonRect")) {
+                    val rect = payload.getJSONObject(name)
+                    for (edge in listOf("left", "right")) if (rect.has(edge)) rect.put(edge, rect.getDouble(edge) + dx)
+                    for (edge in listOf("top", "bottom")) if (rect.has(edge)) rect.put(edge, rect.getDouble(edge) + dy)
+                }
+                result.complete(payload)
+            } catch (error: Throwable) { result.completeExceptionally(error) }
+        }
+        observe()
+        return result
     }
     private fun retireView(entry: Entry): CompletableFuture<Unit> {
         entry.retiringView?.let { return it }

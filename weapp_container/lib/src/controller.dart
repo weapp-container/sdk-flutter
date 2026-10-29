@@ -113,24 +113,30 @@ class WeappContainerController {
   }
 
   Future<void> load(String packPath,
-      {String? route, Map<String, Object?> options = const {}}) {
+      {String? route,
+      Map<String, Object?> options = const {},
+      Map<String, Object?>? initialHostChrome}) {
     _loadRequested = true;
     return _invoke<void>('load', {
       'packPath': packPath,
       if (route != null) 'route': route,
-      'options': options
+      'options': options,
+      if (initialHostChrome != null) 'initialHostChrome': initialHostChrome,
     });
   }
 
   /// Apply a verified immutable development pack. A returned startup/frame
   /// result is separate from the native GPU presentation receipt.
   Future<Map<String, Object?>> applyDevPack(String packPath,
-      {String? route, Map<String, Object?> options = const {}}) async {
+      {String? route,
+      Map<String, Object?> options = const {},
+      Map<String, Object?>? initialHostChrome}) async {
     _loadRequested = true;
     return Map<String, Object?>.from((await _invoke<Map>('applyDevPack', {
       'packPath': packPath,
       if (route != null) 'route': route,
       'options': options,
+      if (initialHostChrome != null) 'initialHostChrome': initialHostChrome,
     }))!);
   }
 
@@ -145,6 +151,37 @@ class WeappContainerController {
       _invoke<void>(
           'navigate', {'route': route, 'query': query, 'replace': replace});
   Future<void> back() => _invoke<void>('back');
+  Future<void> switchTab(String route) =>
+      _invoke<void>('switchTab', {'route': route});
+
+  /// Parse verified host presentation configuration without executing guest JS.
+  /// This preflight is independent of native view measurement and load authority.
+  Future<Map<String, Object?>> inspectPackChrome(String packPath,
+          {String? route}) async =>
+      Map<String, Object?>.from((await _invoke<Map>('inspectPackChrome', {
+        'packPath': packPath,
+        if (route != null) 'route': route,
+      }))!);
+
+  /// Publish measured Flutter client-window logical rectangles. The platform
+  /// adapter converts their origin to the actual native screen before receipt;
+  /// the native view remains the viewport/display metric owner.
+  Future<void> updateHostChrome(Map<String, Object?> geometry) => _invoke<void>(
+      'hostChrome', {...geometry, 'coordinateSpace': 'flutterClient'});
+
+  /// Transform a prospective layout without mutating the accepted runtime.
+  Future<Map<String, Object?>> prepareHostChrome(
+          Map<String, Object?> geometry) async =>
+      Map<String, Object?>.from((await _invoke<Map>('prepareHostChrome',
+          {...geometry, 'coordinateSpace': 'flutterClient'}))!);
+
+  /// Covering developer controls do not background or stop the mini-program.
+  Future<void> setPreviewOccluded(bool occluded) =>
+      _invoke<void>('setPreviewOccluded', {'occluded': occluded});
+
+  /// Windows/Linux use real native chrome above their native child surface.
+  Future<void> updateNativeChrome(Map<String, Object?> chrome) =>
+      _invoke<void>('nativeChrome', chrome);
   Future<void> sendMessage(Object? message) =>
       _invoke<void>('sendMessage', {'message': message});
   Future<void> setForeground(bool foreground) =>

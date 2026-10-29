@@ -9,6 +9,8 @@ import UIKit
         var closing: Task<Void, Error>?
         var retiringView: Task<Void, Error>?
         var calls: [String: CheckedContinuation<WeappJSON, Error>] = [:]
+        var clientChrome: [String: Any]?
+        var preparedClientChrome: [String: Any]?
         init(_ session: WeappContainerSession) { self.session = session }
     }
     private var entries: [Int64: Entry] = [:]
@@ -109,13 +111,25 @@ import UIKit
                 })
             }
         case "load":
-            try await session.load(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]))
+            try await session.load(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]))
+            acceptPreparedChrome(entry,args)
         case "applyDevPack":
-            return codec(try await session.applyDevPack(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"])))
+            let value=try await session.applyDevPack(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]))
+            acceptPreparedChrome(entry,args);return codec(value)
         case "devState": return codec(try session.devState())
         case "clearDevStorage": try await session.clearDevStorage()
         case "navigate": try session.navigate(route: string(args, "route"), query: object(args["query"]), replace: args["replace"] as? Bool ?? false)
         case "back": try session.back()
+        case "switchTab": try session.switchTab(route: string(args, "route"))
+        case "inspectPackChrome": return codec(try session.inspectPackChrome(packURL: URL(fileURLWithPath: string(args, "packPath")), route: args["route"] as? String))
+        case "hostChrome": try await updateChrome(entry, args.filter { $0.key != "id" })
+        case "prepareHostChrome":
+            let raw=args.filter { $0.key != "id" }
+            let value=try await measureChrome(entry,raw,prospective:true)
+            entry.preparedClientChrome=raw;return value
+        case "setPreviewOccluded":
+            guard let value = args["occluded"] as? Bool else { throw fail("Missing occluded") }
+            try session.setPreviewOccluded(value)
         case "sendMessage": try session.sendMessage(json(args["message"]))
         case "setForeground":
             guard let active = args["foreground"] as? Bool else { throw fail("Missing foreground") }
@@ -150,6 +164,48 @@ import UIKit
         do { try await operation.value; if entry.view === view { entry.view = nil }; entry.retiringView = nil }
         catch { entry.retiringView = nil; throw error }
     }
+    private func acceptPreparedChrome(_ entry: Entry,_ args:[String:Any]) {
+        guard let initial=args["initialHostChrome"] as? [String:Any],let raw=entry.preparedClientChrome,
+              (initial["revision"] as? NSNumber)?.uint64Value == (raw["revision"] as? NSNumber)?.uint64Value else { return }
+        entry.clientChrome=raw;entry.preparedClientChrome=nil
+    }
+    private func updateChrome(_ entry: Entry, _ supplied: [String: Any]) async throws {
+        let measured=try await measureChrome(entry,supplied,prospective:false)
+        try entry.session.updateHostChrome(object(measured));entry.clientChrome=supplied
+    }
+    private func measureChrome(_ entry: Entry, _ supplied: [String: Any],prospective:Bool) async throws -> [String:Any] {
+        var payload = supplied
+        let coordinates = payload.removeValue(forKey: "coordinateSpace") as? String ?? "screen"
+        if coordinates == "screen" { return payload }
+        guard coordinates == "flutterClient" else { throw fail("Unknown chrome coordinate space") }
+        let deadline = Date().addingTimeInterval(10)
+        while true {
+            try Task.checkCancellation()
+            guard !detached, entry.closing == nil, entries.values.contains(where: { $0 === entry }) else {
+                throw WeappContainerError(code: "ERR_CANCELLED", message: "Chrome owner retired before native measurement")
+            }
+            if let view = entry.view, let window = view.window, view.bounds.width > 0, view.bounds.height > 0 {
+                guard let content = (prospective ? entry.clientChrome?["contentRect"] : payload["contentRect"]) as? [String: Any],
+                      let left = content["left"] as? NSNumber, let top = content["top"] as? NSNumber else { throw fail("Missing content rectangle") }
+                if !prospective, let width=content["width"] as? NSNumber,let height=content["height"] as? NSNumber,
+                   abs(Double(view.bounds.width)-width.doubleValue)>1 || abs(Double(view.bounds.height)-height.doubleValue)>1 {
+                    guard Date()<deadline else { throw WeappContainerError(code:"ERR_NOT_READY",message:"Native chrome viewport has not matched measured layout") }
+                    try await Task.sleep(nanoseconds:16_000_000);continue
+                }
+                let origin = view.convert(view.bounds, to: window.screen.coordinateSpace).origin
+                let dx = Double(origin.x) - left.doubleValue, dy = Double(origin.y) - top.doubleValue
+                for name in ["contentRect", "menuButtonRect"] {
+                    guard var rect = payload[name] as? [String: Any] else { throw fail("Missing chrome rectangle") }
+                    for key in ["left", "right"] { if let n = rect[key] as? NSNumber { rect[key] = n.doubleValue + dx } }
+                    for key in ["top", "bottom"] { if let n = rect[key] as? NSNumber { rect[key] = n.doubleValue + dy } }
+                    payload[name] = rect
+                }
+                return payload
+            }
+            guard Date() < deadline else { throw WeappContainerError(code: "ERR_NOT_READY", message: "Chrome needs an attached measured native view") }
+            try await Task.sleep(nanoseconds: 16_000_000)
+        }
+    }
     private func close(_ id: Int64, _ entry: Entry) async throws {
         if let operation = entry.closing { return try await operation.value }
         let operation = Task { @MainActor in
@@ -169,6 +225,7 @@ import UIKit
         switch event {
         case .ready(let value): emit(id, merged(value, type: "ready"))
         case .navigation(let value): emit(id, merged(value, type: "navigation"))
+        case .chrome(let value): emit(id, merged(value, type: "chrome"))
         case .message(let value): emit(id, ["type": "message", "message": codec(value)])
         case .error(let error): emit(id, ["type": "error", "code": error.code, "message": error.message])
         case .closed(let error): emit(id, ["type": "closed", "ok": error == nil, "error": error.map { ["code": $0.code, "message": $0.message] as Any } ?? NSNull()])

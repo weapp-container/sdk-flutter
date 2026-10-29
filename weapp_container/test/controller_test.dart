@@ -14,6 +14,11 @@ class FakePlatform extends WeappContainerPlatform {
   bool failClose = false;
   Completer<void>? detach;
   bool initialized = false;
+  bool cancelChrome = false;
+  Map<String, Object?> currentState = {
+    'sessionId': 'session',
+    'page': {'id': 2}
+  };
   @override
   Stream<Map<String, Object?>> get events => source.stream;
   @override
@@ -25,7 +30,21 @@ class FakePlatform extends WeappContainerPlatform {
   Future<T?> invoke<T>(String method, Map<String, Object?> args) async {
     if (!initialized) throw StateError("Transport used before initialization");
     requests.add((method, args));
+    if (method == 'hostChrome' && cancelChrome)
+      throw PlatformException(
+          code: 'ERR_CANCELLED', message: 'stale page geometry');
+    if (method == 'state') return currentState as T;
     if (method == 'create') return {'id': ++nextId} as T;
+    if (method == 'inspectPackChrome') {
+      return {'schemaVersion': 1, 'navigationStyle': 'custom', 'title': '测试'}
+          as T;
+    }
+    if (method == 'prepareHostChrome') {
+      final value = Map<String, Object?>.from(args)
+        ..remove('id')
+        ..remove('coordinateSpace');
+      return value as T;
+    }
     if (method == 'prepareView')
       return {
         'pack': {
@@ -79,6 +98,140 @@ void main() {
     await controller.registerHostMethod('host.beforeLoad', (_) => null);
     expect(platform.requests.last.$1, 'registerHostMethod');
     await controller.close();
+  });
+  test(
+      'chrome preflight, measured geometry and tabs use explicit native commands',
+      () async {
+    final controller =
+        await WeappContainerController.create(storageKey: 'retained');
+    final chrome = await controller.inspectPackChrome('/verified/pack',
+        route: 'pages/custom/index');
+    expect(chrome['navigationStyle'], 'custom');
+    expect(
+        platform.requests.where((r) => r.$1 == 'load' || r.$1 == 'prepareView'),
+        isEmpty);
+    const geometry = <String, Object?>{
+      'schemaVersion': 1,
+      'revision': 4,
+      'contentRect': {'left': 0, 'top': 92, 'width': 390, 'height': 700},
+      'menuButtonRect': {
+        'left': 294,
+        'right': 382,
+        'top': 52,
+        'bottom': 84,
+        'width': 88,
+        'height': 32
+      },
+    };
+    final prospective = await controller.prepareHostChrome(geometry);
+    expect(prospective, geometry);
+    expect(platform.requests.where((r) => r.$1 == 'hostChrome'), isEmpty);
+    await controller.applyDevPack('/verified/restart',
+        initialHostChrome: prospective);
+    expect(platform.requests.last.$2['initialHostChrome'], geometry);
+    await controller.updateHostChrome(geometry);
+    expect(platform.requests.last.$1, 'hostChrome');
+    expect(platform.requests.last.$2,
+        {'id': controller.id, ...geometry, 'coordinateSpace': 'flutterClient'});
+    await controller.setPreviewOccluded(true);
+    await controller.setPreviewOccluded(false);
+    expect(platform.requests.where((r) => r.$1 == 'setForeground'), isEmpty);
+    await controller.switchTab('pages/settings/index');
+    expect(platform.requests.last.$1, 'switchTab');
+    expect(platform.requests.last.$2,
+        {'id': controller.id, 'route': 'pages/settings/index'});
+    await controller.close();
+  });
+
+  testWidgets(
+      'covering developer UI keeps app foreground and blocks Flutter input',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final creating = WeappContainerController.create(storageKey: null);
+    await tester.pump();
+    final controller = await creating;
+    Widget view(bool occluded) => Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+            width: 390,
+            height: 700,
+            child: WeappContainerView(
+                controller: controller, occluded: occluded)));
+    await tester.pumpWidget(view(false));
+    await tester.pump();
+    await tester.pump();
+    final before = platform.requests.length;
+    await tester.pumpWidget(view(true));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.byType(WeappContainerView));
+    await tester.pump();
+    final covered = platform.requests.skip(before).toList();
+    expect(
+        covered
+            .where((r) => r.$1 == 'setPreviewOccluded')
+            .single
+            .$2['occluded'],
+        true);
+    expect(covered.where((r) => r.$1 == 'input' || r.$1 == 'setForeground'),
+        isEmpty);
+    await tester.pumpWidget(view(false));
+    await tester.pump();
+    await tester.pump();
+    expect(
+        platform.requests
+            .where((r) => r.$1 == 'setPreviewOccluded')
+            .last
+            .$2['occluded'],
+        false);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.runAsync(controller.close);
+    debugDefaultTargetPlatformOverride = null;
+  });
+  testWidgets('late page geometry cancellation does not fault the new page',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final creating = WeappContainerController.create(storageKey: null);
+    await tester.pump();
+    final controller = await creating;
+    platform.cancelChrome = true;
+    final failures = <Object>[];
+    const geometry = <String, Object?>{
+      'schemaVersion': 1,
+      'revision': 1,
+      'sessionId': 'session',
+      'pageId': 1,
+      'contentRect': {'left': 0, 'top': 44, 'width': 390, 'height': 700},
+      'menuButtonRect': {
+        'left': 294,
+        'right': 382,
+        'top': 6,
+        'bottom': 38,
+        'width': 88,
+        'height': 32
+      }
+    };
+    await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+            width: 390,
+            height: 700,
+            child: WeappContainerView(
+                controller: controller,
+                hostChrome: geometry,
+                onError: (error, _) => failures.add(error)))));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    expect(platform.requests.where((r) => r.$1 == 'state'), isNotEmpty);
+    expect(failures, isEmpty);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.runAsync(controller.close);
+    debugDefaultTargetPlatformOverride = null;
   });
   test(
       'GPU opt-in reaches the native owner and development updates preserve result identity',

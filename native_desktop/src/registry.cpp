@@ -39,9 +39,10 @@ Frame::~Frame() {
   if (handle)
     weapp_container_sdk_frame_release(&handle, &b.value);
 }
-std::shared_ptr<const Frame> Frame::acquire(weapp_container_sdk_session *s,
-                                            Status &status, PresentationStamp stamp,
-                                            std::shared_ptr<PresentationFeedback> feedback) {
+std::shared_ptr<const Frame>
+Frame::acquire(weapp_container_sdk_session *s, Status &status,
+               PresentationStamp stamp,
+               std::shared_ptr<PresentationFeedback> feedback) {
   auto frame = std::make_shared<Frame>();
   Buffer b;
   status =
@@ -54,7 +55,9 @@ std::shared_ptr<const Frame> Frame::acquire(weapp_container_sdk_session *s,
   if (!status)
     return {};
   if (frame->info.revision != stamp.revision) {
-    status = Status::error("ERR_CANCELLED", "Acquired pixels do not match the captured frame revision");
+    status = Status::error(
+        "ERR_CANCELLED",
+        "Acquired pixels do not match the captured frame revision");
     return {};
   }
   frame->feedback = std::move(feedback);
@@ -67,9 +70,12 @@ Status Metrics::parse(const Json &a, Metrics &out) {
     m.value = a;
     m.value.erase("id");
     for (auto key : {"previewX", "previewY"}) {
-      if (a.contains(key) && (!a[key].is_number() || !std::isfinite(a[key].get<double>()) ||
-                             a[key].get<double>() < 0 || a[key].get<double>() > 32767))
-        return Status::error("ERR_INVALID_ARGUMENT", "native preview origin must be finite and nonnegative");
+      if (a.contains(key) &&
+          (!a[key].is_number() || !std::isfinite(a[key].get<double>()) ||
+           a[key].get<double>() < 0 || a[key].get<double>() > 32767))
+        return Status::error(
+            "ERR_INVALID_ARGUMENT",
+            "native preview origin must be finite and nonnegative");
       m.value.erase(key);
     }
     m.preview_x = a.value("previewX", 0.0);
@@ -176,20 +182,30 @@ Status Registry::ensure(Entry &e) {
     if (auto s = command(e.native, "registerHostMethod", {{"name", method}});
         !s)
       return s;
+  if (!e.host_chrome.is_null()) {
+    if (auto s = command(e.native, "hostChrome", e.host_chrome); !s)
+      return s;
+  }
+  if (e.occluded) {
+    if (auto s = command(e.native, "setPreviewOccluded", {{"occluded", true}});
+        !s)
+      return s;
+  }
   return {};
 }
 Status Registry::foreground(Entry &e) {
+  bool visible = e.foreground && bool(e.texture) && !e.retiring;
+  if (e.texture) {
+    auto shown = e.texture->set_visible(visible && !e.occluded);
+    if (!shown)
+      return shown;
+  }
   if (!e.native || e.closing || e.closed)
     return {};
   Json state;
   auto s = command(e.native, "state", Json::object(), &state);
   if (!s || state.value("status", "") != "ready")
     return s;
-  bool visible = e.foreground && bool(e.texture) && !e.retiring;
-  if (e.texture) {
-    auto shown = e.texture->set_visible(visible);
-    if (!shown) return shown;
-  }
   return state.value("foreground", false) == visible
              ? Status{}
              : command(e.native, "lifecycle",
@@ -216,6 +232,12 @@ void Registry::load(Entry &e, const Json &a, Reply reply) {
     Json state;
     auto observed = command(e.native, "state", Json::object(), &state);
     if (observed && state.value("status", "") == "ready") {
+      if (s && state.contains("hostChrome") &&
+          state["hostChrome"].is_object()) {
+        e.host_chrome = state["hostChrome"];
+        e.host_chrome.erase("sessionId");
+        e.host_chrome.erase("pageId");
+      }
       auto visible = foreground(e);
       if (s && !visible)
         s = visible;
@@ -278,7 +300,9 @@ void Registry::close(const std::shared_ptr<Entry> &e, Reply reply) {
         {});
   }
   for (auto &pending : e->pending_prepares)
-    pending(Status::error("ERR_CANCELLED", "session closed before measured-view preparation"), {});
+    pending(Status::error("ERR_CANCELLED",
+                          "session closed before measured-view preparation"),
+            {});
   e->pending_prepares.clear();
   if (e->texture && !e->retiring) {
     e->texture->invalidate_presentation();
@@ -402,7 +426,7 @@ void Registry::tick() {
   for (auto &e : entries) {
     if (!e->native)
       continue;
-    if (e->texture && !e->retiring && e->foreground) {
+    if (e->texture && !e->retiring && e->foreground && !e->occluded) {
       auto consumed = e->texture->take_presented();
       if (consumed) {
         Json accepted;
@@ -410,7 +434,8 @@ void Registry::tick() {
         if (status && accepted.value("presentationRequired", false)) {
           status = command(e->native, "presented",
                            {{"generation", consumed->generation},
-                            {"revision", consumed->revision}}, &accepted);
+                            {"revision", consumed->revision}},
+                           &accepted);
           // A newer accepted frame or detached surface intentionally cancels
           // this receipt. Never substitute the newly observed identity.
           if (!status && status.code != "ERR_CANCELLED")
@@ -424,11 +449,13 @@ void Registry::tick() {
     Json state;
     if (command(e->native, "state", Json::object(), &state) &&
         state.value("status", "") == "ready" && e->texture && !e->retiring &&
-        e->foreground)
+        e->foreground && !e->occluded &&
+        state.value("chromeGeometryReady", true))
       report(e->id,
-             e->texture->present(e->native, e->metrics,
-             PresentationStamp{state.value("generation", uint64_t(0)),
-                               state.value("frameRevision", uint64_t(0))}));
+             e->texture->present(
+                 e->native, e->metrics,
+                 PresentationStamp{state.value("generation", uint64_t(0)),
+                                   state.value("frameRevision", uint64_t(0))}));
     drain(e);
   }
   ticking_ = false;
@@ -489,7 +516,8 @@ void Registry::invoke(const std::string &method, const Json &args,
       auto e = std::make_shared<Entry>();
       e->id = next_id_++;
       e->config = Json::object();
-      if (platform_ != "macos") e->config["gpuRequired"] = false;
+      if (platform_ != "macos")
+        e->config["gpuRequired"] = false;
       if (args.contains("storageKey") && !args["storageKey"].is_null()) {
         auto key = args["storageKey"].get<std::string>();
         if (key.empty()) {
@@ -505,21 +533,28 @@ void Registry::invoke(const std::string &method, const Json &args,
         e->config["sessionId"] = args["sessionId"].get<std::string>();
       if (args.contains("gpuRequired")) {
         if (!args["gpuRequired"].is_boolean()) {
-          reply(Status::error("ERR_INVALID_ARGUMENT", "gpuRequired must be a boolean"), {});
+          reply(Status::error("ERR_INVALID_ARGUMENT",
+                              "gpuRequired must be a boolean"),
+                {});
           return;
         }
-        if (args["gpuRequired"].get<bool>() && platform_ != "macos" && !gpu_factory_) {
+        if (args["gpuRequired"].get<bool>() && platform_ != "macos" &&
+            !gpu_factory_) {
           // These Flutter plugins still expose CPU texture presenters. Native
           // desktop GL presenters must not be mislabeled as Flutter textures.
           reply(Status::error("ERR_UNSUPPORTED_CAPABILITY",
-              "GPU native preview is not attached to this Flutter platform"), {});
+                              "GPU native preview is not attached to this "
+                              "Flutter platform"),
+                {});
           return;
         }
         e->config["gpuRequired"] = args["gpuRequired"];
       }
       if (args.contains("devDiagnostics")) {
         if (!args["devDiagnostics"].is_boolean()) {
-          reply(Status::error("ERR_INVALID_ARGUMENT", "devDiagnostics must be a boolean"), {});
+          reply(Status::error("ERR_INVALID_ARGUMENT",
+                              "devDiagnostics must be a boolean"),
+                {});
           return;
         }
         e->config["devDiagnostics"] = args["devDiagnostics"];
@@ -554,6 +589,73 @@ void Registry::invoke(const std::string &method, const Json &args,
     }
     Json payload = args;
     payload.erase("id");
+    if (method == "prepareHostChrome") {
+      reply({}, payload);
+      return;
+    }
+    if (method == "inspectPackChrome" ||
+        (method == "hostChrome" && !e->native)) {
+      weapp_container_sdk_session *temporary = nullptr;
+      const std::string config = R"({"engine":"quickjs"})";
+      Buffer created;
+      auto status = created.read(weapp_container_sdk_session_new(
+          reinterpret_cast<const uint8_t *>(config.data()), config.size(),
+          &temporary, &created.value));
+      Json result;
+      if (status)
+        status = command(temporary, method.c_str(), payload, &result);
+      if (temporary) {
+        Buffer retired;
+        auto cleanup = retired.read(
+            weapp_container_sdk_session_destroy(&temporary, &retired.value));
+        if (!cleanup)
+          status = cleanup;
+      }
+      if (status && method == "hostChrome")
+        e->host_chrome = payload;
+      reply(status, result);
+      return;
+    }
+    if (method == "hostChrome") {
+      auto status = command(e->native, "hostChrome", payload);
+      if (status)
+        e->host_chrome = payload;
+      reply(status, nullptr);
+      return;
+    }
+    if (method == "setPreviewOccluded") {
+      const auto occluded = payload.at("occluded").get<bool>();
+      auto status = e->native
+                        ? command(e->native, "setPreviewOccluded", payload)
+                        : Status{};
+      if (status) {
+        e->occluded = occluded;
+        if (e->texture) {
+          e->texture->invalidate_presentation();
+          status = e->texture->set_visible(e->foreground && !occluded);
+        }
+      }
+      reply(status, nullptr);
+      return;
+    }
+    if (method == "nativeChrome") {
+      auto weak = std::weak_ptr<Life>(life_);
+      const auto id = e->id;
+      auto action = [weak, id](Json event) {
+        if (auto life = weak.lock();
+            life && life->owner && life->owner->emit_) {
+          event["type"] = "chromeAction";
+          life->owner->emit_({{"id", id}, {"event", event}});
+        }
+      };
+      auto status = e->texture
+                        ? e->texture->set_chrome(payload, std::move(action))
+                        : Status{};
+      if (status)
+        e->native_chrome = payload;
+      reply(status, nullptr);
+      return;
+    }
     if (method == "attach" || method == "resize") {
       Metrics metrics;
       auto s = Metrics::parse(payload, metrics);
@@ -598,8 +700,9 @@ void Registry::invoke(const std::string &method, const Json &args,
       if (method == "attach") {
         auto weak = std::weak_ptr<Life>(life_);
         auto id = e->id;
-        const auto& factory = e->config.value("gpuRequired", false) && gpu_factory_
-            ? gpu_factory_ : factory_;
+        const auto &factory =
+            e->config.value("gpuRequired", false) && gpu_factory_ ? gpu_factory_
+                                                                  : factory_;
         e->texture = factory(s, [weak, id](Status error) {
           if (auto life = weak.lock(); life && life->owner)
             life->owner->report(id, error);
@@ -611,6 +714,18 @@ void Registry::invoke(const std::string &method, const Json &args,
           return;
         }
         s = e->texture->layout(e->metrics);
+        if (s && !e->native_chrome.is_null()) {
+          auto weak_chrome = std::weak_ptr<Life>(life_);
+          const auto chrome_id = e->id;
+          s = e->texture->set_chrome(
+              e->native_chrome, [weak_chrome, chrome_id](Json event) {
+                if (auto life = weak_chrome.lock();
+                    life && life->owner && life->owner->emit_) {
+                  event["type"] = "chromeAction";
+                  life->owner->emit_({{"id", chrome_id}, {"event", event}});
+                }
+              });
+        }
         if (s && e->native) {
           Json state;
           if (command(e->native, "state", Json::object(), &state) &&
@@ -631,8 +746,11 @@ void Registry::invoke(const std::string &method, const Json &args,
         if (!prepares.empty()) {
           auto prepared = ensure(*e);
           Json capabilities;
-          if (prepared) prepared = command(e->native, "capabilities", Json::object(), &capabilities);
-          for (auto &pending : prepares) pending(prepared, capabilities);
+          if (prepared)
+            prepared = command(e->native, "capabilities", Json::object(),
+                               &capabilities);
+          for (auto &pending : prepares)
+            pending(prepared, capabilities);
         }
         if (e->pending_load) {
           auto pending = std::exchange(e->pending_load, {});
@@ -640,20 +758,27 @@ void Registry::invoke(const std::string &method, const Json &args,
           load(*e, pending_args, std::move(pending));
         }
       } else {
-        if (e->texture) s = e->texture->layout(e->metrics);
+        if (e->texture)
+          s = e->texture->layout(e->metrics);
         reply(s, nullptr);
       }
       return;
     }
     if (method == "prepareView") {
       if (!e->metrics.width) {
-        if (e->pending_prepares.size() >= 8) reply(Status::error("ERR_BUSY", "too many measured-view preparations"), {});
-        else e->pending_prepares.push_back(std::move(reply));
+        if (e->pending_prepares.size() >= 8)
+          reply(
+              Status::error("ERR_BUSY", "too many measured-view preparations"),
+              {});
+        else
+          e->pending_prepares.push_back(std::move(reply));
         return;
       }
       auto status = ensure(*e);
       Json capabilities;
-      if (status) status = command(e->native, "capabilities", Json::object(), &capabilities);
+      if (status)
+        status =
+            command(e->native, "capabilities", Json::object(), &capabilities);
       reply(status, capabilities);
       return;
     }
@@ -664,7 +789,8 @@ void Registry::invoke(const std::string &method, const Json &args,
     if (method == "classifyDevPack") {
       auto status = ensure(*e);
       Json result;
-      if (status) status = command(e->native, "classifyDevPack", payload, &result);
+      if (status)
+        status = command(e->native, "classifyDevPack", payload, &result);
       reply(status, result);
       return;
     }
@@ -672,28 +798,36 @@ void Registry::invoke(const std::string &method, const Json &args,
       auto status = ensure(*e);
       Json classification;
       if (status)
-        status = command(e->native, "classifyDevPack", payload, &classification);
+        status =
+            command(e->native, "classifyDevPack", payload, &classification);
       if (!status) {
         reply(status, {});
         return;
       }
       const auto kind = classification.value("reloadKind", "");
       if (kind != "restart" && kind != "inPlace") {
-        reply(Status::error("ERR_PROTOCOL_VERSION", "unknown native dev reload kind"), {});
+        reply(Status::error("ERR_PROTOCOL_VERSION",
+                            "unknown native dev reload kind"),
+              {});
         return;
       }
       if (kind == "restart") {
         // Reuse the normal detach/load/resume transaction; calling a runtime
         // restart underneath a live texture would violate GPU ownership.
-        load(*e, payload, [e, reply = std::move(reply)](Status loaded, Json) mutable {
-          Json state;
-          if (loaded) loaded = command(e->native, "state", Json::object(), &state);
-          reply(loaded, loaded ? Json{{"reloadKind", "restart"}, {"state", state}} : Json());
-        });
+        load(*e, payload,
+             [e, reply = std::move(reply)](Status loaded, Json) mutable {
+               Json state;
+               if (loaded)
+                 loaded = command(e->native, "state", Json::object(), &state);
+               reply(loaded,
+                     loaded ? Json{{"reloadKind", "restart"}, {"state", state}}
+                            : Json());
+             });
       } else {
         Json result;
         status = command(e->native, "applyDevPack", payload, &result);
-        if (status && e->texture) e->texture->invalidate_presentation();
+        if (status && e->texture)
+          e->texture->invalidate_presentation();
         reply(status, result);
       }
       return;
@@ -730,8 +864,9 @@ void Registry::invoke(const std::string &method, const Json &args,
       return;
     }
     static const std::set<std::string> allowed = {
-        "navigate",         "back",  "sendMessage", "state", "capabilities",
-        "completeHostCall", "input", "flushStorage", "devState", "clearDevStorage"};
+        "navigate",     "back",         "switchTab",        "sendMessage",
+        "state",        "capabilities", "completeHostCall", "input",
+        "flushStorage", "devState",     "clearDevStorage"};
     if (!allowed.count(method)) {
       reply(Status::error("ERR_UNSUPPORTED",
                           "unknown desktop plugin method: " + method),
@@ -743,7 +878,8 @@ void Registry::invoke(const std::string &method, const Json &args,
     if (s && method == "clearDevStorage") {
       s = command(e->native, "flushStorage", Json::object(), &result);
       if (s && result.value("pending", false)) {
-        e->flushes[result.at("ticket").get<uint64_t>()].push_back(std::move(reply));
+        e->flushes[result.at("ticket").get<uint64_t>()].push_back(
+            std::move(reply));
         return;
       }
     }
@@ -752,7 +888,10 @@ void Registry::invoke(const std::string &method, const Json &args,
           std::move(reply));
       return;
     }
-    reply(s, method == "state" || method == "capabilities" || method == "devState" ? result : Json());
+    reply(s,
+          method == "state" || method == "capabilities" || method == "devState"
+              ? result
+              : Json());
   } catch (const std::exception &error) {
     reply(Status::error("ERR_INVALID_ARGUMENT", error.what()), {});
   }

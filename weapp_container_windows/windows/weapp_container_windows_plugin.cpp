@@ -292,14 +292,30 @@ public:
         registrar->messenger(), "dev.weapp.container/methods",
         &flutter::StandardMethodCodec::GetInstance());
     methods_->SetMethodCallHandler(
-        [this](const flutter::MethodCall<Value> &call,
+        [this, registrar](const flutter::MethodCall<Value> &call,
                std::unique_ptr<flutter::MethodResult<Value>> result) {
           auto shared =
               std::shared_ptr<flutter::MethodResult<Value>>(std::move(result));
           try {
+            Json arguments = call.arguments() ? fromValue(*call.arguments()) : Json();
+            const bool chrome_method=call.method_name()=="hostChrome"||call.method_name()=="prepareHostChrome";
+            const bool client_chrome = chrome_method && arguments.value("coordinateSpace", "screen") == "flutterClient";
+            if (client_chrome || call.method_name() == "attach" || call.method_name() == "resize") {
+              auto *view = registrar->GetView();auto window = view ? view->GetNativeWindow() : nullptr;
+              POINT origin{};MONITORINFO monitor{};monitor.cbSize=sizeof(monitor);
+              if (!window || !IsWindow(window) || !ClientToScreen(window,&origin) ||
+                  !GetMonitorInfoW(MonitorFromWindow(window,MONITOR_DEFAULTTONEAREST),&monitor)) {
+                if(client_chrome){shared->Error("ERR_NOT_READY","Chrome needs an attached native host window");return;}
+              } else {
+                const auto scale=GetDpiForWindow(window)/96.0;
+                const double dx=(origin.x-monitor.rcMonitor.left)/scale,dy=(origin.y-monitor.rcMonitor.top)/scale;
+                if(client_chrome){arguments.erase("coordinateSpace");translate_chrome(arguments,dx,dy);}
+                else arguments["screenTop"]=dy+arguments.value("previewY",0.0);
+              }
+            }
+            if(chrome_method)arguments.erase("coordinateSpace");
             registry_->invoke(call.method_name(),
-                              call.arguments() ? fromValue(*call.arguments())
-                                               : Json(),
+                              arguments,
                               [shared](Status status, Json value) {
                                 if (status)
                                   shared->Success(toValue(value));

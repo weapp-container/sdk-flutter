@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { verifySourceInventory } from './source-inventory.mjs';
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, join, sep } from 'node:path';
@@ -9,6 +10,7 @@ import { nativeArtifactPaths, nativeSdkComponent } from './native-artifact-paths
 import { SDK_VERSION } from './runtime-artifacts.mjs';
 import { makeFixture } from '../example/shared/make-fixture.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const reviewedSource = verifySourceInventory(root);
 const args = process.argv.slice(2);
 const option = (name, fallback) => { const at = args.indexOf(name); return at < 0 ? fallback : args[at + 1]; };
 const out = resolve(option('--out', join(root, '.build/distribution')));
@@ -52,11 +54,11 @@ function provenance() {
   const revision = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
   const dirty = spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' });
   if (revision.status || dirty.status) throw new Error('Unable to record source provenance');
-  return { sourceCommit: revision.stdout.trim(), sourceDirty: Boolean(dirty.stdout.trim()) };
+  return { sourceCommit: revision.stdout.trim(), sourceDirty: Boolean(dirty.stdout.trim()), sourceInventorySha256: reviewedSource.inventorySha256 };
 }
 function receipt(path, status) {
   const value = JSON.parse(readFileSync(path, 'utf8'));
-  if (value.status !== status || value.sdkVersion !== '0.1.0-preview.3') throw new Error(`Invalid SDK receipt ${path}`);
+  if (value.status !== status || value.sdkVersion !== '0.1.0-preview.4') throw new Error(`Invalid SDK receipt ${path}`);
   if (value.native) {
     if (!value.native.length || value.native.some(r => r.status !== 'built' || r.sourceDirty !== false || !/^[a-f0-9]{40}$/.test(r.sourceCommit))) throw new Error(`Native SDK lacks clean committed provenance: ${path}`);
   } else if (value.sourceDirty !== false || !/^[a-f0-9]{40}$/.test(value.sourceCommit)) throw new Error(`SDK lacks clean committed provenance: ${path}`);
@@ -115,7 +117,7 @@ if (!args.includes('--skip-packages')) {
   if (existsSync(finalPackages)) renameSync(finalPackages, previous);
   renameSync(packages, finalPackages); packages = finalPackages;
   rmSync(previous, { recursive: true, force: true });
-  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: '0.1.0-preview.3', ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
+  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: '0.1.0-preview.4', ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
 }
 if (!existsSync(join(consumer, 'pubspec.yaml'))) {
   run(flutter, ['create', '--no-pub', '--platforms=android,ios,macos,windows,linux', '--org', 'dev.weapp', '--project-name', 'weapp_sdk_consumer', consumer]);

@@ -2,6 +2,9 @@
 #include "registry.hpp"
 #include "native_preview_texture.hpp"
 #include <filesystem>
+#if defined(GDK_WINDOWING_X11)
+#include <gdk/gdkx.h>
+#endif
 using namespace weapp::flutter;
 namespace {
 // Flutter Linux FlValue stores strings as NUL-terminated gchar*, including
@@ -167,6 +170,7 @@ private:
 };
 struct Plugin {
   std::unique_ptr<Registry> registry;
+  std::shared_ptr<GtkWidget> view;
   // Borrowed from messenger-owned channels. The channel destroy callbacks
   // clear these before dropping their final shared ownership of Plugin.
   FlMethodChannel *methods = nullptr;
@@ -200,8 +204,36 @@ void methodCall(FlMethodChannel *, FlMethodCall *call, gpointer data) {
       std::shared_ptr<FlMethodCall>(FL_METHOD_CALL(g_object_ref(call)),
                                     [](FlMethodCall *p) { g_object_unref(p); });
   try {
+    Json arguments = fromValue(fl_method_call_get_args(call));
+    const std::string method = fl_method_call_get_name(call);
+    const bool chrome_method=method=="hostChrome"||method=="prepareHostChrome";
+    const bool client_chrome = chrome_method && arguments.value("coordinateSpace", "screen") == "flutterClient";
+    if (client_chrome || method == "attach" || method == "resize") {
+      auto *view = plugin->view.get();
+      auto *display = view ? gtk_widget_get_display(view) : nullptr;
+      bool x11 = false;
+#if defined(GDK_WINDOWING_X11)
+      x11 = display && GDK_IS_X11_DISPLAY(display);
+#endif
+      if (client_chrome && !x11) {
+        reply(call, Status::error("ERR_UNSUPPORTED_CAPABILITY", "Wayland does not expose the screen origin required by host chrome"), {}); return;
+      }
+      auto *top = view ? gtk_widget_get_toplevel(view) : nullptr;
+      auto *window = top ? gtk_widget_get_window(top) : nullptr;
+      gint x=0,y=0,offset_x=0,offset_y=0;
+      if(x11 && window && gtk_widget_translate_coordinates(view,top,0,0,&offset_x,&offset_y) && gdk_window_get_origin(window,&x,&y)) {
+        auto *monitor=gdk_display_get_monitor_at_window(display,window);GdkRectangle extent{};
+        if(monitor)gdk_monitor_get_geometry(monitor,&extent);
+        const double dx=x+offset_x-extent.x,dy=y+offset_y-extent.y;
+        if(client_chrome){arguments.erase("coordinateSpace");translate_chrome(arguments,dx,dy);}
+        else arguments["screenTop"]=dy+arguments.value("previewY",0.0);
+      } else if(client_chrome) {
+        reply(call, Status::error("ERR_NOT_READY", "Chrome needs a realized native X11 host window"), {}); return;
+      }
+    }
+    if(chrome_method)arguments.erase("coordinateSpace");
     plugin->registry->invoke(
-        fl_method_call_get_name(call), fromValue(fl_method_call_get_args(call)),
+        method, arguments,
         [retained](Status s, Json value) { reply(retained.get(), s, value); });
   } catch (const std::exception &error) {
     reply(call, Status::error("ERR_INVALID_ARGUMENT", error.what()), {});
@@ -273,6 +305,7 @@ void weapp_container_linux_plugin_register_with_registrar(
   auto view = std::shared_ptr<GtkWidget>(
       GTK_WIDGET(g_object_ref(fl_plugin_registrar_get_view(registrar))),
       [](GtkWidget* value) { g_object_unref(value); });
+  plugin->view = view;
   plugin->registry->set_gpu_preview_factory(
       [view](Status& status, std::function<void(Status)> errors) -> std::shared_ptr<Texture> {
         auto* parent = gtk_widget_get_parent(view.get());

@@ -9,8 +9,8 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace weapp::flutter {
 using Json = nlohmann::json;
@@ -29,6 +29,21 @@ struct Buffer {
 };
 Status command(weapp_container_sdk_session *, const char *,
                const Json & = Json::object(), Json * = nullptr);
+// Flutter client-window geometry is translated exactly once by its native
+// platform adapter. Content/event coordinates remain local to the GPU surface.
+inline void translate_chrome(Json &payload, double dx, double dy) {
+  if (!std::isfinite(dx) || !std::isfinite(dy))
+    throw std::invalid_argument("native screen origin must be finite");
+  for (auto name : {"contentRect", "menuButtonRect"}) {
+    auto &rect = payload.at(name);
+    for (auto edge : {"left", "right"})
+      if (rect.contains(edge))
+        rect[edge] = rect.at(edge).get<double>() + dx;
+    for (auto edge : {"top", "bottom"})
+      if (rect.contains(edge))
+        rect[edge] = rect.at(edge).get<double>() + dy;
+  }
+}
 struct PresentationStamp {
   uint64_t generation = 0, revision = 0;
   bool operator==(const PresentationStamp &other) const {
@@ -36,7 +51,8 @@ struct PresentationStamp {
   }
 };
 // Raster/GPU callbacks only record immutable receipts. Session commands remain
-// on the Registry owner thread; an epoch invalidates detached/reloaded textures.
+// on the Registry owner thread; an epoch invalidates detached/reloaded
+// textures.
 class PresentationFeedback {
 public:
   struct Ticket {
@@ -64,6 +80,7 @@ public:
     pending_.reset();
     consumed_ = submitted_;
   }
+
 private:
   std::mutex mutex_;
   uint64_t epoch_ = 1, submitted_ = 0, consumed_ = 0;
@@ -75,9 +92,9 @@ struct Frame {
   std::shared_ptr<PresentationFeedback> feedback;
   PresentationFeedback::Ticket presentation;
   ~Frame();
-  static std::shared_ptr<const Frame> acquire(weapp_container_sdk_session *,
-                                              Status &, PresentationStamp,
-                                              std::shared_ptr<PresentationFeedback>);
+  static std::shared_ptr<const Frame>
+  acquire(weapp_container_sdk_session *, Status &, PresentationStamp,
+          std::shared_ptr<PresentationFeedback>);
 };
 // A raster callback takes a shared immutable lease; producer publication never
 // invalidates pixels already borrowed by the engine.
@@ -109,15 +126,22 @@ public:
   virtual Status layout(const Metrics &) { return {}; }
   virtual Status set_visible(bool) { return {}; }
   virtual bool is_native_preview() const { return false; }
+  virtual Status set_chrome(const Json &, std::function<void(Json)>) {
+    return Status::error("ERR_UNSUPPORTED_CAPABILITY",
+                         "native chrome is unavailable for this surface");
+  }
   virtual Status suspend(weapp_container_sdk_session *) { return {}; }
   virtual Status resume(weapp_container_sdk_session *) { return {}; }
   virtual Status present(weapp_container_sdk_session *, const Metrics &,
                          PresentationStamp) = 0;
-  std::optional<PresentationStamp> take_presented() { return feedback_->take(); }
+  std::optional<PresentationStamp> take_presented() {
+    return feedback_->take();
+  }
   void invalidate_presentation() { feedback_->invalidate(); }
   // Completion is always delivered on the platform owner thread. Each platform
   // keeps its callback object alive until its registrar releases it.
   virtual void retire(std::function<void(Status)> completion) = 0;
+
 protected:
   std::shared_ptr<PresentationFeedback> feedback_ =
       std::make_shared<PresentationFeedback>();
@@ -135,7 +159,9 @@ public:
            Schedule, Log);
   ~Registry();
   // Optional native child preview; no CPU texture is selected when required.
-  void set_gpu_preview_factory(Factory factory) { gpu_factory_ = std::move(factory); }
+  void set_gpu_preview_factory(Factory factory) {
+    gpu_factory_ = std::move(factory);
+  }
   void invoke(const std::string &, const Json &, Reply);
   void tick();
   void shutdown();
@@ -148,7 +174,9 @@ private:
     std::set<std::string> methods;
     weapp_container_sdk_session *native = nullptr;
     std::shared_ptr<Texture> texture;
-    bool closing = false, closed = false, retiring = false, foreground = true;
+    bool closing = false, closed = false, retiring = false, foreground = true,
+         occluded = false;
+    Json host_chrome, native_chrome;
     Json load;
     Reply pending_load;
     std::vector<Reply> pending_prepares;

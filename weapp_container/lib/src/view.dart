@@ -15,10 +15,20 @@ class WeappContainerView extends StatefulWidget {
     super.key,
     required this.controller,
     this.foreground = true,
+    this.occluded = false,
+    this.hostChrome,
+    this.nativeChrome,
+    this.onHostChromeApplied,
     this.onError,
   });
   final WeappContainerController controller;
   final bool foreground;
+
+  /// Presentation/input suspension only. App lifecycle and timers keep running.
+  final bool occluded;
+  final Map<String, Object?>? hostChrome;
+  final Map<String, Object?>? nativeChrome;
+  final ValueChanged<int>? onHostChromeApplied;
   final void Function(Object error, StackTrace stack)? onError;
   @override
   State<WeappContainerView> createState() => _WeappContainerViewState();
@@ -38,22 +48,28 @@ class _WeappContainerViewState extends State<WeappContainerView>
   Future<void>? _syncing;
   Map<String, Object?>? _pendingMetrics;
   Map<String, Object?>? _metrics;
+  int? _hostChromeRevision;
+  int? _nativeChromeRevision;
+  bool _occluded = false;
+  bool _nativeOccluded = false;
+  Future<void> _chromeSync = Future.value();
   bool get _desktop => switch (defaultTargetPlatform) {
-    TargetPlatform.macOS ||
-    TargetPlatform.windows ||
-    TargetPlatform.linux => true,
-    _ => false,
-  };
+        TargetPlatform.macOS ||
+        TargetPlatform.windows ||
+        TargetPlatform.linux =>
+          true,
+        _ => false,
+      };
   @override
   void initState() {
     super.initState();
     _controller = widget.controller;
     _ready = _controller.claimView(this);
     _run(_ready);
-    _resumed =
-        WidgetsBinding.instance.lifecycleState == null ||
+    _resumed = WidgetsBinding.instance.lifecycleState == null ||
         _isVisibleLifecycle(WidgetsBinding.instance.lifecycleState!);
     WidgetsBinding.instance.addObserver(this);
+    _updateChrome();
   }
 
   @override
@@ -62,6 +78,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
     if (!identical(oldWidget.controller, widget.controller))
       throw StateError('Use a new widget key when changing controller');
     _updateForeground();
+    _updateChrome();
   }
 
   @override
@@ -104,13 +121,78 @@ class _WeappContainerViewState extends State<WeappContainerView>
     _run(_controller.setForeground(next));
   }
 
+  void _updateChrome() {
+    final geometry = widget.hostChrome;
+    final native = widget.nativeChrome;
+    final geometryRevision = geometry?['revision'] as int?;
+    final nativeRevision = native?['revision'] as int?;
+    final geometryChanged =
+        geometry != null && geometryRevision != _hostChromeRevision;
+    final nativeChanged = native != null &&
+        nativeRevision != _nativeChromeRevision &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux);
+    final occlusionChanged = widget.occluded != _occluded;
+    if (!geometryChanged && !nativeChanged && !occlusionChanged) return;
+    if (geometryChanged) _hostChromeRevision = geometryRevision;
+    if (nativeChanged) _nativeChromeRevision = nativeRevision;
+    final occluded = widget.occluded;
+    _occluded = occluded;
+    _chromeSync =
+        _chromeSync.catchError((Object _, StackTrace __) {}).then((_) async {
+      await _ready;
+      if (_disposed || _controller.isClosed) return;
+      // Suspend first when covering; restore only after the geometry/controls
+      // matching the accepted generation have reached the native owner.
+      if (occlusionChanged && occluded) {
+        await _controller.setPreviewOccluded(true);
+        _nativeOccluded = true;
+      }
+      if (geometryChanged) {
+        try {
+          await _controller.updateHostChrome(geometry);
+        } on PlatformException catch (error) {
+          if (error.code == 'ERR_CANCELLED') {
+            if (_disposed ||
+                !mounted ||
+                widget.hostChrome?['revision'] != geometryRevision) return;
+            // Runtime navigation can win before Flutter consumes its chrome
+            // event. Confirm the new owner instead of faulting a healthy page.
+            final current = await _controller.state();
+            final currentPage = current['page'];
+            if ((geometry['sessionId'] != null &&
+                    geometry['sessionId'] != current['sessionId']) ||
+                (geometry['pageId'] != null &&
+                    currentPage is Map &&
+                    geometry['pageId'] != currentPage['id'])) {
+              _hostChromeRevision = null;
+              return;
+            }
+          }
+          rethrow;
+        }
+        if (!_disposed &&
+            mounted &&
+            widget.hostChrome?['revision'] == geometryRevision &&
+            geometryRevision != null) {
+          widget.onHostChromeApplied?.call(geometryRevision);
+        }
+      }
+      if (nativeChanged) await _controller.updateNativeChrome(native);
+      if (!occluded && _nativeOccluded) {
+        await _controller.setPreviewOccluded(false);
+        _nativeOccluded = false;
+      }
+    });
+    _run(_chromeSync);
+  }
+
   void _layout(Map<String, Object?> next) {
     if (_disposed) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_disposed || !mounted) return;
       final measured = Map<String, Object?>.of(next);
-      if (defaultTargetPlatform == TargetPlatform.windows ||
-          defaultTargetPlatform == TargetPlatform.linux) {
+      if (_desktop) {
         final box = context.findRenderObject();
         if (box is RenderBox && box.hasSize) {
           final origin = box.localToGlobal(Offset.zero);
@@ -211,8 +293,8 @@ class _WeappContainerViewState extends State<WeappContainerView>
             'screenTop': 0,
             'deviceOrientation':
                 display.display.size.width > display.display.size.height
-                ? 'landscape'
-                : 'portrait',
+                    ? 'landscape'
+                    : 'portrait',
           });
         }
         // -1 identifies an actual native child preview, never a Flutter pixel
@@ -310,13 +392,12 @@ class _WeappContainerViewState extends State<WeappContainerView>
                   ? {
                       EagerGestureRecognizer:
                           GestureRecognizerFactoryWithHandlers<
-                            EagerGestureRecognizer
-                          >(
-                            () => EagerGestureRecognizer(
-                              allowedButtonsFilter: (_) => _acceptsInput,
-                            ),
-                            (_) {},
-                          ),
+                              EagerGestureRecognizer>(
+                        () => EagerGestureRecognizer(
+                          allowedButtonsFilter: (_) => _acceptsInput,
+                        ),
+                        (_) {},
+                      ),
                     }
                   : const {},
               child: SizedBox.expand(
@@ -346,13 +427,13 @@ class _WeappContainerViewState extends State<WeappContainerView>
         ),
         onCreatePlatformView: (params) =>
             PlatformViewsService.initExpensiveAndroidView(
-                id: params.id,
-                viewType: 'dev.weapp.container/view',
-                layoutDirection: Directionality.of(context),
-                creationParams: {'id': _controller.id},
-                creationParamsCodec: const StandardMessageCodec(),
-                onFocus: () => params.onFocusChanged(true),
-              )
+          id: params.id,
+          viewType: 'dev.weapp.container/view',
+          layoutDirection: Directionality.of(context),
+          creationParams: {'id': _controller.id},
+          creationParamsCodec: const StandardMessageCodec(),
+          onFocus: () => params.onFocusChanged(true),
+        )
               ..addOnPlatformViewCreatedListener(params.onPlatformViewCreated)
               ..create(),
       );
@@ -400,6 +481,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
   bool get _acceptsInput =>
       _texture != null &&
       _foreground == true &&
+      !widget.occluded &&
       !_disposed &&
       !_controller.isClosed;
 
