@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 
 import 'controller.dart';
 import 'host_layout.dart';
+import 'view_diagnostic.dart';
 
 Map<String, Object?>? _chromeSnapshot(Map<String, Object?>? value) =>
     value == null
@@ -19,19 +20,25 @@ bool _chromeEqual(Object? left, Object? right) {
   if (identical(left, right)) return true;
   if (left is Map && right is Map) {
     return left.length == right.length &&
-        left.keys.every((key) =>
-            right.containsKey(key) && _chromeEqual(left[key], right[key]));
+        left.keys.every(
+          (key) =>
+              right.containsKey(key) && _chromeEqual(left[key], right[key]),
+        );
   }
   if (left is List && right is List) {
     return left.length == right.length &&
-        List.generate(left.length, (index) => index)
-            .every((index) => _chromeEqual(left[index], right[index]));
+        List.generate(
+          left.length,
+          (index) => index,
+        ).every((index) => _chromeEqual(left[index], right[index]));
   }
   return left == right;
 }
 
 bool _sameChromeObservation(
-    Map<String, Object?>? left, Map<String, Object?>? right) {
+  Map<String, Object?>? left,
+  Map<String, Object?>? right,
+) {
   if (left == null || right == null) return left == null && right == null;
   return const [
     'schemaVersion',
@@ -45,6 +52,22 @@ bool _sameChromeObservation(
 }
 
 class _ChromeRetired implements Exception {}
+
+int _nextViewLease = 0;
+
+class _ViewAttempt {
+  _ViewAttempt(this.operation, this.lease, this.sequence);
+  final WeappViewOperation operation;
+  final int lease;
+  final int sequence;
+}
+
+class _AttributedViewError implements Exception {
+  _AttributedViewError(this.error, this.stack, this.attempt);
+  final Object error;
+  final StackTrace stack;
+  final _ViewAttempt attempt;
+}
 
 class _DesiredHostGeometry {
   _DesiredHostGeometry(this.chrome, this.observation);
@@ -71,6 +94,7 @@ class WeappContainerView extends StatefulWidget {
     this.nativeChrome,
     this.onHostChromeApplied,
     this.onError,
+    this.onDiagnostic,
   });
   final WeappContainerController controller;
   final bool foreground;
@@ -89,6 +113,11 @@ class WeappContainerView extends StatefulWidget {
   final Map<String, Object?>? nativeChrome;
   final ValueChanged<int>? onHostChromeApplied;
   final void Function(Object error, StackTrace stack)? onError;
+
+  /// Includes retired-operation failures without turning them into current
+  /// preview failures. No exception text or arbitrary payload is serialized.
+  /// This is a synchronous observer; asynchronous tasks own their errors.
+  final ValueChanged<WeappViewDiagnostic>? onDiagnostic;
   @override
   State<WeappContainerView> createState() => _WeappContainerViewState();
 }
@@ -96,6 +125,16 @@ class WeappContainerView extends StatefulWidget {
 class _WeappContainerViewState extends State<WeappContainerView>
     with WidgetsBindingObserver {
   final _focus = FocusNode();
+  final int _viewLease = ++_nextViewLease;
+  int _operationSequence = 0;
+  void Function(Object error, StackTrace stack)? _onError;
+  ValueChanged<WeappViewDiagnostic>? _onDiagnostic;
+
+  void _captureCallbacks() {
+    _onError = widget.onError;
+    _onDiagnostic = widget.onDiagnostic;
+  }
+
   final _pointers = <int, Map<String, Object?>>{};
   PointerDownEvent? _tapStart;
   late final WeappContainerController _controller;
@@ -131,10 +170,12 @@ class _WeappContainerViewState extends State<WeappContainerView>
   void initState() {
     super.initState();
     _controller = widget.controller;
-    _cancelCloseListener =
-        _controller.listenForCloseRequest(_retireChromeWaits);
+    _captureCallbacks();
+    _cancelCloseListener = _controller.listenForCloseRequest(
+      _retireChromeWaits,
+    );
     _ready = _controller.claimView(this);
-    _run(_ready);
+    _run(WeappViewOperation.claim, () => _ready);
     _resumed = WidgetsBinding.instance.lifecycleState == null ||
         _isVisibleLifecycle(WidgetsBinding.instance.lifecycleState!);
     WidgetsBinding.instance.addObserver(this);
@@ -144,6 +185,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
   @override
   void didUpdateWidget(covariant WeappContainerView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _captureCallbacks();
     if (!identical(oldWidget.controller, widget.controller))
       throw StateError('Use a new widget key when changing controller');
     _updateForeground();
@@ -165,9 +207,60 @@ class _WeappContainerViewState extends State<WeappContainerView>
   bool _isVisibleLifecycle(AppLifecycleState state) =>
       state == AppLifecycleState.resumed ||
       (_desktop && state == AppLifecycleState.inactive);
-  void _error(Object error, StackTrace stack) {
-    if (widget.onError != null) {
-      widget.onError!(error, stack);
+  _ViewAttempt _attempt(WeappViewOperation operation) =>
+      _ViewAttempt(operation, _viewLease, ++_operationSequence);
+
+  bool _diagnose(Object error, _ViewAttempt attempt) {
+    final retired = _disposed ||
+        !mounted ||
+        _controller.closeRequested ||
+        !_controller.ownsView(this);
+    try {
+      final diagnostic = WeappViewDiagnostic(
+        operation: attempt.operation,
+        viewLease: _viewLease,
+        operationSequence: attempt.sequence,
+        retired: retired,
+        error: error,
+      );
+      if (_onDiagnostic != null) {
+        _onDiagnostic!(diagnostic);
+      } else if (retired) {
+        debugPrint('weapp_container.retired_view $diagnostic');
+      }
+    } catch (_) {
+      // Diagnostics are observers. Neither construction nor a public sink may
+      // replace the original operation error, interrupt a supersession proof,
+      // or leak an unhandled late Future failure after View retirement.
+      _diagnosticFailure(attempt, retired);
+    }
+    return retired;
+  }
+
+  void _diagnosticFailure(_ViewAttempt attempt, bool retired) {
+    // All fields originate in this View. Do not stringify the diagnostic,
+    // exception, stack, native message/details, or a failure of the sink itself.
+    final message = 'weapp_container.view_diagnostic_failure '
+        '{"schemaVersion":1,"code":"ERR_DIAGNOSTIC_SINK",'
+        '"operation":"${attempt.operation.name}",'
+        '"viewLease":"$_viewLease",'
+        '"operationSequence":"${attempt.sequence}","retired":$retired}';
+    try {
+      debugPrint(message);
+    } catch (_) {
+      // A replaced debugPrint callback is another observer. Its failure must
+      // not affect onError delivery, native retirement, or recovery decisions.
+    }
+  }
+
+  void _error(Object error, StackTrace stack, _ViewAttempt attempt) {
+    final retired = _diagnose(error, attempt);
+    // The completed operation belongs to this retired lease. Its error remains
+    // diagnostic, while the controller retirement future still fails normally.
+    // A new lease's claim of a failed retirement is a separate active failure.
+    if (retired) return;
+    if (_onError != null) {
+      _onError!(error, stack);
     } else {
       FlutterError.reportError(
         FlutterErrorDetails(
@@ -179,15 +272,26 @@ class _WeappContainerViewState extends State<WeappContainerView>
     }
   }
 
-  void _run(Future<void> future) {
-    unawaited(future.catchError(_error));
+  void _run(WeappViewOperation operation, Future<void> Function() action) {
+    final submitted = _attempt(operation);
+    unawaited(
+      Future<void>.sync(action).catchError((Object error, StackTrace stack) {
+        var attempt = submitted;
+        while (error is _AttributedViewError) {
+          if (error.attempt.lease == _viewLease) attempt = error.attempt;
+          stack = error.stack;
+          error = error.error;
+        }
+        _error(error, stack, attempt);
+      }),
+    );
   }
 
   void _updateForeground() {
     final next = widget.foreground && _resumed;
     if (_foreground == next || _controller.closeRequested) return;
     _foreground = next;
-    _run(_controller.setForeground(next));
+    _run(WeappViewOperation.foreground, () => _controller.setForeground(next));
   }
 
   void _updateChrome() {
@@ -226,7 +330,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
     }
   }
 
-  Future<T> _awaitChrome<T>(Future<T> operation) {
+  Future<T> _awaitChrome<T>(Future<T> operation, _ViewAttempt attempt) {
     final waiters = _chromeWaiters;
     final result = Completer<T>();
     void retire() {
@@ -240,13 +344,22 @@ class _WeappContainerViewState extends State<WeappContainerView>
     }
     // Keep an error handler on the actual operation after retiring its wait;
     // late native replies cannot leak errors or reactivate this View.
-    operation.then<void>((value) {
-      waiters.remove(retire);
-      if (!result.isCompleted) result.complete(value);
-    }, onError: (Object error, StackTrace stack) {
-      waiters.remove(retire);
-      if (!result.isCompleted) result.completeError(error, stack);
-    });
+    operation.then<void>(
+      (value) {
+        waiters.remove(retire);
+        if (!result.isCompleted) result.complete(value);
+      },
+      onError: (Object error, StackTrace stack) {
+        waiters.remove(retire);
+        if (!result.isCompleted) {
+          result.completeError(error, stack);
+        } else {
+          // The native operation may outlive the retired wait. Keep its actual
+          // failure visible without invoking the active-preview error callback.
+          _error(error, stack, attempt);
+        }
+      },
+    );
     return result.future;
   }
 
@@ -263,7 +376,9 @@ class _WeappContainerViewState extends State<WeappContainerView>
       (!_controller.atomicHostLayout ||
           (value.observation != null &&
               _sameChromeObservation(
-                  value.observation, _controller.pendingHostLayout)));
+                value.observation,
+                _controller.pendingHostLayout,
+              )));
 
   // A success reply establishes only this command's accepted geometry, never a
   // presented frame. A subsequently consumed observation may restore covering
@@ -314,11 +429,15 @@ class _WeappContainerViewState extends State<WeappContainerView>
     if (pending != null) {
       return _sameChromeObservation(pending, committed.observation) &&
           _sameChromeObservation(
-              widget.hostLayoutObservation, committed.observation);
+            widget.hostLayoutObservation,
+            committed.observation,
+          );
     }
     return (widget.hostLayoutObservation == null ||
             _sameChromeObservation(
-                widget.hostLayoutObservation, committed.observation)) &&
+              widget.hostLayoutObservation,
+              committed.observation,
+            )) &&
         _acceptedCommittedGeometry(committed);
   }
 
@@ -330,17 +449,19 @@ class _WeappContainerViewState extends State<WeappContainerView>
       if (_chromeActive && _chromeHandledVersion != _chromeDesiredVersion)
         _scheduleChrome();
     });
-    _run(_chromeSync);
+    _run(WeappViewOperation.chromeQueue, () => _chromeSync);
   }
 
   Future<void> _syncChrome() async {
+    var attempt = _attempt(WeappViewOperation.chromeReady);
     try {
-      await _awaitChrome(_ready);
+      await _awaitChrome(_ready, attempt);
       while (_chromeActive) {
         final version = _chromeDesiredVersion;
         _chromeHandledVersion = version;
         if (_occluded && !_nativeOccluded) {
-          await _awaitChrome(_controller.setPreviewOccluded(true));
+          attempt = _attempt(WeappViewOperation.cover);
+          await _awaitChrome(_controller.setPreviewOccluded(true), attempt);
           _nativeOccluded = true;
         }
         if (!_chromeActive) return;
@@ -351,13 +472,25 @@ class _WeappContainerViewState extends State<WeappContainerView>
             _eligibleGeometry(geometry)) {
           _attemptedGeometry = geometry;
           try {
+            attempt = _attempt(
+              _controller.atomicHostLayout
+                  ? WeappViewOperation.hostLayout
+                  : WeappViewOperation.hostChrome,
+            );
             if (_controller.atomicHostLayout) {
-              await _awaitChrome(_controller.updateHostLayout(
+              await _awaitChrome(
+                _controller.updateHostLayout(
                   observation: geometry.observation!,
                   chrome: geometry.chrome,
-                  layoutRevision: geometry.revision.toString()));
+                  layoutRevision: geometry.revision.toString(),
+                ),
+                attempt,
+              );
             } else {
-              await _awaitChrome(_controller.updateHostChrome(geometry.chrome));
+              await _awaitChrome(
+                _controller.updateHostChrome(geometry.chrome),
+                attempt,
+              );
             }
             if (_successfulCurrentGeometry(geometry)) {
               _committedGeometry = geometry;
@@ -371,11 +504,18 @@ class _WeappContainerViewState extends State<WeappContainerView>
               if (!_currentGeometry(geometry)) {
                 cancelled = true;
               } else {
+                final proof = _attempt(WeappViewOperation.hostLayoutProof);
                 try {
-                  final current = await _awaitChrome(_controller.state());
+                  final current = await _awaitChrome(
+                    _controller.state(),
+                    proof,
+                  );
                   if (_controller.atomicHostLayout) {
-                    cancelled = supersededHostLayout(geometry.observation!,
-                        geometry.revision.toString(), current);
+                    cancelled = supersededHostLayout(
+                      geometry.observation!,
+                      geometry.revision.toString(),
+                      current,
+                    );
                   } else {
                     final page = current['page'];
                     cancelled = (geometry.chrome['sessionId'] != null &&
@@ -387,20 +527,23 @@ class _WeappContainerViewState extends State<WeappContainerView>
                   }
                 } on _ChromeRetired {
                   rethrow;
-                } catch (_) {
+                } catch (proofError) {
+                  _diagnose(proofError, proof);
                   // An unavailable read-only proof cannot rewrite the original
                   // cancellation or prevent independent controls from updating.
                   cancelled = false;
                 }
               }
             }
-            if (!cancelled && _chromeActive) {
-              _error(error, stack);
+            if (cancelled) {
+              _diagnose(error, attempt);
+            } else {
+              _error(error, stack, attempt);
             }
           } on _ChromeRetired {
             rethrow;
           } catch (error, stack) {
-            if (_chromeActive) _error(error, stack);
+            _error(error, stack, attempt);
           }
         }
         if (!_chromeActive) return;
@@ -412,12 +555,16 @@ class _WeappContainerViewState extends State<WeappContainerView>
           final snapshot =
               (jsonDecode(nativeSignature) as Map).cast<String, Object?>();
           try {
-            await _awaitChrome(_controller.updateNativeChrome(snapshot));
+            attempt = _attempt(WeappViewOperation.nativeChrome);
+            await _awaitChrome(
+              _controller.updateNativeChrome(snapshot),
+              attempt,
+            );
             _appliedNativeChromeSignature = nativeSignature;
           } on _ChromeRetired {
             rethrow;
           } catch (error, stack) {
-            if (_chromeActive) _error(error, stack);
+            _error(error, stack, attempt);
           }
         }
         if (!_chromeActive) return;
@@ -425,13 +572,16 @@ class _WeappContainerViewState extends State<WeappContainerView>
             (_nativeChromeSignature == null ||
                 _nativeChromeSignature == _appliedNativeChromeSignature) &&
             _nativeOccluded) {
-          await _awaitChrome(_controller.setPreviewOccluded(false));
+          attempt = _attempt(WeappViewOperation.uncover);
+          await _awaitChrome(_controller.setPreviewOccluded(false), attempt);
           _nativeOccluded = false;
         }
         if (version == _chromeDesiredVersion) return;
       }
     } on _ChromeRetired {
       // Ignore late replies after this View or its controller began retirement.
+    } catch (error, stack) {
+      throw _AttributedViewError(error, stack, attempt);
     }
   }
 
@@ -452,12 +602,13 @@ class _WeappContainerViewState extends State<WeappContainerView>
       _pendingMetrics = measured;
       if (_syncing == null) {
         _syncing = _sync();
-        _run(_syncing!);
+        _run(WeappViewOperation.metricsQueue, () => _syncing!);
       }
     });
   }
 
   Future<void> _sync() async {
+    var attempt = _attempt(WeappViewOperation.claim);
     try {
       await _ready;
       while (!_disposed &&
@@ -466,13 +617,17 @@ class _WeappContainerViewState extends State<WeappContainerView>
         final next = _pendingMetrics!;
         _pendingMetrics = null;
         if (_texture == null) {
+          attempt = _attempt(WeappViewOperation.attachTexture);
           _texture = await _controller.attachTexture(next);
         } else {
+          attempt = _attempt(WeappViewOperation.resizeTexture);
           await _controller.resizeTexture(next);
         }
         _metrics = next;
         if (mounted) setState(() {});
       }
+    } catch (error, stack) {
+      throw _AttributedViewError(error, stack, attempt);
     } finally {
       _syncing = null;
     }
@@ -500,7 +655,12 @@ class _WeappContainerViewState extends State<WeappContainerView>
     WidgetsBinding.instance.removeObserver(this);
     final retirement = _detach();
     _controller.releaseView(this, retirement);
-    _run(retirement);
+    _run(
+      _desktop
+          ? WeappViewOperation.detachTexture
+          : WeappViewOperation.detachPlatformView,
+      () => retirement,
+    );
     _focus.dispose();
     super.dispose();
   }
@@ -738,6 +898,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
       !_controller.closeRequested;
 
   void _input(List<Map<String, Object?>> input) {
-    if (_acceptsInput) _run(_controller.sendInput(input));
+    if (_acceptsInput)
+      _run(WeappViewOperation.input, () => _controller.sendInput(input));
   }
 }

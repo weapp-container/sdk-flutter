@@ -106,7 +106,7 @@ if (!args.includes('--skip-packages')) {
     prepare(status, target, () => {
       const native = nativeInstallation(target);
       verifyNativeInstallation(native, target, manifestPath);
-      const source = join(native, 'package.json'); const value = receipt(source, 'verified', '0.1.0-preview.5.3'); verifyFiles(native, value.artifacts);
+      const source = join(native, 'package.json'); const value = receipt(source, 'verified', SDK_VERSION); verifyFiles(native, value.artifacts);
       run(process.execPath, [join(packages, 'native_desktop/prepare.mjs'), '--target', target, '--from', native]);
       return { source, receiptSha256: hash(source), nativeSourceCommits: value.native.map(r => r.sourceCommit), artifactCount: value.artifacts.length };
     });

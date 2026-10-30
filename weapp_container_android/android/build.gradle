@@ -1,5 +1,5 @@
 group = 'dev.weapp.container.flutter'
-version = '0.1.0-preview.5.3'
+version = '0.1.0-preview.5.4'
 buildscript {
     ext.kotlin_version = '2.0.21'
     repositories { google(); mavenCentral() }
@@ -17,7 +17,7 @@ android {
 // The host app resolves the plugin's transitive AAR as well. Register the
 // packaged repository for every consumer project, restricted to this SDK group.
 def sdkMaven = file(project.findProperty('weappSdkMavenDir') ?: "$projectDir/../native/maven")
-def requiredAar = new File(sdkMaven, 'com/sonofmagic/weapp/weapp-container-android/0.1.0-preview.5.3/weapp-container-android-0.1.0-preview.5.3.aar')
+def requiredAar = new File(sdkMaven, 'com/sonofmagic/weapp/weapp-container-android/0.1.0-preview.5.4/weapp-container-android-0.1.0-preview.5.4.aar')
 if (!requiredAar.isFile()) throw new GradleException('Missing pinned Android SDK; run node tools/prepare-native.mjs --platform android --arch universal from sdk-flutter. Core sources are never built by this plugin.')
 
 rootProject.allprojects {
@@ -27,6 +27,6 @@ rootProject.allprojects {
     }
 }
 dependencies {
-    implementation 'com.sonofmagic.weapp:weapp-container-android:0.1.0-preview.5.3'
+    implementation 'com.sonofmagic.weapp:weapp-container-android:0.1.0-preview.5.4'
     testImplementation 'junit:junit:4.13.2'
 }

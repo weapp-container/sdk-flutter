@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { SDK_VERSION } from '../tools/runtime-artifacts.mjs';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,11 +12,11 @@ const source = option('--from');
 if (!['macos', 'windows', 'linux'].includes(target) || !source) throw new Error('Usage: node prepare.mjs --target macos|windows|linux --from <installed-desktop-sdk>');
 const native = path.resolve(source);
 const archive = target === 'windows' ? 'weapp_container_sdk.lib' : 'libweapp_container_sdk.a';
-const sdkVersion = '0.1.0-preview.5.3';
+const sdkVersion = SDK_VERSION;
 const receipt = JSON.parse(await readFile(path.join(native, 'package.json'), 'utf8'));
 const cleanSource = value => value.sourceDirty === false && /^[a-f0-9]{40}$/.test(value.sourceCommit ?? '');
 if (receipt.schemaVersion !== 1 || receipt.status !== 'verified' || receipt.sdkVersion !== sdkVersion || !cleanSource(receipt)) {
-  throw new Error('Native desktop package must have a verified, clean 0.1.0-preview.5.3 package.json receipt');
+  throw new Error(`Native desktop package must have a verified, clean ${sdkVersion} package.json receipt`);
 }
 if (!String(receipt.platform).startsWith(`${target}-`)) throw new Error('Native package platform does not match the requested Flutter target');
 if (!Array.isArray(receipt.native) || receipt.native.length === 0 || receipt.native.some(value =>

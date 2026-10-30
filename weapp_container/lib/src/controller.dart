@@ -440,6 +440,8 @@ class WeappContainerController {
   }
 
   // Package implementation hooks; host applications use WeappContainerView.
+  bool ownsView(Object owner) => identical(_viewOwner, owner);
+
   Future<void> claimView(Object owner) {
     if (_viewOwner != null && !identical(_viewOwner, owner))
       throw StateError('A session supports one attached widget');

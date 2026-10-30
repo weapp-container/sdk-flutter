@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { SDK_VERSION } from '../../tools/runtime-artifacts.mjs';
 // The current wrapper requires a newly produced desktop/native SDK of the same release.
-const desktopProducerVersion = '0.1.0-preview.5.3';
+const desktopProducerVersion = SDK_VERSION;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = await mkdtemp(path.join(tmpdir(), 'weapp-flutter-receipt-'));
@@ -19,6 +19,8 @@ try {
   await mkdir(path.join(native, 'include'), { recursive: true });
   await mkdir(path.join(native, 'lib'), { recursive: true });
   await cp(path.join(here, '../prepare.mjs'), path.join(helper, 'prepare.mjs'));
+  await mkdir(path.join(root, 'flutter/tools'), { recursive: true });
+  await cp(path.join(here, '../../tools/runtime-artifacts.mjs'), path.join(root, 'flutter/tools/runtime-artifacts.mjs'));
   const headerBytes = await readFile(path.join(here, '../include/weapp_container_sdk.h'));
   await writeFile(path.join(native, 'include/weapp_container_sdk.h'), headerBytes);
   await writeFile(path.join(helper, 'include/weapp_container_sdk.h'), headerBytes);
@@ -38,7 +40,7 @@ try {
   };
   await run(receipt, true);
   assert.equal(SDK_VERSION, desktopProducerVersion);
-  for (const oldVersion of ['0.1.0-preview.5.1', '0.1.0-preview.5.2']) {
+  for (const oldVersion of ['0.1.0-preview.5.1', '0.1.0-preview.5.2', '0.1.0-preview.5.3']) {
     await run({ ...receipt, sdkVersion: oldVersion }, false);
     await run({ ...receipt, native: [{ ...receipt.native[0], sdkVersion: oldVersion }] }, false);
   }
