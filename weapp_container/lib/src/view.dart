@@ -94,6 +94,7 @@ class WeappContainerView extends StatefulWidget {
     this.nativeChrome,
     this.onHostChromeApplied,
     this.onError,
+    this.onFailure,
     this.onDiagnostic,
   });
   final WeappContainerController controller;
@@ -114,6 +115,11 @@ class WeappContainerView extends StatefulWidget {
   final ValueChanged<int>? onHostChromeApplied;
   final void Function(Object error, StackTrace stack)? onError;
 
+  /// Preferred active-error handler when exact operation provenance is needed.
+  /// When supplied it handles the error instead of [onError]. Retired errors
+  /// remain diagnostics. The legacy handler is unchanged when this is absent.
+  final ValueChanged<WeappViewFailure>? onFailure;
+
   /// Includes retired-operation failures without turning them into current
   /// preview failures. No exception text or arbitrary payload is serialized.
   /// This is a synchronous observer; asynchronous tasks own their errors.
@@ -129,9 +135,11 @@ class _WeappContainerViewState extends State<WeappContainerView>
   int _operationSequence = 0;
   void Function(Object error, StackTrace stack)? _onError;
   ValueChanged<WeappViewDiagnostic>? _onDiagnostic;
+  ValueChanged<WeappViewFailure>? _onFailure;
 
   void _captureCallbacks() {
     _onError = widget.onError;
+    _onFailure = widget.onFailure;
     _onDiagnostic = widget.onDiagnostic;
   }
 
@@ -210,13 +218,14 @@ class _WeappContainerViewState extends State<WeappContainerView>
   _ViewAttempt _attempt(WeappViewOperation operation) =>
       _ViewAttempt(operation, _viewLease, ++_operationSequence);
 
-  bool _diagnose(Object error, _ViewAttempt attempt) {
+  WeappViewDiagnostic _diagnose(Object error, _ViewAttempt attempt) {
     final retired = _disposed ||
         !mounted ||
         _controller.closeRequested ||
         !_controller.ownsView(this);
+    WeappViewDiagnostic? diagnostic;
     try {
-      final diagnostic = WeappViewDiagnostic(
+      diagnostic = WeappViewDiagnostic(
         operation: attempt.operation,
         viewLease: _viewLease,
         operationSequence: attempt.sequence,
@@ -234,7 +243,14 @@ class _WeappContainerViewState extends State<WeappContainerView>
       // or leak an unhandled late Future failure after View retirement.
       _diagnosticFailure(attempt, retired);
     }
-    return retired;
+    return diagnostic ??
+        WeappViewDiagnostic.unavailable(
+          operation: attempt.operation,
+          viewLease: _viewLease,
+          operationSequence: attempt.sequence,
+          retired: retired,
+          error: error,
+        );
   }
 
   void _diagnosticFailure(_ViewAttempt attempt, bool retired) {
@@ -253,13 +269,27 @@ class _WeappContainerViewState extends State<WeappContainerView>
     }
   }
 
-  void _error(Object error, StackTrace stack, _ViewAttempt attempt) {
-    final retired = _diagnose(error, attempt);
+  void _error(
+    Object error,
+    StackTrace stack,
+    _ViewAttempt attempt, {
+    WeappViewFailureProof proofOutcome = WeappViewFailureProof.notRequested,
+  }) {
+    final diagnostic = _diagnose(error, attempt);
     // The completed operation belongs to this retired lease. Its error remains
     // diagnostic, while the controller retirement future still fails normally.
     // A new lease's claim of a failed retirement is a separate active failure.
-    if (retired) return;
-    if (_onError != null) {
+    if (diagnostic.retired) return;
+    if (_onFailure != null) {
+      _onFailure!(
+        WeappViewFailure(
+          error: error,
+          stackTrace: stack,
+          diagnostic: diagnostic,
+          proofOutcome: proofOutcome,
+        ),
+      );
+    } else if (_onError != null) {
       _onError!(error, stack);
     } else {
       FlutterError.reportError(
@@ -500,6 +530,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
             }
           } on PlatformException catch (error, stack) {
             var cancelled = false;
+            var proofOutcome = WeappViewFailureProof.notRequested;
             if (error.code == 'ERR_CANCELLED') {
               if (!_currentGeometry(geometry)) {
                 cancelled = true;
@@ -525,6 +556,7 @@ class _WeappContainerViewState extends State<WeappContainerView>
                             page is Map &&
                             geometry.chrome['pageId'] != page['id']);
                   }
+                  proofOutcome = WeappViewFailureProof.notSuperseded;
                 } on _ChromeRetired {
                   rethrow;
                 } catch (proofError) {
@@ -532,13 +564,14 @@ class _WeappContainerViewState extends State<WeappContainerView>
                   // An unavailable read-only proof cannot rewrite the original
                   // cancellation or prevent independent controls from updating.
                   cancelled = false;
+                  proofOutcome = WeappViewFailureProof.unavailable;
                 }
               }
             }
             if (cancelled) {
               _diagnose(error, attempt);
             } else {
-              _error(error, stack, attempt);
+              _error(error, stack, attempt, proofOutcome: proofOutcome);
             }
           } on _ChromeRetired {
             rethrow;

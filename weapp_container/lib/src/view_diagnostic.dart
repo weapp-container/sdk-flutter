@@ -36,6 +36,25 @@ class WeappViewDiagnostic {
   })  : code = _code(error),
         nativeReason = _reason(error);
 
+  /// A failed optional projection must preserve a readable original code,
+  /// without evaluating message/details again or replacing the original error.
+  WeappViewDiagnostic.unavailable({
+    required this.operation,
+    required this.viewLease,
+    required this.operationSequence,
+    required this.retired,
+    required Object error,
+  })  : code = _availableCode(error),
+        nativeReason = 'unclassified';
+
+  static String? _availableCode(Object error) {
+    try {
+      return _code(error);
+    } catch (_) {
+      return null;
+    }
+  }
+
   final WeappViewOperation operation;
   final int viewLease;
   final int operationSequence;
@@ -112,3 +131,24 @@ class WeappViewDiagnostic {
   @override
   String toString() => jsonEncode(toMap());
 }
+
+/// The original active error and the exact immutable operation that delivered it.
+/// This handler value is never serialized; only [diagnostic] has a safe wire form.
+/// A diagnostic observer may fail without replacing this original error.
+class WeappViewFailure {
+  WeappViewFailure({
+    required this.error,
+    required this.stackTrace,
+    required this.diagnostic,
+    this.proofOutcome = WeappViewFailureProof.notRequested,
+  });
+
+  final Object error;
+  final StackTrace stackTrace;
+  final WeappViewDiagnostic diagnostic;
+  final WeappViewFailureProof proofOutcome;
+  String get disposition => 'active-error';
+}
+
+/// Outcome of this operation's own cancellation proof, never a later health read.
+enum WeappViewFailureProof { notRequested, unavailable, notSuperseded }

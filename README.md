@@ -1,19 +1,31 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.5**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.6**; native ABI: **1**.
 
-Current source requires a newly built **0.1.0-preview.5.5** runtime and matching SDK bundles. Production, exact archive pins, private publication and consumer validation for this version are pending. The checked-in `runtime-artifacts.lock.json` retains the historical **0.1.0-preview.5.3** archive set (SHA-256 `ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388`); it does not satisfy this source version. Preparation must reject that mismatch. Old native producer, archive and device evidence remains unchanged; new binaries require independent source and artifact bindings.
+Current source requires a newly built **0.1.0-preview.5.6** runtime and matching SDK bundles. Production, exact archive pins, private publication and consumer validation for this version are pending. The checked-in `runtime-artifacts.lock.json` retains the historical **0.1.0-preview.5.3** archive set (SHA-256 `ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388`); it does not satisfy this source version. Preparation must reject that mismatch. Old native producer, archive and device evidence remains unchanged; new binaries require independent source and artifact bindings.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
 Atomic host layout captures queued geometry by value. A cancelled measurement is
 treated as superseded only when the same native owner proves a newer observation
 or accepted layout revision and execution remains healthy. Unknown cancellations
-still reach `onError`; an obsolete operation cannot acknowledge chrome or resume
+still reach the active error handler; an obsolete operation cannot acknowledge chrome or resume
 presentation. Android development diagnostics expose only allowlisted reasons
-and canonical decimal layout identities. These wrapper changes reuse the exact
-native archives above; their source commit does not replace the archive's
-original producer identity. Device verification remains a separate requirement.
+and canonical decimal layout identities. Wrapper source identity never replaces
+the native archive's original producer identity. Device verification remains a
+separate requirement.
+
+`WeappContainerView.onFailure` optionally receives a `WeappViewFailure` with the
+original error/stack and the exact immutable `diagnostic` for the operation that
+delivered it. Its `proofOutcome` reports that operation's cancellation proof,
+not a later health read. When supplied, it handles active errors instead of
+`onError`; existing users that only provide `onError` keep the previous behavior.
+Retired-operation failures remain `onDiagnostic` observations and cannot become
+an active failure for another View lease. `viewLease` and `operationSequence`
+identify a View operation, independently of a development pack attempt ID.
+Only the typed diagnostic projection is suitable for inspection; the original
+error/stack is not a safe wire payload. A diagnostic callback failure does not
+replace the original error or change input authorization.
 
 iOS layout measurement preserves nine typed cancellation causes at their actual
 branch: task cancellation, engine detach/initialization, entry close, view
