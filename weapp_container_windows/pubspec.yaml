@@ -1,6 +1,6 @@
 name: weapp_container_windows
 description: Windows raster texture implementation of WeApp Container.
-version: 0.1.0-preview.5.4
+version: 0.1.0-preview.5.5
 publish_to: none
 environment:
   sdk: '>=3.6.0 <4.0.0'

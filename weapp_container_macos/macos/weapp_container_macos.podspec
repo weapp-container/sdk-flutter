@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = 'weapp_container_macos'
-  s.version = '0.1.0-preview.5.4'
+  s.version = '0.1.0-preview.5.5'
   s.summary = 'WeApp Container macOS Flutter texture plugin'
   s.homepage = 'https://github.com/weapp-container/sdk-flutter'
   s.license = { :type => 'Apache-2.0', :file => '../LICENSE' }

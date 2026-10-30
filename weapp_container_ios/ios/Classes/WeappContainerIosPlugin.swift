@@ -2,14 +2,72 @@ import Foundation
 import CoreFoundation
 import Dispatch
 
+/// Closed diagnostic provenance only. No cancellation reason establishes
+/// operation success, safe recovery or permission to enable input.
+enum IOSLayoutCancellationReason: String, CaseIterable {
+    case taskCancelled = "layout-measurement-task-cancelled"
+    case engineDetached = "layout-measurement-engine-detached"
+    case engineInitializing = "layout-measurement-engine-initializing"
+    case entryClosing = "layout-measurement-entry-closing"
+    case viewRetiring = "layout-measurement-view-retiring"
+    case lifetimeChanged = "layout-measurement-lifetime-changed"
+    case entryRemoved = "layout-measurement-entry-removed"
+    case restartReceiptMismatch = "layout-measurement-restart-receipt-mismatch"
+    case observationSuperseded = "layout-measurement-observation-superseded"
+}
+
+struct IOSLayoutMeasurementFailure {
+    let code: String
+    let message: String
+    let details: [String: Any]?
+}
+
 enum IOSLayoutMeasurementError: Error {
-    case invalidSnapshot, cancelled, expired
+    case invalidSnapshot, cancelled(IOSLayoutCancellationReason), expired
+
+    /// Used unchanged by the Flutter boundary and deterministic contract tests.
+    var wireFailure: IOSLayoutMeasurementFailure {
+        switch self {
+        case .cancelled(let reason):
+            return .init(code: "ERR_CANCELLED",
+                         message: "Native layout measurement was superseded or its owner retired",
+                         details: ["schemaVersion": 1, "reason": reason.rawValue])
+        case .expired:
+            return .init(code: "ERR_NOT_READY", message: "Native layout measurement deadline expired", details: nil)
+        case .invalidSnapshot:
+            return .init(code: "ERR_INVALID_REQUEST", message: "Expected immutable complete native layout measurement", details: nil)
+        }
+    }
 }
 
 /// Value-only gate shared by atomic measurement and native chrome conversion.
 /// Its deterministic tests compile this exact production code without UIKit.
 struct IOSLayoutMeasurement {
-    enum Decision: Equatable { case ready, wait, cancelled, expired }
+    enum Decision: Equatable {
+        case ready, wait, cancelled(IOSLayoutCancellationReason), expired
+
+        func requireReadyOrWaiting() throws {
+            switch self {
+            case .cancelled(let reason): throw IOSLayoutMeasurementError.cancelled(reason)
+            case .expired: throw IOSLayoutMeasurementError.expired
+            case .ready, .wait: return
+            }
+        }
+    }
+    /// Preserve the former predicate order, with provenance at its source.
+    static func ownerCancellation(taskCancelled: Bool = false, engineDetached: Bool = false,
+                                  engineInitializing: Bool = false, entryClosing: Bool = false,
+                                  viewRetiring: Bool = false, lifetimeCurrent: Bool = true,
+                                  entryPresent: Bool = true) -> IOSLayoutCancellationReason? {
+        if taskCancelled { return .taskCancelled }
+        if engineDetached { return .engineDetached }
+        if engineInitializing { return .engineInitializing }
+        if entryClosing { return .entryClosing }
+        if viewRetiring { return .viewRetiring }
+        if !lifetimeCurrent { return .lifetimeChanged }
+        if !entryPresent { return .entryRemoved }
+        return nil
+    }
     struct Native {
         let windowMetrics: [String: Any]
         let left: Double
@@ -283,18 +341,18 @@ struct IOSLayoutMeasurement {
               abs(left - native.left) <= 0.5, abs(top - native.top) <= 0.5 else { return false }
         return true
     }
-    func decision(nowNanoseconds: UInt64, ownerCurrent: Bool, state: [String: Any]? = nil,
+    func decision(nowNanoseconds: UInt64, ownerCancellation: IOSLayoutCancellationReason? = nil, state: [String: Any]? = nil,
                   native: Native? = nil, chrome: [String: Any]? = nil,
                   restartReceipt: [String: Any]? = nil) -> Decision {
-        if !ownerCurrent { return .cancelled }
+        if let ownerCancellation { return .cancelled(ownerCancellation) }
         if nowNanoseconds >= deadlineNanoseconds { return .expired }
         guard observation != nil else { return .ready }
         guard let state else { return .wait }
         if restartAttempt != nil {
             guard let restartReceipt else { return .wait }
-            if !matchesRestartReceipt(restartReceipt, state: state) { return .cancelled }
+            if !matchesRestartReceipt(restartReceipt, state: state) { return .cancelled(.restartReceiptMismatch) }
         }
-        if superseded(by: state) { return .cancelled }
+        if superseded(by: state) { return .cancelled(.observationSuperseded) }
         guard matchesCurrentTuple(state), let native, let chrome, matchesNative(native, chrome: chrome) else { return .wait }
         return .ready
     }
@@ -356,11 +414,8 @@ import UIKit
             catch let error as WeappContainerError { result(FlutterError(code: error.code, message: error.message, details: nil)) }
             catch let error as WeappHostError { result(FlutterError(code: error.code.rawValue, message: error.message, details: nil)) }
             catch let error as IOSLayoutMeasurementError {
-                switch error {
-                case .cancelled: result(FlutterError(code: "ERR_CANCELLED", message: "Native layout measurement was superseded or its owner retired", details: nil))
-                case .expired: result(FlutterError(code: "ERR_NOT_READY", message: "Native layout measurement deadline expired", details: nil))
-                case .invalidSnapshot: result(FlutterError(code: "ERR_INVALID_REQUEST", message: "Expected immutable complete native layout measurement", details: nil))
-                }
+                let failure = error.wireFailure
+                result(FlutterError(code: failure.code, message: failure.message, details: failure.details))
             }
             catch { result(FlutterError(code: "ERR_INVALID_REQUEST", message: error.localizedDescription, details: nil)) }
         }
@@ -536,17 +591,14 @@ import UIKit
         let measured=try await measureChrome(entry,frozen,prospective:false)
         try entry.session.updateHostChrome(object(measured));entry.clientChrome=frozen
     }
-    private func measurementOwnerCurrent(_ entry: Entry, _ lifetime: UUID) -> Bool {
-        !Task.isCancelled && !detached && initializing == nil && entry.closing == nil
-            && entry.retiringView == nil && entry.measurementLifetime == lifetime
-            && entries.values.contains(where: { $0 === entry })
+    private func measurementOwnerCancellation(_ entry: Entry, _ lifetime: UUID) -> IOSLayoutCancellationReason? {
+        IOSLayoutMeasurement.ownerCancellation(taskCancelled: Task.isCancelled, engineDetached: detached,
+            engineInitializing: initializing != nil, entryClosing: entry.closing != nil,
+            viewRetiring: entry.retiringView != nil, lifetimeCurrent: entry.measurementLifetime == lifetime,
+            entryPresent: entries.values.contains(where: { $0 === entry }))
     }
     private func requireMeasurement(_ decision: IOSLayoutMeasurement.Decision) throws {
-        switch decision {
-        case .cancelled: throw IOSLayoutMeasurementError.cancelled
-        case .expired: throw IOSLayoutMeasurementError.expired
-        case .ready, .wait: return
-        }
+        try decision.requireReadyOrWaiting()
     }
     private func nativeMeasurement(_ view: WeappContainerView, _ window: UIWindow) -> IOSLayoutMeasurement.Native {
         // Match the SDK view's quantization, without requesting a new native
@@ -590,7 +642,7 @@ import UIKit
         guard coordinates == "screen" || coordinates == "flutterClient" else { throw fail("Unknown chrome coordinate space") }
         while true {
             try requireMeasurement(measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
-                                                       ownerCurrent: measurementOwnerCurrent(entry, lifetime)))
+                                                       ownerCancellation: measurementOwnerCancellation(entry, lifetime)))
             if coordinates == "screen", measurement.observation == nil { return payload }
             // Every atomic payload, even at unchanged dimensions, must still
             // belong to the exact immutable native observation and page owner.
@@ -602,7 +654,7 @@ import UIKit
             else if measurement.observation != nil { state = codec(try entry.session.state()) as? [String: Any] }
             else { state = nil }
             try requireMeasurement(measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
-                                                       ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state,
+                                                       ownerCancellation: measurementOwnerCancellation(entry, lifetime), state: state,
                                                        restartReceipt: restartSnapshot?.receipt))
             if let view = entry.view, let window = view.window,
                view.bounds.width.isFinite, view.bounds.height.isFinite, view.bounds.width > 0, view.bounds.height > 0 {
@@ -626,7 +678,7 @@ import UIKit
                     && abs(width! - Double(view.bounds.width.rounded())) <= 0.5
                     && abs(height! - Double(view.bounds.height.rounded())) <= 0.5)
                 let decision = measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
-                    ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: state, native: native, chrome: measured,
+                    ownerCancellation: measurementOwnerCancellation(entry, lifetime), state: state, native: native, chrome: measured,
                     restartReceipt: restartSnapshot?.receipt)
                 try requireMeasurement(decision)
                 if sizeReady && decision == .ready {
@@ -635,7 +687,7 @@ import UIKit
                     // a receipt cached before a suspended measurement poll.
                     if let final = try restartMeasurementSnapshot(entry, measurement) {
                         let finalDecision = measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
-                            ownerCurrent: measurementOwnerCurrent(entry, lifetime), state: final.state,
+                            ownerCancellation: measurementOwnerCancellation(entry, lifetime), state: final.state,
                             native: native, chrome: measured, restartReceipt: final.receipt)
                         try requireMeasurement(finalDecision)
                         if finalDecision == .ready { return measured }
@@ -646,7 +698,7 @@ import UIKit
             if remaining == 0 { throw IOSLayoutMeasurementError.expired }
             // Yield UIKit's actor so layout, close and view retirement can run.
             do { try await Task.sleep(nanoseconds: min(16_000_000, remaining)) }
-            catch { throw IOSLayoutMeasurementError.cancelled }
+            catch is CancellationError { throw IOSLayoutMeasurementError.cancelled(.taskCancelled) }
         }
     }
     private func close(_ id: Int64, _ entry: Entry) async throws {

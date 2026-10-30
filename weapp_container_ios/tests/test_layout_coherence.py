@@ -27,6 +27,8 @@ class LayoutCoherenceTests(unittest.TestCase):
             self.assertEqual(report["count"], len(set(report["checks"])))
             self.assertEqual(report["nativeSessionsCreated"], 0)
             self.assertEqual(report["devicesUsed"], 0)
+            fixture = json.loads((HERE.parent.parent / "weapp_container/test/fixtures/ios-layout-cancellation-v1.json").read_text())
+            self.assertEqual(report["cancellationContracts"], fixture["contracts"])
 
     def test_atomic_and_chrome_measurements_share_monotonic_deadline(self):
         source = PLUGIN.read_text()
@@ -49,8 +51,8 @@ class LayoutCoherenceTests(unittest.TestCase):
         source = PLUGIN.read_text()
         self.assertIn('case "prepareHostLayout", "hostLayout":', source)
         self.assertIn('preparing: call.method == "prepareHostLayout"', source)
-        self.assertIn("measurementOwnerCurrent(entry, lifetime)", source)
-        self.assertIn("entry.retiringView == nil && entry.measurementLifetime == lifetime", source)
+        self.assertIn("measurementOwnerCancellation(entry, lifetime)", source)
+        self.assertIn("viewRetiring: entry.retiringView != nil, lifetimeCurrent: entry.measurementLifetime == lifetime", source)
         for start, end in (("private func retireView(", "private func acceptPreparedChrome("),
                            ("private func close(", "private func retireAll(")):
             body = source.split(start, 1)[1].split(end, 1)[0]
@@ -76,6 +78,16 @@ class LayoutCoherenceTests(unittest.TestCase):
         self.assertIn('if trueBoolean(atomic["enabled"])', source)
         returned = measure.split('var layout:', 1)[1]
         self.assertNotIn('restartAttempt', returned)
+
+    def test_typed_failure_is_forwarded_without_message_inference_or_raw_details(self):
+        source = PLUGIN.read_text()
+        boundary = source.split("catch let error as IOSLayoutMeasurementError {", 1)[1].split("catch {", 1)[0]
+        self.assertIn("let failure = error.wireFailure", boundary)
+        self.assertIn("FlutterError(code: failure.code, message: failure.message, details: failure.details)", boundary)
+        self.assertIn("try decision.requireReadyOrWaiting()", source)
+        self.assertIn("catch is CancellationError { throw IOSLayoutMeasurementError.cancelled(.taskCancelled) }", source)
+        self.assertNotIn("ownerCurrent:", source)
+        self.assertNotIn('details: error', source)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import Foundation
 @main enum LayoutCoherenceChecks {
     struct Failure: Error { let message: String }
     static var passed: [String] = []
+    static var cancellationContracts: [[String: Any]] = []
     static func check(_ name: String, _ body: () throws -> Void) throws {
         do { try body(); passed.append(name) }
         catch { throw Failure(message: name + ": " + String(describing: error)) }
@@ -66,12 +67,26 @@ import Foundation
     static func decision(_ gate: IOSLayoutMeasurement, _ current: [String: Any] = state,
                          native: IOSLayoutMeasurement.Native = native, chrome: [String: Any] = chrome,
                          now: UInt64 = 101, alive: Bool = true, receipt: [String: Any]? = nil) -> IOSLayoutMeasurement.Decision {
-        gate.decision(nowNanoseconds: now, ownerCurrent: alive, state: current, native: native, chrome: chrome,
+        gate.decision(nowNanoseconds: now, ownerCancellation: alive ? nil : .entryRemoved, state: current, native: native, chrome: chrome,
                       restartReceipt: receipt)
     }
     static func accepted(revision: String = "20") -> [String: Any] {
         var value = observation; value.removeValue(forKey: "sessionId"); value.removeValue(forKey: "pageId")
         value["layoutRevision"] = revision; value["chrome"] = chrome; return value
+    }
+    static func cancellationContract(_ decision: IOSLayoutMeasurement.Decision,
+                                     expected: IOSLayoutCancellationReason) throws {
+        try expect(decision == .cancelled(expected))
+        do { try decision.requireReadyOrWaiting(); throw Failure(message: "Cancelled decision succeeded") }
+        catch let error as IOSLayoutMeasurementError {
+            let failure = error.wireFailure
+            try expect(failure.code == "ERR_CANCELLED")
+            let details = failure.details ?? [:]
+            try expect(Set(details.keys) == Set(["schemaVersion", "reason"]))
+            try expect(details["schemaVersion"] as? Int == 1 && details["reason"] as? String == expected.rawValue)
+            cancellationContracts.append(["reason": expected.rawValue, "error": [
+                "code": failure.code, "message": failure.message, "details": details]])
+        }
     }
     static func main() throws {
         try check("restart-capability-preserves-core-fields-and-requires-enabled-atomic-layout") {
@@ -108,25 +123,25 @@ import Foundation
             try expect(decision(frozen, poisonedState) == .wait)
             for status in ["applying", "accepted", "rejected", "cancelled", "notSeen", "notRetained"] {
                 var receipt = preparedReceipt; receipt["status"] = status
-                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled(.restartReceiptMismatch))
             }
             for (field, value) in [("ownerId", "4"), ("attemptId", "8"), ("targetRoot", String(repeating: "c", count: 64)),
                                    ("operation", "navigate"), ("reloadKind", "inPlace")] {
                 var receipt = preparedReceipt; receipt[field] = value
-                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled(.restartReceiptMismatch))
             }
         }
         try check("prepared-restart-pins-receipt-and-current-accepted-cas") {
             let frozen = try gate(preparing: true, restart: restartAttempt)
             for field in ["expectedAccepted", "acceptedPackIdentity"] {
                 var receipt = preparedReceipt; receipt[field] = ["root": String(repeating: "c", count: 64), "acceptedPackRevision": "10", "sessionId": "other"]
-                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled(.restartReceiptMismatch))
             }
             for key in ["root", "acceptedPackRevision", "sessionId"] {
                 var current = poisonedState, identity = acceptedIdentity
                 identity[key] = key == "root" ? String(repeating: "c", count: 64) : "10"
                 current["acceptedPackIdentity"] = identity
-                try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+                try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled(.restartReceiptMismatch))
             }
         }
         try check("healthy-and-explicit-empty-restarts-still-require-authentic-context") {
@@ -141,7 +156,7 @@ import Foundation
             current["pendingHostLayout"] = observed
             try expect(decision(try gate(observed, preparing: true, restart: context), current, receipt: receipt) == .ready)
             receipt["status"] = "cancelled"
-            try expect(decision(try gate(observed, preparing: true, restart: context), current, receipt: receipt) == .cancelled)
+            try expect(decision(try gate(observed, preparing: true, restart: context), current, receipt: receipt) == .cancelled(.restartReceiptMismatch))
         }
         try check("restart-proof-is-immutable-and-receipt-fields-are-explicit") {
             let identity = NSMutableDictionary(dictionary: acceptedIdentity)
@@ -151,10 +166,10 @@ import Foundation
             try expect(decision(frozen, poisonedState, receipt: preparedReceipt) == .ready)
             for key in ["schemaVersion", "ownerId", "attemptId", "targetRoot", "expectedAccepted", "acceptedPackIdentity", "operation", "reloadKind", "status"] {
                 var receipt = preparedReceipt; receipt.removeValue(forKey: key)
-                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+                try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled(.restartReceiptMismatch))
             }
             var receipt = preparedReceipt; receipt["schemaVersion"] = true
-            try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled)
+            try expect(decision(frozen, poisonedState, receipt: receipt) == .cancelled(.restartReceiptMismatch))
         }
         try check("prepared-restart-rejects-malformed-context-and-empty-fault-bypass") {
             var malformed: [[String: Any]] = []
@@ -172,7 +187,7 @@ import Foundation
             var empty = restartAttempt; empty["expectedAccepted"] = NSNull()
             var receipt = preparedReceipt; receipt["expectedAccepted"] = NSNull(); receipt["acceptedPackIdentity"] = NSNull()
             var current = poisonedState; current["acceptedPackIdentity"] = NSNull()
-            try expect(decision(try gate(preparing: true, restart: empty), current, receipt: receipt) == .cancelled)
+            try expect(decision(try gate(preparing: true, restart: empty), current, receipt: receipt) == .cancelled(.restartReceiptMismatch))
         }
         try check("prepared-restart-cannot-bypass-other-or-malformed-execution-faults") {
             let frozen = try gate(preparing: true, restart: restartAttempt)
@@ -206,15 +221,15 @@ import Foundation
             var current = poisonedState; current["pendingHostLayout"] = NSNull(); current["acceptedLayout"] = accepted()
             try expect(decision(frozen, current, receipt: preparedReceipt) == .wait)
             current = poisonedState; current["sessionId"] = "other-session"
-            try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+            try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled(.restartReceiptMismatch))
             current = poisonedState; current["page"] = ["id": 2]
-            try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+            try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled(.restartReceiptMismatch))
             for key in ["sessionId", "page"] {
                 current = poisonedState; current.removeValue(forKey: key)
-                try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled)
+                try expect(decision(frozen, current, receipt: preparedReceipt) == .cancelled(.restartReceiptMismatch))
             }
             var wrongSubject = observation; wrongSubject["sessionId"] = "other-session"
-            try expect(decision(try gate(wrongSubject, preparing: true, restart: restartAttempt), poisonedState, receipt: preparedReceipt) == .cancelled)
+            try expect(decision(try gate(wrongSubject, preparing: true, restart: restartAttempt), poisonedState, receipt: preparedReceipt) == .cancelled(.restartReceiptMismatch))
             var moved = metrics; moved["screenTop"] = 90
             try expect(decision(frozen, poisonedState, native: .init(windowMetrics: moved, left: 0, top: 90), receipt: preparedReceipt) == .wait)
         }
@@ -222,9 +237,9 @@ import Foundation
             let frozen = try gate(preparing: true, restart: restartAttempt)
             try expect(decision(frozen, poisonedState, receipt: preparedReceipt) == .ready)
             var cancelled = preparedReceipt; cancelled["status"] = "cancelled"
-            try expect(decision(frozen, poisonedState, receipt: cancelled) == .cancelled)
+            try expect(decision(frozen, poisonedState, receipt: cancelled) == .cancelled(.restartReceiptMismatch))
             try expect(decision(frozen, poisonedState, now: frozen.deadlineNanoseconds, receipt: preparedReceipt) == .expired)
-            try expect(decision(frozen, poisonedState, alive: false, receipt: preparedReceipt) == .cancelled)
+            try expect(decision(frozen, poisonedState, alive: false, receipt: preparedReceipt) == .cancelled(.entryRemoved))
         }
         try check("exact-pending-tuple-and-native-measurement-ready") { try expect(decision(try gate()) == .ready) }
         try check("old-observation-new-sized-view-never-ready") {
@@ -250,7 +265,7 @@ import Foundation
         try check("newer-exact-native-pending-is-supersession-proof") {
             var next = observation; next["observationId"] = "11"
             var current = state; current["pendingHostLayout"] = next
-            try expect(decision(try gate(), current) == .cancelled)
+            try expect(decision(try gate(), current) == .cancelled(.observationSuperseded))
         }
         try check("newer-native-surface-needs-strict-observation-advance") {
             var next = accepted(revision: "21"); next["surfaceGeneration"] = "3"
@@ -258,11 +273,11 @@ import Foundation
             current["pendingHostLayout"] = NSNull(); current["acceptedLayout"] = next
             try expect(decision(try gate(), current) == .wait)
             next["observationId"] = "11"; current["acceptedLayout"] = next
-            try expect(decision(try gate(), current) == .cancelled)
+            try expect(decision(try gate(), current) == .cancelled(.observationSuperseded))
         }
         try check("accepted-same-observation-newer-canonical-revision-proves-supersession") {
             var current = state; current["pendingHostLayout"] = NSNull(); current["acceptedLayout"] = accepted(revision: "21")
-            try expect(decision(try gate(), current) == .cancelled)
+            try expect(decision(try gate(), current) == .cancelled(.observationSuperseded))
         }
         try check("same-revision-exact-accepted-only-idempotent-without-pending") {
             var current = state; current["pendingHostLayout"] = NSNull(); current["acceptedLayout"] = accepted()
@@ -391,12 +406,12 @@ import Foundation
         try check("deadline-addition-never-wraps-into-new-budget") {
             let frozen = try IOSLayoutMeasurement(nowNanoseconds: UInt64.max - 10)
             try expect(frozen.deadlineNanoseconds == UInt64.max)
-            try expect(frozen.decision(nowNanoseconds: UInt64.max, ownerCurrent: true) == .expired)
+            try expect(frozen.decision(nowNanoseconds: UInt64.max, ownerCancellation: nil) == .expired)
         }
         try check("close-detach-engine-and-view-retirement-cancel-promptly") {
             for _ in ["close", "detachView", "engineDetach", "viewReplaced", "taskCancelled"] {
                 let frozen = try gate()
-                try expect(decision(frozen, now: 101, alive: false) == .cancelled)
+                try expect(decision(frozen, now: 101, alive: false) == .cancelled(.entryRemoved))
             }
         }
         try check("fractional-content-uses-native-rounded-viewport-and-rust-halfpoint-limit") {
@@ -433,7 +448,7 @@ import Foundation
             var current = state; current["status"] = "empty"; current["executionHealth"] = NSNull()
             current["sessionId"] = NSNull(); current["page"] = NSNull(); current["pendingHostLayout"] = next
             current["acceptedPackIdentity"] = NSNull()
-            try expect(decision(try gate(old), current) == .cancelled)
+            try expect(decision(try gate(old), current) == .cancelled(.observationSuperseded))
             try expect(decision(try gate(next), current) == .ready)
             current["pendingHostLayout"] = NSNull()
             try expect(decision(try gate(old), current) == .wait)
@@ -452,7 +467,7 @@ import Foundation
                     current["pendingHostLayout"] = wire
                     try expect(decision(try gate(old), current) == .ready)
                     var next = wire; next["observationId"] = "11"; current["pendingHostLayout"] = next
-                    try expect(decision(try gate(old), current) == .cancelled)
+                    try expect(decision(try gate(old), current) == .cancelled(.observationSuperseded))
                 }
             }
         }
@@ -495,12 +510,52 @@ import Foundation
         try check("reload-old-context-cannot-adopt-newer-observation") {
             let old = try gate(); var next = observation; next["observationId"] = "11"
             var current = state; current["pendingHostLayout"] = next
-            try expect(decision(old, current) == .cancelled)
+            try expect(decision(old, current) == .cancelled(.observationSuperseded))
             try expect(decision(try gate(next), current) == .ready)
             try expect(old.observation?["observationId"] as? String == "10")
         }
+        try check("typed-owner-cancellation-preserves-each-real-branch") {
+            let cases: [(IOSLayoutCancellationReason, IOSLayoutCancellationReason?)] = [
+                (.taskCancelled, IOSLayoutMeasurement.ownerCancellation(taskCancelled: true)),
+                (.engineDetached, IOSLayoutMeasurement.ownerCancellation(engineDetached: true)),
+                (.engineInitializing, IOSLayoutMeasurement.ownerCancellation(engineInitializing: true)),
+                (.entryClosing, IOSLayoutMeasurement.ownerCancellation(entryClosing: true)),
+                (.viewRetiring, IOSLayoutMeasurement.ownerCancellation(viewRetiring: true)),
+                (.lifetimeChanged, IOSLayoutMeasurement.ownerCancellation(lifetimeCurrent: false)),
+                (.entryRemoved, IOSLayoutMeasurement.ownerCancellation(entryPresent: false)),
+            ]
+            for (expected, actual) in cases {
+                try expect(actual == expected)
+                let decision = try gate().decision(nowNanoseconds: 101, ownerCancellation: actual)
+                try cancellationContract(decision, expected: expected)
+            }
+            try expect(IOSLayoutMeasurement.ownerCancellation() == nil)
+            try expect(IOSLayoutMeasurement.ownerCancellation(taskCancelled: true, engineDetached: true,
+                engineInitializing: true, entryClosing: true, viewRetiring: true,
+                lifetimeCurrent: false, entryPresent: false) == .taskCancelled)
+        }
+        try check("typed-restart-and-native-proof-reasons-are-distinct") {
+            var bad = preparedReceipt; bad["status"] = "cancelled"
+            let restart = try gate(preparing: true, restart: restartAttempt)
+            try cancellationContract(decision(restart, poisonedState, receipt: bad), expected: .restartReceiptMismatch)
+            var newer = observation; newer["observationId"] = "11"
+            var current = state; current["pendingHostLayout"] = newer
+            try cancellationContract(decision(try gate(), current), expected: .observationSuperseded)
+        }
+        try check("ready-wait-and-noncancel-errors-do-not-acquire-cancellation-details") {
+            try IOSLayoutMeasurement.Decision.ready.requireReadyOrWaiting()
+            try IOSLayoutMeasurement.Decision.wait.requireReadyOrWaiting()
+            do { try IOSLayoutMeasurement.Decision.expired.requireReadyOrWaiting(); throw Failure(message: "Expiry succeeded") }
+            catch let error as IOSLayoutMeasurementError {
+                try expect(error.wireFailure.code == "ERR_NOT_READY" && error.wireFailure.details == nil)
+            }
+            let malformed = IOSLayoutMeasurementError.invalidSnapshot.wireFailure
+            try expect(malformed.code == "ERR_INVALID_REQUEST" && malformed.details == nil)
+            try expect(cancellationContracts.count == IOSLayoutCancellationReason.allCases.count)
+        }
         let report: [String: Any] = ["schemaVersion": 1, "status": "passed", "checks": passed,
-                                   "count": passed.count, "nativeSessionsCreated": 0, "devicesUsed": 0]
+                                   "count": passed.count, "nativeSessionsCreated": 0, "devicesUsed": 0,
+                                   "cancellationContracts": cancellationContracts]
         print(String(decoding: try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
     }
 }

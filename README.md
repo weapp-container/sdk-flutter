@@ -1,8 +1,8 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.3**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.5**; native ABI: **1**.
 
-The current source requires `0.1.0-preview.5.3` native runtime and SDK bundles, including the shared Skia layout-authority and native selector-owner corrections. The checked-in lock pins the independently reviewed, privately published release bytes (SHA-256 `ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388`). Archive review and publication do not establish consumer installation or Player/GPU/device acceptance; those remain separate gates.
+Current source requires a newly built **0.1.0-preview.5.5** runtime and matching SDK bundles. Production, exact archive pins, private publication and consumer validation for this version are pending. The checked-in `runtime-artifacts.lock.json` retains the historical **0.1.0-preview.5.3** archive set (SHA-256 `ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388`); it does not satisfy this source version. Preparation must reject that mismatch. Old native producer, archive and device evidence remains unchanged; new binaries require independent source and artifact bindings.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 
@@ -14,6 +14,20 @@ presentation. Android development diagnostics expose only allowlisted reasons
 and canonical decimal layout identities. These wrapper changes reuse the exact
 native archives above; their source commit does not replace the archive's
 original producer identity. Device verification remains a separate requirement.
+
+iOS layout measurement preserves nine typed cancellation causes at their actual
+branch: task cancellation, engine detach/initialization, entry close, view
+retirement, measurement lifetime change, removed entry, restart receipt mismatch
+and strictly proved newer native observation or accepted layout revision.
+FlutterError details contain only the
+closed `{schemaVersion: 1, reason}` envelope. Dart accepts it only with
+`ERR_CANCELLED`, exact fields and a reviewed reason; malformed supplied details
+remain unclassified. Null details retain the legacy Android exact-message
+fallback. The Player/server journal records these as operation failures. A reason
+never establishes success, safe recovery, current health or input permission.
+Historical unclassified observations are not reinterpreted by this extension.
+The shared Swift/Dart fixture is a host-only contract; device verification and
+complete native EventChannel/error coverage remain separate requirements.
 
 The View keeps desired geometry, native control metadata and occlusion separate.
 Immediately before dispatch, it checks the complete current widget and native

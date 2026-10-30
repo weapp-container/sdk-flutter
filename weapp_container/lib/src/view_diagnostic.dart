@@ -66,6 +66,32 @@ class WeappViewDiagnostic {
           'layout-native-owner-retired',
     };
     if (_code(error) != 'ERR_CANCELLED') return 'unclassified';
+    final details = error.details;
+    if (details != null) {
+      // A malformed supplied envelope never downgrades to message inference.
+      const typedReasons = {
+        'layout-measurement-task-cancelled',
+        'layout-measurement-engine-detached',
+        'layout-measurement-engine-initializing',
+        'layout-measurement-entry-closing',
+        'layout-measurement-view-retiring',
+        'layout-measurement-lifetime-changed',
+        'layout-measurement-entry-removed',
+        'layout-measurement-restart-receipt-mismatch',
+        'layout-measurement-observation-superseded',
+      };
+      if (details is Map &&
+          details.length == 2 &&
+          details.containsKey('schemaVersion') &&
+          details['schemaVersion'] is int &&
+          details['schemaVersion'] == 1 &&
+          details.containsKey('reason') &&
+          details['reason'] is String &&
+          typedReasons.contains(details['reason'])) {
+        return details['reason'] as String;
+      }
+      return 'unclassified';
+    }
     for (final item in known.entries) {
       if (error.message == item.key ||
           error.message == '${error.code}: ${item.key}') return item.value;
