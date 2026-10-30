@@ -1,8 +1,8 @@
 # Weapp Container Flutter SDK
 
-Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.6**; native ABI: **1**.
+Apache-2.0 Flutter bindings for the Weapp Container native SDK. Source repository: https://github.com/weapp-container/sdk-flutter. Version: **0.1.0-preview.5.7**; native ABI: **1**.
 
-Current source requires a newly built **0.1.0-preview.5.6** runtime and matching SDK bundles. Production, exact archive pins, private publication and consumer validation for this version are pending. The checked-in `runtime-artifacts.lock.json` retains the historical **0.1.0-preview.5.3** archive set (SHA-256 `ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388`); it does not satisfy this source version. Preparation must reject that mismatch. Old native producer, archive and device evidence remains unchanged; new binaries require independent source and artifact bindings.
+Current source requires a newly built **0.1.0-preview.5.7** runtime and matching SDK bundles. Production, exact archive pins, private publication and consumer validation for this version are pending. The checked-in `runtime-artifacts.lock.json` retains the historical **0.1.0-preview.5.3** archive set (SHA-256 `ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388`); it does not satisfy this source version. Preparation must reject that mismatch. Old native producer, archive and device evidence remains unchanged; new binaries require independent source and artifact bindings.
 
 This repository contains seven federated Dart/plugin packages, the desktop adapter, consumers and contract tests. It contains no container-core/Rust source, native runtime binary, generated application pack or parent-checkout dependency. Public Dart names and method/event channels are preserved. The runtime is a separate private binary dependency.
 

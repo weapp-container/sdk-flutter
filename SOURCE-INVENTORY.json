@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "sdkVersion": "0.1.0-preview.5.6",
-  "sourceBaseCommit": "b4729116883c05b7015fe8f50b59ed3a8b2d579a",
-  "review": "Reviewed preview.5.6 wrapper identity and new runtime requirement; historical runtime locks and ORIGIN remain unchanged.",
+  "sdkVersion": "0.1.0-preview.5.7",
+  "sourceBaseCommit": "532aef85ab61f8c05e5961b1ca7027a2759bb162",
+  "review": "Reviewed preview.5.7 source metadata with App17 retirement-owner diagnostics; preserve historical ORIGIN and preview.5.3 artifact lock.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,7 +41,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "3db744d8b955c21ba3ab210b99599fa1a700b89eb060d40f29c1692ae36a0672",
+      "sha256": "cea227a8e968f1a7e04a79b50c7dea6057e21348aad04a61843185d980038c65",
       "size": 14348,
       "mode": "100644"
     },
@@ -335,7 +335,7 @@
     },
     {
       "path": "tools/runtime-artifacts.mjs",
-      "sha256": "7dee7c101ecbaeca6a4f9d4d865ec2a9a820c80461a1d06581d96e757a2edf45",
+      "sha256": "8d98a8f023a034d020d27255b88b2715a52e2407a4a68ff1f513f79767a511ab",
       "size": 19339,
       "mode": "100644"
     },
@@ -413,7 +413,7 @@
     },
     {
       "path": "weapp_container/pubspec.yaml",
-      "sha256": "53b12f03ab9de22a83d827c0321edfa7e9988d1926cff19277fd521791e906a6",
+      "sha256": "758c7f5c0003152dbd41ac824fc23be2957d07540d7a42560d77b99ffb92edda",
       "size": 1060,
       "mode": "100644"
     },
@@ -503,7 +503,7 @@
     },
     {
       "path": "weapp_container_android/android/build.gradle",
-      "sha256": "22538198303cf34a39ad9d20a240e696ea13d090ee699ab7a524e81256cdd704",
+      "sha256": "7c79b7dee86f11f2a5e8416f2651dd5673a5bd2cd06b308c89049a0dff9e54b5",
       "size": 1558,
       "mode": "100644"
     },
@@ -563,7 +563,7 @@
     },
     {
       "path": "weapp_container_android/pubspec.yaml",
-      "sha256": "628ecc631226428797a20cc6e34f87bafbde84c0f906276df215bf498245cf88",
+      "sha256": "977a26a5b3bcd2b77cb7a311242e6c0f59aabc2ed14e3c8ed81ab0804e73abee",
       "size": 447,
       "mode": "100644"
     },
@@ -599,7 +599,7 @@
     },
     {
       "path": "weapp_container_ios/ios/weapp_container_ios.podspec",
-      "sha256": "cfb0bd6bd8ab6561525581aa2897a4d22ad7ae041a0e719ae82a8c9f4de903a3",
+      "sha256": "911351adb01f4ef4611c92baf6ed261b6baa8db9d31f83449c353f844b309a6c",
       "size": 1285,
       "mode": "100644"
     },
@@ -611,7 +611,7 @@
     },
     {
       "path": "weapp_container_ios/pubspec.yaml",
-      "sha256": "7360a13fa1c98f1f577da92055e27a88a835739cbbd6b5d16ce7f2c5b219ae8f",
+      "sha256": "af483015ff0c72b944e075e1c2ca8f6aac0bf3c2f358d44b3487bf76108d91b0",
       "size": 390,
       "mode": "100644"
     },
@@ -665,7 +665,7 @@
     },
     {
       "path": "weapp_container_linux/pubspec.yaml",
-      "sha256": "a5eadc2e3edf207fae91faaf53a4455552cfdc01728b880f047335153929a5f7",
+      "sha256": "7a3326ff994102e22e42626c4dd44e54868d6bc220281a622648169c3e6728c9",
       "size": 368,
       "mode": "100644"
     },
@@ -701,13 +701,13 @@
     },
     {
       "path": "weapp_container_macos/macos/weapp_container_macos.podspec",
-      "sha256": "a57c5a1540b04ad171a09521843dd5e52a5962163eda3997713fe1c84e266ff2",
+      "sha256": "ae801788e3a739ddcc97650ad57b16484571a091802923a751a84d0bf68155c3",
       "size": 1234,
       "mode": "100644"
     },
     {
       "path": "weapp_container_macos/pubspec.yaml",
-      "sha256": "064cec12b1d8a71a17c40babbf0524fcbfd157cfe353a6a53934a628d939376e",
+      "sha256": "31f17760894fda446c1bb298e01fe7ca7508450e8d485c9e4d5d58e52a91036b",
       "size": 367,
       "mode": "100644"
     },
@@ -743,7 +743,7 @@
     },
     {
       "path": "weapp_container_platform_interface/pubspec.yaml",
-      "sha256": "cba7681dff47014263f47eb37e39627415c6ea181068bebe86ab72669eec9cf8",
+      "sha256": "0d5cf345c15e822a94fe9b12476d42becdd479ca38329a4e2ca766b25318d1c0",
       "size": 283,
       "mode": "100644"
     },
@@ -767,7 +767,7 @@
     },
     {
       "path": "weapp_container_windows/pubspec.yaml",
-      "sha256": "cf41bf093b8e05e853a6ce42af6eb2857c9ec9f2e82531d9ac71aaaf14ebd1b7",
+      "sha256": "114591519ece52c451bb5081a2007e20e3473094603e188391e7f8863efe58d3",
       "size": 376,
       "mode": "100644"
     },
