@@ -173,3 +173,33 @@ node --test tests/source-inventory.test.mjs tests/source-contract.test.mjs
 ```
 
 Commit the source and inventory together before assembling distributable packages. The inventory's `sourceBaseCommit` identifies the checkout on which the review was prepared; it does not bind later build or runtime evidence to that earlier commit. Runtime artifact locks must use actual published archive hashes and are reviewed independently.
+
+## Host services in preview.6.0
+
+Call `configureHostServices` with the host-verified installation and account before
+`installNativeDeviceApis` and `load`. The mobile plugins install the platform SDK's
+shared device toolkit, including managed files, network transfers, SocketTask,
+media and optional Bluetooth. Registrations survive internal owner reconstruction;
+account cleanup waits for real native I/O and recording teardown. Failed cleanup
+keeps the session blocked and can be retried through `close`.
+
+`installNativeDeviceApis` accepts `bluetooth` (default true),
+`allowedNetworkOrigins` (default empty), `allowLoopbackForDevelopment` (default
+false), `allowedMediaOrigins` (default empty) and `dedicatedAudioSession` (default
+false). Mobile networking requires an exact configured HTTPS/WSS origin. HTTP/WS
+is permitted only for explicitly enabled loopback development. Guest requests
+never inherit host credentials. iOS remote video has its separate media origin
+policy; Android media currently uses managed local files. Desktop adapters retain
+their own negotiated platform/network support.
+
+On iOS, `nfc: true` enables the CoreNFC adapter only when the host provisions
+the required NFC usage description and entitlements; it defaults to false. SOTER
+attestation providers remain native host configuration and are never injected
+from guest JavaScript.
+
+On iOS, `dedicatedAudioSession: true` explicitly reserves AVAudioSession for this
+container recording adapter. The default installs no RecorderManager methods;
+a host sharing audio with other features should install the native SDK with its
+own `WeappRecordingAudioSession` broker. Native permissions and per-application
+consent still apply independently of whether an API exists. Identity and payment
+handlers remain the embedding host's responsibility.

@@ -45,11 +45,11 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
     }
     override fun onAttachedToActivity(binding:ActivityPluginBinding) {
         activityBinding=binding; binding.addRequestPermissionsResultListener(this)
-        sessions.values.forEach { it.deviceApis?.rebindActivity(binding.activity); it.bluetoothApis?.rebindActivity(binding.activity); it.mediaApis?.rebindActivity(binding.activity) }
+        sessions.values.forEach { it.deviceServices?.rebindActivity(binding.activity) }
     }
     private fun detachActivity() {
         activityBinding?.removeRequestPermissionsResultListener(this); activityBinding=null
-        sessions.values.forEach { it.deviceApis?.rebindActivity(null); it.bluetoothApis?.rebindActivity(null); it.mediaApis?.rebindActivity(null) }
+        sessions.values.forEach { it.deviceServices?.rebindActivity(null) }
         permissionRequests.values.toList().forEach { it.completion(false) }; permissionRequests.clear()
     }
     override fun onDetachedFromActivityForConfigChanges()=detachActivity()
@@ -78,10 +78,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         val replies = mutableMapOf<String, HostReply>()
         val retainedCalls = mutableSetOf<String>()
         var accountCleanup: Pair<String, CompletableFuture<Unit>>? = null
-        var deviceApis:AndroidDeviceApis?=null
-        var bluetoothApis:AndroidBluetoothApis?=null
-        var managedFiles:AndroidManagedFiles?=null
-        var mediaApis:AndroidNativeMedia?=null
+        var deviceServices:AndroidNativeDeviceServices?=null
         var clientChrome: JSONObject? = null
         var preparedClientChrome: JSONObject? = null
         var measurementEpoch = 0L
@@ -160,14 +157,15 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
             val session = entry.session
             val operation: CompletableFuture<*> = when (call.method) {
                 "installNativeDeviceApis" -> {
-                    check(entry.deviceApis==null) { "Native devices already installed" }
+                    check(entry.deviceServices==null) { "Native devices already installed" }
                     val activity=checkNotNull(activityBinding?.activity) { "A foreground Flutter Activity is required" }
-                    val driver=AndroidDeviceApis(activity,permissionBroker); entry.deviceApis=driver
-                    val files=AndroidManagedFiles(app); entry.managedFiles=files
-                    val media=AndroidNativeMedia(activity,files,permissionBroker); entry.mediaApis=media
-                    val tasks=mutableListOf(driver.install(session),files.install(session),media.install(session))
-                    if(args["bluetooth"]!=false) { val ble=AndroidBluetoothApis(activity,permissionBroker); entry.bluetoothApis=ble; tasks.add(ble.install(session)) }
-                    CompletableFuture.allOf(*tasks.toTypedArray())
+                    val origins=(args["allowedNetworkOrigins"] as? List<*>)?.map { it as String }?.toSet() ?: emptySet()
+                    val driver=AndroidNativeDeviceServices(activity, networkOrigins=origins,
+                        allowLoopbackForDevelopment=args["allowLoopbackForDevelopment"]==true,
+                        enableBluetooth=args["bluetooth"]!=false, permissions=permissionBroker,
+                        enableNfc=args["nfc"]==true)
+                    entry.deviceServices=driver
+                    driver.install(session)
                 }
                 "completeAccountCleanup" -> {
                     val operationId=args["operationId"] as String
@@ -449,11 +447,13 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
     private fun closeEntry(id: Long, entry: Entry): CompletableFuture<Unit> {
         entry.closing?.let { return it }
         entry.accountCleanup?.second?.completeExceptionally(ContainerException("ERR_CANCELLED","Session closing")); entry.accountCleanup=null
-        retireView(entry)
         val done = CompletableFuture<Unit>(); entry.closing = done
-        entry.session.closeAsync().whenComplete { _, error ->
-            if (error == null) { sessions.remove(id); closed.add(id); entry.replies.clear(); entry.retainedCalls.clear(); entry.deviceApis?.close(); entry.bluetoothApis?.close(); entry.mediaApis?.close(); entry.managedFiles?.close(); done.complete(Unit) }
-            else { entry.closing = null; done.completeExceptionally(error) }
+        retireView(entry).thenCompose { entry.session.closeAsync() }.whenComplete { _, error ->
+            try {
+                if(error!=null) throw error
+                entry.deviceServices?.close()
+                sessions.remove(id); closed.add(id); entry.replies.clear(); entry.retainedCalls.clear(); done.complete(Unit)
+            } catch(failure:Throwable) { entry.closing = null; done.completeExceptionally(failure) }
         }
         return done
     }

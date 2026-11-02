@@ -372,10 +372,7 @@ import UIKit
         var retiringView: Task<Void, Error>?
         var calls: [String: CheckedContinuation<WeappJSON, Error>] = [:]
         var accountCleanup: (operationId:String,continuation:CheckedContinuation<Void,Error>)?
-        var deviceApis:WeappDeviceApis?
-        var bluetoothApis:WeappBluetoothApis?
-        var managedFiles:WeappManagedFiles?
-        var mediaApis:WeappNativeMedia?
+        var deviceServices:WeappNativeDeviceServices?
         var clientChrome: [String: Any]?
         var preparedClientChrome: [String: Any]?
         var measurementLifetime = UUID()
@@ -486,12 +483,17 @@ import UIKit
         let session = entry.session
         switch call.method {
         case "installNativeDeviceApis":
-            guard entry.deviceApis==nil else { throw fail("Native devices already installed") }
+            guard entry.deviceServices==nil else { throw fail("Native devices already installed") }
             guard let presenter=devicePresenter else { throw fail("A Flutter view controller is required") }
-            let driver=WeappDeviceApis(presenter:presenter); try driver.install(in:session); entry.deviceApis=driver
-            let files=try WeappManagedFiles(); try files.install(in:session); entry.managedFiles=files
-            let media=WeappNativeMedia(presenter:presenter,files:files,allowedMediaOrigins:Set((args["allowedNetworkOrigins"] as? [String]) ?? [])); try media.install(in:session); entry.mediaApis=media
-            if args["bluetooth"] as? Bool != false { let ble=WeappBluetoothApis(presenter:presenter); try ble.install(in:session); entry.bluetoothApis=ble }
+            let driver=try WeappNativeDeviceServices(presenter:presenter,
+                networkOrigins:(args["allowedNetworkOrigins"] as? [String]) ?? [],
+                allowLoopbackForDevelopment:args["allowLoopbackForDevelopment"] as? Bool == true,
+                enableBluetooth:args["bluetooth"] as? Bool != false,
+                allowedMediaOrigins:(args["allowedMediaOrigins"] as? [String]) ?? [],
+                recordingAudioSession:args["dedicatedAudioSession"] as? Bool == true ? WeappExclusiveRecordingAudioSession() : nil,
+                enableNfc:args["nfc"] as? Bool == true)
+            entry.deviceServices=driver
+            try driver.install(in:session)
         case "completeAccountCleanup":
             guard let pending=entry.accountCleanup,pending.operationId==args["operationId"] as? String else { throw fail("Account cleanup belongs to another operation") }
             entry.accountCleanup=nil
@@ -771,11 +773,11 @@ import UIKit
         entry.accountCleanup?.continuation.resume(throwing:CancellationError()); entry.accountCleanup=nil
         if let operation = entry.closing { return try await operation.value }
         let operation = Task { @MainActor in
-            try await entry.session.close()
             try await self.retireView(entry)
+            try await entry.session.close()
         }
         entry.closing = operation
-        do { try await operation.value; entry.deviceApis?.close(); entry.bluetoothApis?.close(); entry.mediaApis?.close(); entries.removeValue(forKey: id); closed.insert(id) }
+        do { try await operation.value; try await entry.deviceServices?.close(); entries.removeValue(forKey: id); closed.insert(id) }
         catch { entry.closing = nil; throw error }
     }
     private func retireAll() async throws {

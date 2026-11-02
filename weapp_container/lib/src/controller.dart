@@ -275,10 +275,18 @@ class WeappContainerController {
   /// Install OS-backed adapters; native permissions remain separately authorized.
   Future<void> installNativeDeviceApis(
           {bool bluetooth = true,
-          List<String> allowedNetworkOrigins = const []}) =>
+          List<String> allowedNetworkOrigins = const [],
+          bool allowLoopbackForDevelopment = false,
+          List<String> allowedMediaOrigins = const [],
+          bool nfc = false,
+          bool dedicatedAudioSession = false}) =>
       _invoke<void>('installNativeDeviceApis', {
         'bluetooth': bluetooth,
-        'allowedNetworkOrigins': List<String>.from(allowedNetworkOrigins)
+        'allowedNetworkOrigins': List<String>.from(allowedNetworkOrigins),
+        'allowLoopbackForDevelopment': allowLoopbackForDevelopment,
+        'allowedMediaOrigins': List<String>.from(allowedMediaOrigins),
+        'nfc': nfc,
+        'dedicatedAudioSession': dedicatedAudioSession,
       });
   Future<void> retryAccountCleanup() => _invoke<void>('retryAccountCleanup');
   Future<List<Object?>> hostComponents() async =>
