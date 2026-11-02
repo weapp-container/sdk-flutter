@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "afcf4a02c25aa939a5a623331fa75269708a6ae7",
-  "review": "Forward frozen snapshot owner contexts from the public controller and reject old runtimes before contextual desktop snapshot publication.",
+  "sourceBaseCommit": "2175b50a375e269c12333e74320746fb1fd5718f",
+  "review": "Align the public desktop capability header with the final preview.6.0 archive.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "fe1abeaae388bfa6d955d5b07039ac845135da80b4585268b5d3540e4e0edeb6",
-      "size": 20049,
+      "sha256": "00f15560e2a0a90223f9b307357e5ec182d6a703ee504fc5a6c8d72968f8741c",
+      "size": 19979,
       "mode": "100644"
     },
     {
@@ -131,8 +131,8 @@
     },
     {
       "path": "native_desktop/include/weapp/desktop.hpp",
-      "sha256": "198fe2fdb358da15b909b4f6f2b7a698c429cb9244996160b6ee287177efadde",
-      "size": 6521,
+      "sha256": "c6636614b048a8c8f87a7e1c84c41a1604aafff7988241c3e95a640d97d131d7",
+      "size": 6560,
       "mode": "100644"
     },
     {
@@ -281,8 +281,8 @@
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388",
-      "size": 3241,
+      "sha256": "1f066a5d333147faff726fcc36778cbe2d705142f4f15cc7a902b85d1600d13f",
+      "size": 3786,
       "mode": "100644"
     },
     {
@@ -311,8 +311,8 @@
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "c64a049ba6e3be3836ac84096f4b75aae645ab4db723e6aa2d1267845c2cbeaa",
-      "size": 8302,
+      "sha256": "29ed103da54a6aea09398af54017df08df2f44a9ca32715058e0a54e7f5f0ba8",
+      "size": 8069,
       "mode": "100644"
     },
     {

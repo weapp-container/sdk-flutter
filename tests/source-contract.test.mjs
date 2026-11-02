@@ -17,17 +17,16 @@ async function sourceFiles() {
   inventory ??= verifySourceInventory(root).files;
   return inventory;
 }
-test('historical artifact lock remains immutable and is rejected by the new source version', async () => {
-  assert.equal(createHash('sha256').update(await readFile(join(root, 'runtime-artifacts.lock.json'))).digest('hex'), 'ee393000b5726172755b24a31812f9b55051e710c2714edadb9b3ac287b95388');
+test('preview.6.0 artifact lock is exact and source-bound', async () => {
+  assert.equal(createHash('sha256').update(await readFile(join(root, 'runtime-artifacts.lock.json'))).digest('hex'), '1f066a5d333147faff726fcc36778cbe2d705142f4f15cc7a902b85d1600d13f');
   const lock = await json('runtime-artifacts.lock.json');
-  assert.equal(lock.runtimeVersion, '0.1.0-preview.5.3');
-  assert.equal(lock.artifacts.length, 10);
+  assert.equal(lock.runtimeVersion, SDK_VERSION);
+  assert.equal(lock.artifacts.length, 12);
   assert.equal(lock.abiVersion, 1);
   assert.equal(lock.source.repository, 'weapp-container/runtime-artifacts');
-  assert.equal(lock.source.releaseTag, 'runtime-v0.1.0-preview.5.3');
+  assert.equal(lock.source.releaseTag, `runtime-v${SDK_VERSION}`);
   if (lock.artifacts.length === 0) assert.throws(() => selectArtifact(lock, { version: lock.runtimeVersion, platform: 'android', arch: 'universal', component: 'android-sdk' }), { code: 'ERR_RUNTIME_MANIFEST' });
-  assert.notEqual(lock.runtimeVersion, SDK_VERSION);
-  assert.throws(() => selectArtifact(lock, { version: SDK_VERSION, abiVersion: 1, platform: 'android', arch: 'universal', component: 'android-sdk' }), { code: 'ERR_RUNTIME_MANIFEST' });
+  assert.equal(lock.runtimeVersion, SDK_VERSION);
   for (const entry of lock.artifacts) assert.equal(selectArtifact(lock, { version: lock.runtimeVersion, abiVersion: lock.abiVersion, platform: entry.platform, arch: entry.arch, component: entry.component }).sha256, entry.sha256);
 });
 test('source export contains no core sources, binaries, links or build caches', async () => {
