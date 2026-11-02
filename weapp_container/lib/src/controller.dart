@@ -67,6 +67,33 @@ typedef WeappHostMethod = FutureOr<Object?> Function(WeappHostCall call);
 typedef WeappAccountCleanup = FutureOr<void> Function(
     String operationId, WeappCancellationToken cancellation);
 
+/// Capture from native state before asynchronous snapshot work begins.
+/// This owner context does not require a pending API call.
+class WeappHostSnapshotContext {
+  WeappHostSnapshotContext(
+      {required Map<String, Object?> application,
+      required Map<String, Object?> account,
+      required this.sessionId})
+      : application = Map.unmodifiable(_copy(application)),
+        account = Map.unmodifiable(_copy(account));
+  factory WeappHostSnapshotContext.fromState(Map<String, Object?> state) {
+    final owner = state['hostServicesState'] as Map;
+    return WeappHostSnapshotContext(
+        application: Map<String, Object?>.from(owner['application'] as Map),
+        account: Map<String, Object?>.from(owner['account'] as Map),
+        sessionId: state['sessionId'] as String);
+  }
+  final Map<String, Object?> application, account;
+  final String sessionId;
+  static Map<String, Object?> _copy(Map<String, Object?> value) =>
+      (jsonDecode(jsonEncode(value)) as Map).cast<String, Object?>();
+  Map<String, Object?> toMap() => {
+        'application': _copy(application),
+        'account': _copy(account),
+        'sessionId': sessionId,
+      };
+}
+
 /// Explicit iOS Wi-Fi capabilities; the OS still verifies signed entitlements.
 class WeappWifiConfiguration {
   const WeappWifiConfiguration(
@@ -381,9 +408,12 @@ class WeappContainerController {
           String operationId, Map<String, Object?> values) =>
       _invoke<void>('prepareAccountHostServiceSnapshots',
           {'operationId': operationId, 'values': _layoutCopy(values)});
-  Future<void> updateHostServiceSnapshots(Map<String, Object?> values) =>
-      _invoke<void>(
-          'updateHostServiceSnapshots', {'values': _layoutCopy(values)});
+  Future<void> updateHostServiceSnapshots(Map<String, Object?> values,
+          {WeappHostSnapshotContext? context}) =>
+      _invoke<void>('updateHostServiceSnapshots', {
+        'values': _layoutCopy(values),
+        if (context != null) 'context': context.toMap(),
+      });
   Future<Map<String, Object?>> switchAccount(Map<String, Object?> account,
           {Map<String, Object?> launches = const {}}) async =>
       Map<String, Object?>.from((await _invoke<Map>(

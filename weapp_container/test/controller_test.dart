@@ -292,6 +292,49 @@ Future<void> closeAtomic(
 }
 
 void main() {
+  test('snapshot transport retains the owner captured before asynchronous work',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final application = <String, Object?>{
+      'hostAppId': 'host',
+      'tenantId': 'tenant',
+      'publisherId': 'publisher',
+      'appId': 'app',
+      'environment': 'release',
+      'version': 'v2',
+      'packRoot': 'verified-root'
+    };
+    final account = <String, Object?>{
+      'principalId': 'old-user',
+      'epoch': '18446744073709551614'
+    };
+    platform.currentState = {
+      'sessionId': 'old-native-owner',
+      'hostServicesState': {'application': application, 'account': account}
+    };
+    final captured =
+        WeappHostSnapshotContext.fromState(await controller.state());
+    account['principalId'] = 'new-user';
+    account['epoch'] = '18446744073709551615';
+    platform.currentState['sessionId'] = 'new-native-owner';
+    await controller.updateHostServiceSnapshots({
+      'wx.getBatteryInfo': {'level': 50}
+    }, context: captured);
+    final payload = platform.requests.last.$2;
+    expect(payload['context'], {
+      'application': application,
+      'account': {'principalId': 'old-user', 'epoch': '18446744073709551614'},
+      'sessionId': 'old-native-owner'
+    });
+    expect((payload['context'] as Map).containsKey('callId'), isFalse);
+    await controller.updateHostServiceSnapshots({
+      'wx.getBatteryInfo': {'level': 60}
+    });
+    expect(platform.requests.last.$2.containsKey('context'), isFalse);
+    await controller.close();
+  });
   test(
       'API resource transport preserves native context and revoked-owner errors',
       () async {

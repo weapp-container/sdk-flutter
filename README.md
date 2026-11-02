@@ -192,6 +192,26 @@ cancellation alone does not release those resources.
 Native cancellation keeps its transport waiter until that real terminal arrives.
 Retired receipts only end the old waiter; they never authorize a new account.
 
+`updateHostServiceSnapshots(values, context: ...)` accepts a
+`WeappHostSnapshotContext` containing only trusted `application`, `account` and
+the internal native `sessionId`; it does not require an API call ID. An async
+producer must check `hostServices.snapshotOwnerContext == "1.0"` and capture
+native state before starting its work. Retain that captured context through
+completion so runtime rejects a late result after account, pack or owner changes.
+Synchronous updates performed immediately on the current owner thread may retain
+the existing values-only form. Never read the new owner after a response and
+attach its identity to the old result.
+
+```dart
+final capabilities = await controller.capabilities();
+if ((capabilities['hostServices'] as Map?)?['snapshotOwnerContext'] != '1.0') {
+  throw UnsupportedError('Runtime lacks snapshot owner validation');
+}
+final context = WeappHostSnapshotContext.fromState(await controller.state());
+final values = await readHostSnapshot(context); // Host-owned backend adapter.
+await controller.updateHostServiceSnapshots(values, context: context);
+```
+
 `readHostApiResource(context, offset: ..., length: ...)` returns
 `{bytes, totalBytes}` for the asset bound to an exact live API setter. Check
 `hostServices.apiResourceChunks == "1.0"` first and request at most 1 MiB per
