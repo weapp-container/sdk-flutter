@@ -13,6 +13,7 @@ class FakePlatform extends WeappContainerPlatform {
   final requests = <(String, Map<String, Object?>)>[];
   int nextId = 0;
   bool failClose = false;
+  bool identitySwitching = false;
   Completer<void>? detach;
   bool initialized = false;
   bool cancelChrome = false;
@@ -36,6 +37,14 @@ class FakePlatform extends WeappContainerPlatform {
   Future<T?> invoke<T>(String method, Map<String, Object?> args) async {
     if (!initialized) throw StateError("Transport used before initialization");
     requests.add((method, args));
+    if (method == 'hostApiResource') {
+      if (identitySwitching)
+        throw PlatformException(code: 'ERR_IDENTITY_SWITCHING');
+      return {
+        'bytes': [0, 128, 255],
+        'totalBytes': 1048579
+      } as T;
+    }
     if (method == 'hostChrome' && cancelChrome)
       throw PlatformException(
         code: 'ERR_CANCELLED',
@@ -283,6 +292,74 @@ Future<void> closeAtomic(
 }
 
 void main() {
+  test(
+      'API resource transport preserves native context and revoked-owner errors',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final context = <String, Object?>{
+      'application': {
+        'hostAppId': 'host',
+        'tenantId': 'tenant',
+        'publisherId': 'publisher',
+        'appId': 'app',
+        'environment': 'release',
+        'version': 'v2',
+        'packRoot': 'verified-root'
+      },
+      'account': {'principalId': 'user', 'epoch': '18446744073709551615'},
+      'sessionId': 'native-incarnation',
+      'callId': 'native-call',
+      'api': 'object:InnerAudioContext.src',
+      'deadlineNs': '18446744073709551614',
+      'cancelToken': 'native-cancel',
+      'componentTarget': {
+        'pageId': '9007199254740993',
+        'nodeId': 'audio',
+        'ownerScopeId': null
+      },
+    };
+    Map<String, Object?>? observed;
+    await controller.registerApiHandler('object:InnerAudioContext.src',
+        (call) async {
+      observed = await controller.readHostApiResource(call.context!,
+          offset: 1048576, length: 3);
+      return <String, Object?>{};
+    });
+    platform.emit(controller.id, {
+      'type': 'hostCall',
+      'callId': 'transport-call',
+      'method': 'object:InnerAudioContext.src',
+      'payload': {'value': 'assets/a.bin'},
+      'context': context
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(observed, {
+      'bytes': [0, 128, 255],
+      'totalBytes': 1048579
+    });
+    expect(
+        platform.requests
+            .singleWhere((request) => request.$1 == 'hostApiResource')
+            .$2,
+        {
+          'id': controller.id,
+          'context': context,
+          'offset': 1048576,
+          'length': 3
+        });
+    platform.emit(controller.id, {
+      'type': 'accountSwitch',
+      'receipt': {'phase': 'revoking'}
+    });
+    platform.identitySwitching = true;
+    await expectLater(
+        controller.readHostApiResource(context, length: 1),
+        throwsA(isA<PlatformException>()
+            .having((e) => e.code, 'code', 'ERR_IDENTITY_SWITCHING')));
+    await controller.close();
+  });
   test(
       'account cleanup awaits every resource and ignores superseded completion',
       () async {

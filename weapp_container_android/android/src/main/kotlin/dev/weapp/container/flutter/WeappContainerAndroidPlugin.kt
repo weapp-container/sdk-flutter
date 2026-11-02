@@ -252,7 +252,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                     }
                     CompletableFuture.completedFuture(Unit)
                 }
-                "hostComponents", "authorizeInstalledPack", "migrateLegacyStorage", "deleteAccountData", "retryAccountCleanup", "configureHostServices", "hostApiEvent", "hostComponentFrame", "hostComponentEvent", "authorizePhoneButton", "prepareAccountHostServiceSnapshots", "updateHostServiceSnapshots", "switchAccount", "queryAccountSwitch", "updateAccountSwitchLaunch", "acknowledgeAccountCleanup", "retryAccountSwitch", "cancelAccountSwitch", "createHostBinary", "readHostBinary", "retainHostBinary", "releaseHostBinary" -> session.hostServicesCommand(call.method, jsonObject(args.filterKeys { it != "id" }))
+                "hostComponents", "authorizeInstalledPack", "migrateLegacyStorage", "deleteAccountData", "retryAccountCleanup", "configureHostServices", "hostApiEvent", "hostComponentFrame", "hostComponentEvent", "authorizePhoneButton", "prepareAccountHostServiceSnapshots", "updateHostServiceSnapshots", "switchAccount", "queryAccountSwitch", "updateAccountSwitchLaunch", "acknowledgeAccountCleanup", "retryAccountSwitch", "cancelAccountSwitch", "hostApiResource", "createHostBinary", "readHostBinary", "retainHostBinary", "releaseHostBinary" -> session.hostServicesCommand(call.method, jsonObject(args.filterKeys { it != "id" }))
                 else -> { result.notImplemented(); return }
             }
             settle(operation, result, call.method, entry, args)

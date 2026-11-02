@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "0c2ac7c270670c8a88c7041ff219ae3fd907029c",
-  "review": "Serialize account cleanup actual terminals across rapid switches and close; preserve cancellation, retry and historical runtime locks",
+  "sourceBaseCommit": "74394cbc497f2ba360c388b42f564f9b520eaa92",
+  "review": "Expose gated read-only API resource chunks while preserving exact native call context and account revocation",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "42a60a3199a5afbded65f5fb46a2db75d40243a50112630e8c10b38c8bd169d4",
-      "size": 18497,
+      "sha256": "177025d7000269be4d5e879b7503ebba6fe527935dfd7d0442b9b6b35a23d9bf",
+      "size": 18951,
       "mode": "100644"
     },
     {
@@ -286,6 +286,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/api-resource-transport.test.mjs",
+      "sha256": "d37afca6cc0304d8126872dbd3cf7445952260823961494c42bd80f37a459449",
+      "size": 960,
+      "mode": "100644"
+    },
+    {
       "path": "tests/evidence/native-nfc-options-development.json",
       "sha256": "6f73074aab7f0c482f6f7063ff36cd0e97f14ec8bacb38cdf9abebfc0706f63a",
       "size": 12700,
@@ -407,8 +413,8 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "c1f92ccd3d9ef481c6f7ab50fb8451c565a104f2bfef44b2949ebc3360a512b3",
-      "size": 29179,
+      "sha256": "333d78443d8e2ea8f5d54ce76488403a3070cef2d14eedf4d8c648e58ad50ff8",
+      "size": 29582,
       "mode": "100644"
     },
     {
@@ -443,8 +449,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "d1cfe852ba58dee419098fc301c750e314c445ce11871a4909d653b99c5a64f2",
-      "size": 84806,
+      "sha256": "14fd9a6152c9a20cec6e9f1ef11e4f8a5c15e15fb9c5fe6f3c213a43d525cccb",
+      "size": 87319,
       "mode": "100644"
     },
     {
@@ -557,8 +563,8 @@
     },
     {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "a52c6311558b06ede464d5e45ea04804d5ea5f5d7de8956c7f11bb3302265cc6",
-      "size": 36336,
+      "sha256": "6294daa9013a132533f72bbd71d9f52f7bf78462d11e050d9623f0e23e2ddb34",
+      "size": 36355,
       "mode": "100644"
     },
     {
@@ -617,8 +623,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "2b67a15d97b01e185820bbc948dfc347803022badf3648adb54da48bffadf31c",
-      "size": 59445,
+      "sha256": "7de644598b90de240470b2f1ebcebb9e9e3c394ed3928edf62e53ff8cbad0117",
+      "size": 59464,
       "mode": "100644"
     },
     {

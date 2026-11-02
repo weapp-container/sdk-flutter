@@ -192,6 +192,13 @@ cancellation alone does not release those resources.
 Native cancellation keeps its transport waiter until that real terminal arrives.
 Retired receipts only end the old waiter; they never authorize a new account.
 
+`readHostApiResource(context, offset: ..., length: ...)` returns
+`{bytes, totalBytes}` for the asset bound to an exact live API setter. Check
+`hostServices.apiResourceChunks == "1.0"` first and request at most 1 MiB per
+chunk. Pass the original native context, including decimal epoch/deadline and
+session/call IDs. Native still rejects revoked, settled, cancelled or expired
+owners; this read does not bypass the account gate or grant arbitrary paths.
+
 `installNativeDeviceApis` accepts `bluetooth` (default true),
 `allowedNetworkOrigins` (default empty), `allowLoopbackForDevelopment` (default
 false), `allowedMediaOrigins` (default empty) and `dedicatedAudioSession` (default

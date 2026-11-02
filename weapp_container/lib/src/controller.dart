@@ -410,6 +410,15 @@ class WeappContainerController {
           {'id': handle, 'offset': offset, 'length': length}))!);
   Future<void> retainHostBinary(String handle) =>
       _invoke<void>('retainHostBinary', {'id': handle});
+
+  /// Read only the asset of an exact live API call; requires apiResourceChunks 1.0.
+  Future<Map<String, Object?>> readHostApiResource(Map<String, Object?> context,
+          {int offset = 0, required int length}) async =>
+      Map<String, Object?>.from((await _invoke<Map>('hostApiResource', {
+        'context': _layoutCopy(context),
+        'offset': offset,
+        'length': length
+      }))!);
   Future<void> releaseHostBinary(String handle) =>
       _invoke<void>('releaseHostBinary', {'id': handle});
 

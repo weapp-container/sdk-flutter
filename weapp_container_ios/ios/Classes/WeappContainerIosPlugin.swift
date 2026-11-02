@@ -566,7 +566,7 @@ import UIKit
                     }
                 })
             }
-        case "hostComponents", "authorizeInstalledPack", "migrateLegacyStorage", "deleteAccountData", "retryAccountCleanup", "configureHostServices", "hostApiEvent", "hostComponentFrame", "hostComponentEvent", "authorizePhoneButton", "prepareAccountHostServiceSnapshots", "updateHostServiceSnapshots", "switchAccount", "queryAccountSwitch", "updateAccountSwitchLaunch", "acknowledgeAccountCleanup", "retryAccountSwitch", "cancelAccountSwitch", "createHostBinary", "readHostBinary", "retainHostBinary", "releaseHostBinary":
+        case "hostComponents", "authorizeInstalledPack", "migrateLegacyStorage", "deleteAccountData", "retryAccountCleanup", "configureHostServices", "hostApiEvent", "hostComponentFrame", "hostComponentEvent", "authorizePhoneButton", "prepareAccountHostServiceSnapshots", "updateHostServiceSnapshots", "switchAccount", "queryAccountSwitch", "updateAccountSwitchLaunch", "acknowledgeAccountCleanup", "retryAccountSwitch", "cancelAccountSwitch", "hostApiResource", "createHostBinary", "readHostBinary", "retainHostBinary", "releaseHostBinary":
             return codec(try session.hostServicesCommand(call.method, try object(args.filter { $0.key != "id" })))
         case "load":
             try await session.load(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]), initialHostLayout: args["initialHostLayout"] == nil ? nil : try object(args["initialHostLayout"]))
