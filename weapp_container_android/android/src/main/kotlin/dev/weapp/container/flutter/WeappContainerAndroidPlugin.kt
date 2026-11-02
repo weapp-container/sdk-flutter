@@ -143,7 +143,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 sessions[id] = entry
                 entry.session.accountCleanupHandler = { operationId ->
                     val pending=CompletableFuture<Unit>()
-                    entry.accountCleanup?.second?.completeExceptionally(ContainerException("ERR_CANCELLED","Account cleanup superseded"))
+                    check(entry.accountCleanup==null) { "Previous account cleanup transport has not ended" }
                     entry.accountCleanup=operationId to pending
                     emit(id,mapOf("type" to "accountCleanupRequired","operationId" to operationId))
                     pending
@@ -174,7 +174,8 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                     require(pending?.first==operationId) { "Account cleanup belongs to another operation" }
                     entry.accountCleanup=null
                     val error=args["error"] as? Map<*,*>
-                    if(error!=null) pending!!.second.completeExceptionally(ContainerException("ERR_ACCOUNT_CLEANUP",error["message"] as? String ?: "Account cleanup failed"))
+                    if(args["retired"]==true) pending!!.second.completeExceptionally(ContainerException("ERR_CANCELLED","Retired account cleanup ended"))
+                    else if(error!=null) pending!!.second.completeExceptionally(ContainerException("ERR_ACCOUNT_CLEANUP",error["message"] as? String ?: "Account cleanup failed"))
                     else pending!!.second.complete(Unit)
                     CompletableFuture.completedFuture(Unit)
                 }
@@ -447,7 +448,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
     }
     private fun closeEntry(id: Long, entry: Entry): CompletableFuture<Unit> {
         entry.closing?.let { return it }
-        entry.accountCleanup?.second?.completeExceptionally(ContainerException("ERR_CANCELLED","Session closing")); entry.accountCleanup=null
+        entry.accountCleanup?.let { emit(id,mapOf("type" to "accountCleanupCancelled","operationId" to it.first)) }
         val done = CompletableFuture<Unit>(); entry.closing = done
         retireView(entry).thenCompose { entry.session.closeAsync() }.whenComplete { _, error ->
             try {

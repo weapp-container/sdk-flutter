@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "373910ee1ff76db60336cc99a892bf0d8f862279",
-  "review": "Expose explicit iOS NFC technology configuration and Linux BLE deployment contract, preserving native owner reconstruction and current verified compilation",
+  "sourceBaseCommit": "0c2ac7c270670c8a88c7041ff219ae3fd907029c",
+  "review": "Serialize account cleanup actual terminals across rapid switches and close; preserve cancellation, retry and historical runtime locks",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "51858542fe58814a402d9e05fd27bc787ea84109900dfaf5e937b59616cf81f5",
-      "size": 17890,
+      "sha256": "42a60a3199a5afbded65f5fb46a2db75d40243a50112630e8c10b38c8bd169d4",
+      "size": 18497,
       "mode": "100644"
     },
     {
@@ -407,8 +407,8 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "0c19762554b6205ab8537c3a546b4d4b728bbcda59c2cff507b73c3b0daef93a",
-      "size": 28067,
+      "sha256": "c1f92ccd3d9ef481c6f7ab50fb8451c565a104f2bfef44b2949ebc3360a512b3",
+      "size": 29179,
       "mode": "100644"
     },
     {
@@ -443,8 +443,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "b37045cb475b9168c57a56ee94ade617044cf27a734a87de528a23daa770f44c",
-      "size": 79071,
+      "sha256": "d1cfe852ba58dee419098fc301c750e314c445ce11871a4909d653b99c5a64f2",
+      "size": 84806,
       "mode": "100644"
     },
     {
@@ -557,8 +557,8 @@
     },
     {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "e0fb11c81b2366c5097b9cfe4bc58e3a7c39d1a987353fc99741757829c53ca8",
-      "size": 36232,
+      "sha256": "a52c6311558b06ede464d5e45ea04804d5ea5f5d7de8956c7f11bb3302265cc6",
+      "size": 36336,
       "mode": "100644"
     },
     {
@@ -617,8 +617,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "f6987e6e4500b7b11746b5b278a392b20979e55252fd6ea4537c79820514d585",
-      "size": 59317,
+      "sha256": "2b67a15d97b01e185820bbc948dfc347803022badf3648adb54da48bffadf31c",
+      "size": 59445,
       "mode": "100644"
     },
     {

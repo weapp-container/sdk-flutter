@@ -303,8 +303,9 @@ void main() {
         {'type': 'accountCleanupRequired', 'operationId': 'first'});
     await Future<void>.delayed(Duration.zero);
     expect(
-        platform.requests
-            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        platform.requests.where((entry) =>
+            entry.$1 == 'completeAccountCleanup' &&
+            entry.$2['retired'] != true),
         isEmpty);
     platform.emit(controller.id,
         {'type': 'accountCleanupRequired', 'operationId': 'second'});
@@ -313,16 +314,24 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(cancelled, contains('first'));
     expect(
-        platform.requests
-            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        platform.requests.where((entry) =>
+            entry.$1 == 'completeAccountCleanup' &&
+            entry.$2['retired'] != true),
         isEmpty);
     second.complete();
     await Future<void>.delayed(Duration.zero);
     final replies = platform.requests
-        .where((entry) => entry.$1 == 'completeAccountCleanup')
+        .where((entry) =>
+            entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true)
         .toList();
     expect(replies, hasLength(1));
     expect(replies.single.$2['operationId'], 'second');
+    expect(
+        platform.requests
+            .where((entry) => entry.$2['retired'] == true)
+            .single
+            .$2['operationId'],
+        'first');
     await controller.close();
     await platform.source.close();
   });
@@ -340,17 +349,142 @@ void main() {
         {'type': 'accountCleanupRequired', 'operationId': 'cleanup'});
     await Future<void>.delayed(Duration.zero);
     expect(
-        platform.requests
-            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        platform.requests.where((entry) =>
+            entry.$1 == 'completeAccountCleanup' &&
+            entry.$2['retired'] != true),
         isEmpty);
     resource.complete();
     await Future<void>.delayed(Duration.zero);
-    final reply = platform.requests
-        .singleWhere((entry) => entry.$1 == 'completeAccountCleanup');
+    final reply = platform.requests.singleWhere((entry) =>
+        entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true);
     expect((reply.$2['error'] as Map)['message'],
         contains('camera retirement failed'));
     unregister();
     await controller.close();
+    await platform.source.close();
+  });
+  test(
+      'latest cleanup waits a cancelled old terminal and skips queued stale operations',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final old = Completer<void>(), latest = Completer<void>();
+    final started = <String>[];
+    controller.registerAccountCleanupHandler((operation, _) {
+      started.add(operation);
+      return operation == 'old' ? old.future : latest.future;
+    });
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'old'});
+    await Future<void>.delayed(Duration.zero);
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'skipped'});
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'latest'});
+    latest.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(started, ['old']);
+    expect(
+        platform.requests.where((entry) =>
+            entry.$1 == 'completeAccountCleanup' &&
+            entry.$2['retired'] != true),
+        isEmpty);
+    old.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(started, ['old', 'latest']);
+    final reply = platform.requests.singleWhere((entry) =>
+        entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true);
+    expect(reply.$2['operationId'], 'latest');
+    expect(
+        platform.requests
+            .where((entry) => entry.$2['retired'] == true)
+            .map((entry) => entry.$2['operationId']),
+        ['old', 'skipped']);
+    await controller.close();
+    await platform.source.close();
+  });
+  test('a failed superseded hook must end before retry and queued close',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final old = Completer<void>();
+    final started = <String>[];
+    controller.registerAccountCleanupHandler((operation, _) {
+      started.add(operation);
+      return operation == 'old' ? old.future : Future<void>.value();
+    });
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'old'});
+    await Future<void>.delayed(Duration.zero);
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'retry'});
+    await Future<void>.delayed(Duration.zero);
+    expect(started, ['old']);
+    old.completeError(StateError('old resource retirement failed'));
+    await Future<void>.delayed(Duration.zero);
+    expect(started, ['old', 'retry']);
+    final reply = platform.requests.singleWhere((entry) =>
+        entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true);
+    expect(reply.$2['operationId'], 'retry');
+    expect(reply.$2.containsKey('error'), isFalse);
+    final pending = Completer<void>();
+    controller.registerAccountCleanupHandler((operation, _) =>
+        operation == 'pending' ? pending.future : Future<void>.value());
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'pending'});
+    await Future<void>.delayed(Duration.zero);
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'queued'});
+    final closing = controller.close();
+    await Future<void>.delayed(Duration.zero);
+    expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
+    pending.complete();
+    await closing;
+    expect(started, isNot(contains('queued')));
+    await platform.source.close();
+  });
+  test(
+      'native cancellation waits real hook terminals and replies to a request received during close',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final native = Completer<void>();
+    late WeappCancellationToken token;
+    controller.registerAccountCleanupHandler((operation, cancellation) {
+      token = cancellation;
+      return operation == 'pending' ? native.future : Future<void>.value();
+    });
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'pending'});
+    await Future<void>.delayed(Duration.zero);
+    platform.emit(controller.id,
+        {'type': 'accountCleanupCancelled', 'operationId': 'other'});
+    expect(token.isCancelled, isFalse);
+    platform.emit(controller.id,
+        {'type': 'accountCleanupCancelled', 'operationId': 'pending'});
+    expect(token.isCancelled, isTrue);
+    final closing = controller.close();
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'late'});
+    await Future<void>.delayed(Duration.zero);
+    expect(
+        platform.requests
+            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        isEmpty);
+    native.complete();
+    await closing;
+    await Future<void>.delayed(Duration.zero);
+    expect(
+        platform.requests
+            .where((entry) => entry.$1 == 'completeAccountCleanup')
+            .map((entry) => [entry.$2['operationId'], entry.$2['retired']]),
+        [
+          ['pending', true],
+          ['late', true]
+        ]);
     await platform.source.close();
   });
   test('close waits for old cleanup then drains resources before native close',
@@ -377,8 +511,9 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(operations, ['switch', 'close:${controller.id}']);
     expect(
-        platform.requests
-            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        platform.requests.where((entry) =>
+            entry.$1 == 'completeAccountCleanup' &&
+            entry.$2['retired'] != true),
         isEmpty);
     retire.complete();
     await closing;

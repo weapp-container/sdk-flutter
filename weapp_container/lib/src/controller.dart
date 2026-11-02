@@ -128,10 +128,14 @@ class WeappContainerController {
       if (event.type == 'hostCall') {
         unawaited(_hostCall(event.fields));
       } else if (event.type == 'accountCleanupRequired') {
-        if (!_closeRequested) {
+        if (!_closed) {
           final task = _cleanupAccount(event.fields['operationId'] as String);
           _cleanupTasks.add(task);
           unawaited(task.whenComplete(() => _cleanupTasks.remove(task)));
+        }
+      } else if (event.type == 'accountCleanupCancelled') {
+        if (_cleanupOperationId == event.fields['operationId']) {
+          _cleanupCancellation?._cancel();
         }
       } else if (event.type == 'hostCallCancelled') {
         _calls.remove(event.fields['callId'])?.cancellation._cancel();
@@ -207,7 +211,9 @@ class WeappContainerController {
   final _calls = <String, WeappHostCall>{};
   final _cleanupHandlers = <WeappAccountCleanup>{};
   final _cleanupTasks = <Future<void>>{};
+  Future<void> _cleanupTail = Future<void>.value();
   WeappCancellationToken? _cleanupCancellation;
+  String? _cleanupOperationId;
   late final StreamSubscription<Map<String, Object?>> _subscription;
   Future<void>? _closing;
   bool _closeRequested = false;
@@ -272,34 +278,55 @@ class WeappContainerController {
     return () => _cleanupHandlers.remove(handler);
   }
 
-  Future<void> _cleanupAccount(String operationId) async {
+  Future<void> _cleanupAccount(String operationId) {
     _cleanupCancellation?._cancel();
     final cancellation = WeappCancellationToken();
     _cleanupCancellation = cancellation;
-    Object? failure;
-    await Future.wait(_cleanupHandlers.toList().map((handler) async {
-      try {
-        await handler(operationId, cancellation);
-      } catch (error) {
-        failure ??= error;
-      }
-    }));
-    if (cancellation.isCancelled || _closed || _closeRequested) return;
-    try {
-      await _invoke<void>('completeAccountCleanup', {
-        'operationId': operationId,
-        if (failure != null)
-          'error': {
-            'code': 'ERR_ACCOUNT_CLEANUP',
-            'message': failure.toString()
+    _cleanupOperationId = operationId;
+    final previous = _cleanupTail;
+    final task = () async {
+      // Revocation is immediate; retirement still waits for every earlier
+      // handler's real terminal, including handlers that ignore cancellation.
+      await previous;
+      bool retired() =>
+          !identical(_cleanupCancellation, cancellation) ||
+          cancellation.isCancelled ||
+          _closed ||
+          _closeRequested;
+      Object? failure;
+      if (!retired())
+        await Future.wait(_cleanupHandlers.toList().map((handler) async {
+          try {
+            await handler(operationId, cancellation);
+          } catch (error) {
+            failure ??= error;
           }
-      });
-    } catch (error, stack) {
-      if (!_closed && !_closeRequested) _events.addError(error, stack);
-    } finally {
-      if (identical(_cleanupCancellation, cancellation))
-        _cleanupCancellation = null;
-    }
+        }));
+      try {
+        // Retirement still owes the exact native transport its real terminal.
+        // This bypasses the business-command gate while close is waiting.
+        await _platform.invoke<void>('completeAccountCleanup', {
+          'id': id,
+          'operationId': operationId,
+          if (retired()) 'retired': true,
+          if (failure != null && !retired())
+            'error': {
+              'code': 'ERR_ACCOUNT_CLEANUP',
+              'message': failure.toString()
+            }
+        });
+      } catch (error, stack) {
+        if (!_closed && !_closeRequested) _events.addError(error, stack);
+      } finally {
+        if (identical(_cleanupCancellation, cancellation)) {
+          _cleanupCancellation = null;
+          _cleanupOperationId = null;
+        }
+      }
+    }();
+    _cleanupTail =
+        task.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return task;
   }
 
   /// Install OS-backed adapters; native permissions remain separately authorized.

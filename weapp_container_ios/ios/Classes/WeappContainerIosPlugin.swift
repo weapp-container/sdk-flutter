@@ -459,7 +459,7 @@ import UIKit
             let entry = Entry(WeappContainerSession(configuration: configuration)); entries[id] = entry
             entry.session.onAccountCleanup = { [weak self, weak entry] operationId in
                 guard let self,let entry else { throw CancellationError() }
-                entry.accountCleanup?.continuation.resume(throwing:CancellationError()); entry.accountCleanup=nil
+                guard entry.accountCleanup == nil else { throw self.fail("Previous cleanup transport has not ended") }
                 try await withTaskCancellationHandler(operation: {
                     try Task.checkCancellation()
                     try await withCheckedThrowingContinuation { (continuation:CheckedContinuation<Void,Error>) in
@@ -467,9 +467,9 @@ import UIKit
                         self.emit(id,["type":"accountCleanupRequired","operationId":operationId])
                     }
                 }, onCancel: {
-                    Task { @MainActor [weak entry] in
+                    Task { @MainActor [weak self,weak entry] in
                         guard let entry,entry.accountCleanup?.operationId==operationId else { return }
-                        entry.accountCleanup?.continuation.resume(throwing:CancellationError()); entry.accountCleanup=nil
+                        self?.emit(id,["type":"accountCleanupCancelled","operationId":operationId])
                     }
                 })
             }
@@ -516,7 +516,8 @@ import UIKit
         case "completeAccountCleanup":
             guard let pending=entry.accountCleanup,pending.operationId==args["operationId"] as? String else { throw fail("Account cleanup belongs to another operation") }
             entry.accountCleanup=nil
-            if let failure=args["error"] as? [String:Any] { pending.continuation.resume(throwing:WeappContainerError(code:"ERR_ACCOUNT_CLEANUP",message:failure["message"] as? String ?? "Account cleanup failed")) }
+            if args["retired"] as? Bool == true { pending.continuation.resume(throwing:CancellationError()) }
+            else if let failure=args["error"] as? [String:Any] { pending.continuation.resume(throwing:WeappContainerError(code:"ERR_ACCOUNT_CLEANUP",message:failure["message"] as? String ?? "Account cleanup failed")) }
             else { pending.continuation.resume() }
         case "registerHostMethod":
             let name = try string(args, "name")
@@ -789,7 +790,7 @@ import UIKit
     }
     private func close(_ id: Int64, _ entry: Entry) async throws {
         entry.measurementLifetime = UUID()
-        entry.accountCleanup?.continuation.resume(throwing:CancellationError()); entry.accountCleanup=nil
+        if let pending=entry.accountCleanup { emit(id,["type":"accountCleanupCancelled","operationId":pending.operationId]) }
         if let operation = entry.closing { return try await operation.value }
         let operation = Task { @MainActor in
             try await self.retireView(entry)
