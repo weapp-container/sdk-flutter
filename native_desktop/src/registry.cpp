@@ -1350,6 +1350,13 @@ void Registry::invoke(const std::string &method, const Json &args,
       return;
     }
     Json result;
+    if(method=="updateHostServiceSnapshots" && payload.contains("context")) {
+      Json capabilities;auto negotiated=command(e->native,"capabilities",Json::object(),&capabilities);
+      if(!negotiated){reply(negotiated,{});return;}
+      if(capabilities.value("hostServices",Json::object()).value("snapshotOwnerContext","")!="1.0") {
+        reply(Status::error("ERR_UNSUPPORTED_CAPABILITY","runtime lacks native snapshot owner context 1.0"),{});return;
+      }
+    }
     auto s = command(e->native, method.c_str(), payload, &result);
     if(s && (method=="prepareAccountHostServiceSnapshots" || method=="updateHostServiceSnapshots")) {
       auto &snapshots=e->config["hostServices"]["syncValues"];

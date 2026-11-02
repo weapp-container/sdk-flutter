@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "bed83f1ee906c052c2a44205647ada3f511942d7",
-  "review": "Expose optional application/account/native-session snapshot ownership while retaining values-only synchronous updates",
+  "sourceBaseCommit": "afcf4a02c25aa939a5a623331fa75269708a6ae7",
+  "review": "Forward frozen snapshot owner contexts from the public controller and reject old runtimes before contextual desktop snapshot publication.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
