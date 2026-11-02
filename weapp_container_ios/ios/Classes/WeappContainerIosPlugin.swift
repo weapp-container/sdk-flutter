@@ -485,13 +485,23 @@ import UIKit
         case "installNativeDeviceApis":
             guard entry.deviceServices==nil else { throw fail("Native devices already installed") }
             guard let presenter=devicePresenter else { throw fail("A Flutter view controller is required") }
+            let wifiConfiguration: WeappWifiConfiguration?
+            if let raw = args["wifiConfiguration"], !(raw is NSNull) {
+                guard let wifi = raw as? [String: Any],
+                      let connect = wifi["connectToNetworks"] as? Bool,
+                      let read = wifi["readCurrentNetwork"] as? Bool else {
+                    throw fail("wifiConfiguration requires connectToNetworks and readCurrentNetwork booleans")
+                }
+                wifiConfiguration = .init(connectToNetworks: connect, readCurrentNetwork: read)
+            } else { wifiConfiguration = nil }
             let driver=try WeappNativeDeviceServices(presenter:presenter,
                 networkOrigins:(args["allowedNetworkOrigins"] as? [String]) ?? [],
                 allowLoopbackForDevelopment:args["allowLoopbackForDevelopment"] as? Bool == true,
                 enableBluetooth:args["bluetooth"] as? Bool != false,
                 allowedMediaOrigins:(args["allowedMediaOrigins"] as? [String]) ?? [],
                 recordingAudioSession:args["dedicatedAudioSession"] as? Bool == true ? WeappExclusiveRecordingAudioSession() : nil,
-                enableNfc:args["nfc"] as? Bool == true)
+                enableNfc:args["nfc"] as? Bool == true,
+                wifiConfiguration:wifiConfiguration)
             entry.deviceServices=driver
             try driver.install(in:session)
         case "completeAccountCleanup":

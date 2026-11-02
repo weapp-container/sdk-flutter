@@ -197,6 +197,18 @@ the required NFC usage description and entitlements; it defaults to false. SOTER
 attestation providers remain native host configuration and are never injected
 from guest JavaScript.
 
+Android Wi-Fi requires `enableWifi: true` (default false). On iOS, provide
+`wifiConfiguration` with explicit `connectToNetworks` and `readCurrentNetwork`
+booleans; omission installs no Wi-Fi methods. These options survive internal
+owner reconstruction. Signed iOS entitlements, foreground precise location and
+per-application consent remain separate requirements. iOS current-network queries
+require `partialInfo: true` and return real SSID/BSSID; partial connection events
+remain SSID-only. General iOS Wi-Fi scanning is unavailable through public APIs.
+
+In Dart, construct `WeappWifiConfiguration(connectToNetworks: true,
+readCurrentNetwork: true)`. Linux hosts may pass their stable `linuxDesktopId`
+(default empty) for portal identification.
+
 On iOS, `dedicatedAudioSession: true` explicitly reserves AVAudioSession for this
 container recording adapter. The default installs no RecorderManager methods;
 a host sharing audio with other features should install the native SDK with its

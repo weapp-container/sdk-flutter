@@ -67,6 +67,18 @@ typedef WeappHostMethod = FutureOr<Object?> Function(WeappHostCall call);
 typedef WeappAccountCleanup = FutureOr<void> Function(
     String operationId, WeappCancellationToken cancellation);
 
+/// Explicit iOS Wi-Fi capabilities; the OS still verifies signed entitlements.
+class WeappWifiConfiguration {
+  const WeappWifiConfiguration(
+      {required this.connectToNetworks, required this.readCurrentNetwork});
+  final bool connectToNetworks;
+  final bool readCurrentNetwork;
+  Map<String, Object?> toMap() => {
+        'connectToNetworks': connectToNetworks,
+        'readCurrentNetwork': readCurrentNetwork,
+      };
+}
+
 /// Own a session independently of its widget. Explicitly await close() to persist
 /// storage and release native resources. Detaching a widget keeps its JS isolate.
 class WeappContainerController {
@@ -279,6 +291,9 @@ class WeappContainerController {
           bool allowLoopbackForDevelopment = false,
           List<String> allowedMediaOrigins = const [],
           bool nfc = false,
+          bool enableWifi = false,
+          WeappWifiConfiguration? wifiConfiguration,
+          String linuxDesktopId = '',
           bool dedicatedAudioSession = false}) =>
       _invoke<void>('installNativeDeviceApis', {
         'bluetooth': bluetooth,
@@ -286,6 +301,10 @@ class WeappContainerController {
         'allowLoopbackForDevelopment': allowLoopbackForDevelopment,
         'allowedMediaOrigins': List<String>.from(allowedMediaOrigins),
         'nfc': nfc,
+        'enableWifi': enableWifi,
+        if (wifiConfiguration != null)
+          'wifiConfiguration': wifiConfiguration.toMap(),
+        'linuxDesktopId': linuxDesktopId,
         'dedicatedAudioSession': dedicatedAudioSession,
       });
   Future<void> retryAccountCleanup() => _invoke<void>('retryAccountCleanup');

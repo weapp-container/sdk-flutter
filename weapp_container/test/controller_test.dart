@@ -424,6 +424,31 @@ void main() {
   tearDown(() async {
     await platform.source.close();
   });
+  test(
+      'native device install requires explicit Wi-Fi options and forwards Linux identity',
+      () async {
+    final controller = await WeappContainerController.create(storageKey: null);
+    await controller.installNativeDeviceApis();
+    final defaults = platform.requests.last.$2;
+    expect(defaults['enableWifi'], isFalse);
+    expect(defaults.containsKey('wifiConfiguration'), isFalse);
+    expect(defaults['linuxDesktopId'], '');
+    await controller.installNativeDeviceApis(
+        bluetooth: false,
+        nfc: true,
+        enableWifi: true,
+        linuxDesktopId: 'dev.example.Host',
+        wifiConfiguration: const WeappWifiConfiguration(
+            connectToNetworks: true, readCurrentNetwork: false));
+    final explicit = platform.requests.last.$2;
+    expect(explicit['bluetooth'], isFalse);
+    expect(explicit['nfc'], isTrue);
+    expect(explicit['enableWifi'], isTrue);
+    expect(explicit['linuxDesktopId'], 'dev.example.Host');
+    expect(explicit['wifiConfiguration'],
+        {'connectToNetworks': true, 'readCurrentNetwork': false});
+    await controller.close();
+  });
   test('supersession query is read-only and freezes the submitted observation',
       () async {
     final controller = await WeappContainerController.create(

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "3a2f113dc9aac0c27ed217d74f69b76972c7a711",
-  "review": "Retain desktop native owners across pending cleanup, retry account retirement from the native owner tick, block premature owner reconstruction until exact cleanup acknowledgement, mirror the desktop options ABI and forward trusted GeoClue desktop identity; fault-injected registry compilation/run only, no device acceptance.",
+  "sourceBaseCommit": "9a3779f7f10bbf36b8892c4ce4f2e0ecee7f5ae3",
+  "review": "Expose explicit mobile Wi-Fi configuration and Linux desktop identity while preserving existing device options; actual Kotlin Swift and Dart development checks",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "b4b55bcd7b9c83616cd8ba21b2f1d72beb1d31bafd736cbde49256b5866a0fa0",
-      "size": 16164,
+      "sha256": "ecc3c03ffe241d33c1a5d109b3fe8054c1bf604ae9a0b3fb37ad407b7b5b09bb",
+      "size": 16911,
       "mode": "100644"
     },
     {
@@ -286,6 +286,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/evidence/native-wifi-options-development.json",
+      "sha256": "9bf1b13d1934ff9209b0eb559aed83f3241e4d384d69e1469adaaf5e98c192ae",
+      "size": 12301,
+      "mode": "100644"
+    },
+    {
       "path": "tests/prepare-native.test.mjs",
       "sha256": "60f2f132191ccfa31052c4433cea88f5d0df7b645f942b7126c931f029135bb1",
       "size": 10816,
@@ -395,8 +401,8 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "c4c1afe7d029dfbd288f3bab951a6c68ca51461e37c40c123724f47a6d2beeed",
-      "size": 26565,
+      "sha256": "3d2655ebb3d2e878ccafd891c70e60c0dcc612738cea6921f2d435144d256ae8",
+      "size": 27294,
       "mode": "100644"
     },
     {
@@ -431,8 +437,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "ccfb65fe3578850415c68809fa06834bd45ec47983ec1e8c52277eb1916d23b3",
-      "size": 77500,
+      "sha256": "e3325475b9826533d39428bab811c387e2976806c821b1d5a222ebcb89fe4f6b",
+      "size": 78607,
       "mode": "100644"
     },
     {
@@ -545,8 +551,8 @@
     },
     {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "89532956a25f7b2b00423c57d1c2ff68845a8a8511873e823543a186cbad7955",
-      "size": 36171,
+      "sha256": "e0fb11c81b2366c5097b9cfe4bc58e3a7c39d1a987353fc99741757829c53ca8",
+      "size": 36232,
       "mode": "100644"
     },
     {
@@ -605,8 +611,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "91ff1664698e7fd060cbbe157b90c07b510f0fc292005acd22f5a2be3a167722",
-      "size": 57857,
+      "sha256": "b29699c7efd397e9fa3d33ffc1637fcb0e9271c7f7cab8e185984433bc815085",
+      "size": 58516,
       "mode": "100644"
     },
     {

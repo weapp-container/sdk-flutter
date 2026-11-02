@@ -163,7 +163,8 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                     val driver=AndroidNativeDeviceServices(activity, networkOrigins=origins,
                         allowLoopbackForDevelopment=args["allowLoopbackForDevelopment"]==true,
                         enableBluetooth=args["bluetooth"]!=false, permissions=permissionBroker,
-                        enableNfc=args["nfc"]==true)
+                        enableNfc=args["nfc"]==true,
+                        enableWifi=args["enableWifi"]==true)
                     entry.deviceServices=driver
                     driver.install(session)
                 }
