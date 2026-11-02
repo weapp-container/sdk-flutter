@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.vendored_libraries = 'vendor/lib/libweapp_container_desktop.a', 'vendor/lib/libweapp_container_sdk.a'
   s.dependency 'FlutterMacOS'
   s.platform = :osx, '12.0'
-  s.frameworks = 'FlutterMacOS', 'Metal', 'CoreVideo', 'IOSurface', 'AppKit', 'CoreGraphics', 'CoreText', 'CoreFoundation', 'Foundation', 'Security', 'SystemConfiguration', 'IOKit', 'QuartzCore', 'AVFoundation', 'CoreMedia', 'CoreLocation', 'CoreWLAN', 'CoreImage'
+  s.frameworks = 'FlutterMacOS', 'Metal', 'CoreVideo', 'IOSurface', 'AppKit', 'CoreGraphics', 'CoreText', 'CoreFoundation', 'Foundation', 'Security', 'SystemConfiguration', 'IOKit', 'QuartzCore', 'AVFoundation', 'CoreMedia', 'CoreLocation', 'CoreWLAN', 'CoreImage', 'CoreBluetooth', 'Contacts', 'EventKit', 'LocalAuthentication'
   s.libraries = 'c++', 'z', 'iconv', 'resolv'
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',

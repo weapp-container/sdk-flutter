@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "d496657f25f719004b7abd68d549ccf48d92975d",
-  "review": "Align the reviewed Flutter desktop wrapper contract with sdk-desktop 93b108b payment and account cleanup APIs",
+  "sourceBaseCommit": "323409f141de51cd106eeb25c5995abedca65c66",
+  "review": "Add macOS system frameworks required by the reviewed desktop device adapter",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -731,8 +731,8 @@
     },
     {
       "path": "weapp_container_macos/macos/weapp_container_macos.podspec",
-      "sha256": "a87a15c42c904725470ced0a49d995729f8aa4ff45fffb2294e3522af3d07444",
-      "size": 1379,
+      "sha256": "9e034797b13dfe78ba8d956275b61dee79fc7989880ecd9d15a197db7dfc9b18",
+      "size": 1443,
       "mode": "100644"
     },
     {
