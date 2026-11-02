@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "2175b50a375e269c12333e74320746fb1fd5718f",
-  "review": "Align the public desktop capability header with the final preview.6.0 archive.",
+  "sourceBaseCommit": "94786bae0633ac215f23683a463150755101f7e6",
+  "review": "Make the packaged desktop preparation helper self-contained.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -161,8 +161,8 @@
     },
     {
       "path": "native_desktop/prepare.mjs",
-      "sha256": "10c57fcdce8185ac6194c37a407b3b8f3fa98de1c1c95e781fdc07c8d98422df",
-      "size": 6005,
+      "sha256": "366935f448afec3dbb811e355635b403d8b559edf078efa26fa841209b1f3b28",
+      "size": 6170,
       "mode": "100644"
     },
     {

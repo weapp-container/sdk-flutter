@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { SDK_VERSION } from '../tools/runtime-artifacts.mjs';
+// Keep this standalone packaging helper self-contained: package.mjs exports
+// native_desktop without the source checkout's tools/ directory.
+const SDK_VERSION = process.env.WEAPP_CONTAINER_SDK_VERSION ?? '0.1.0-preview.6.0';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
