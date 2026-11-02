@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "74394cbc497f2ba360c388b42f564f9b520eaa92",
-  "review": "Expose gated read-only API resource chunks while preserving exact native call context and account revocation",
+  "sourceBaseCommit": "d496657f25f719004b7abd68d549ccf48d92975d",
+  "review": "Align the reviewed Flutter desktop wrapper contract with sdk-desktop 93b108b payment and account cleanup APIs",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -131,8 +131,8 @@
     },
     {
       "path": "native_desktop/include/weapp/desktop.hpp",
-      "sha256": "2e2db85ab74cec801f9fe6d9f9b5c9ca7d1fee6734226a399ec0679204a91d13",
-      "size": 5828,
+      "sha256": "198fe2fdb358da15b909b4f6f2b7a698c429cb9244996160b6ee287177efadde",
+      "size": 6521,
       "mode": "100644"
     },
     {
