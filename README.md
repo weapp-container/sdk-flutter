@@ -208,6 +208,20 @@ remain SSID-only. General iOS Wi-Fi scanning is unavailable through public APIs.
 In Dart, construct `WeappWifiConfiguration(connectToNetworks: true,
 readCurrentNetwork: true)`. Linux hosts may pass their stable `linuxDesktopId`
 (default empty) for portal identification.
+Linux BLE connections additionally require `linuxBluetoothExclusive: true`
+(default false) and a host deployment that excludes other OS clients from the
+selected BLE devices; BlueZ connects/disconnects devices globally. Without this
+explicit deployment contract, only client-scoped discovery is exposed.
+
+iOS hosts can opt into specific NFC technologies through `nfcConfiguration`:
+`ndef` defaults true; `isoDep`, `mifareUltralight`, `nfcF` and `nfcV` default false.
+Omitting this option keeps NFC disabled unless the existing `nfc: true` selects
+NDEF only. The host needs a signed CoreNFC TAG entitlement, nonempty
+NFCReaderUsageDescription and matching AID/FeliCa Info.plist lists; native reader
+activation verifies actual eligibility. Classic and general NfcA/NfcB raw APIs
+remain unregistered on iOS. Android `nfc: true` enables its actual TagTechnology
+adapters; per-tag support comes from the OS, including chip-dependent Classic.
+Use `WeappNfcConfiguration(...)` in Dart.
 
 On iOS, `dedicatedAudioSession: true` explicitly reserves AVAudioSession for this
 container recording adapter. The default installs no RecorderManager methods;

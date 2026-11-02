@@ -494,6 +494,15 @@ import UIKit
                 }
                 wifiConfiguration = .init(connectToNetworks: connect, readCurrentNetwork: read)
             } else { wifiConfiguration = nil }
+            let nfcConfiguration: WeappNfcConfiguration?
+            if let raw = args["nfcConfiguration"], !(raw is NSNull) {
+                guard let nfc = raw as? [String: Any] else { throw fail("nfcConfiguration must be an object") }
+                func flag(_ key: String, _ fallback: Bool = false) throws -> Bool {
+                    guard let raw = nfc[key] else { return fallback }
+                    guard let value = raw as? Bool else { throw fail("nfcConfiguration.\(key) must be a boolean") }; return value
+                }
+                nfcConfiguration = try .init(ndef: flag("ndef", true), isoDep: flag("isoDep"), mifareUltralight: flag("mifareUltralight"), nfcF: flag("nfcF"), nfcV: flag("nfcV"))
+            } else { nfcConfiguration = nil }
             let driver=try WeappNativeDeviceServices(presenter:presenter,
                 networkOrigins:(args["allowedNetworkOrigins"] as? [String]) ?? [],
                 allowLoopbackForDevelopment:args["allowLoopbackForDevelopment"] as? Bool == true,
@@ -501,7 +510,7 @@ import UIKit
                 allowedMediaOrigins:(args["allowedMediaOrigins"] as? [String]) ?? [],
                 recordingAudioSession:args["dedicatedAudioSession"] as? Bool == true ? WeappExclusiveRecordingAudioSession() : nil,
                 enableNfc:args["nfc"] as? Bool == true,
-                wifiConfiguration:wifiConfiguration)
+                wifiConfiguration:wifiConfiguration, nfcConfiguration:nfcConfiguration)
             entry.deviceServices=driver
             try driver.install(in:session)
         case "completeAccountCleanup":

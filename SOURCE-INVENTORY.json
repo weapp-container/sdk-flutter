@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "9a3779f7f10bbf36b8892c4ce4f2e0ecee7f5ae3",
-  "review": "Expose explicit mobile Wi-Fi configuration and Linux desktop identity while preserving existing device options; actual Kotlin Swift and Dart development checks",
+  "sourceBaseCommit": "373910ee1ff76db60336cc99a892bf0d8f862279",
+  "review": "Expose explicit iOS NFC technology configuration and Linux BLE deployment contract, preserving native owner reconstruction and current verified compilation",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "ecc3c03ffe241d33c1a5d109b3fe8054c1bf604ae9a0b3fb37ad407b7b5b09bb",
-      "size": 16911,
+      "sha256": "51858542fe58814a402d9e05fd27bc787ea84109900dfaf5e937b59616cf81f5",
+      "size": 17890,
       "mode": "100644"
     },
     {
@@ -113,8 +113,8 @@
     },
     {
       "path": "native_desktop/include/native_device_apis.hpp",
-      "sha256": "b92fe4b01f1c68e1eb0f4f26698376a87b1730815fdc14c483479285350d3135",
-      "size": 4870,
+      "sha256": "e78a984d5a7b22f44889005e7162c41aa62ed5f1a87c92189324055404ee7a30",
+      "size": 4957,
       "mode": "100644"
     },
     {
@@ -137,8 +137,8 @@
     },
     {
       "path": "native_desktop/include/weapp/device_apis.hpp",
-      "sha256": "a4248f346a1626928ddd3d6f028fe326c3d6de4ce68856266b98ced174ef8ada",
-      "size": 1619,
+      "sha256": "157068a7fc055c5ec2e76cd9733da95b15d148ddd671cf5b33981edd3e02362f",
+      "size": 1971,
       "mode": "100644"
     },
     {
@@ -286,6 +286,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/evidence/native-nfc-options-development.json",
+      "sha256": "6f73074aab7f0c482f6f7063ff36cd0e97f14ec8bacb38cdf9abebfc0706f63a",
+      "size": 12700,
+      "mode": "100644"
+    },
+    {
       "path": "tests/evidence/native-wifi-options-development.json",
       "sha256": "9bf1b13d1934ff9209b0eb559aed83f3241e4d384d69e1469adaaf5e98c192ae",
       "size": 12301,
@@ -401,8 +407,8 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "3d2655ebb3d2e878ccafd891c70e60c0dcc612738cea6921f2d435144d256ae8",
-      "size": 27294,
+      "sha256": "0c19762554b6205ab8537c3a546b4d4b728bbcda59c2cff507b73c3b0daef93a",
+      "size": 28067,
       "mode": "100644"
     },
     {
@@ -437,8 +443,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "e3325475b9826533d39428bab811c387e2976806c821b1d5a222ebcb89fe4f6b",
-      "size": 78607,
+      "sha256": "b37045cb475b9168c57a56ee94ade617044cf27a734a87de528a23daa770f44c",
+      "size": 79071,
       "mode": "100644"
     },
     {
@@ -611,8 +617,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "b29699c7efd397e9fa3d33ffc1637fcb0e9271c7f7cab8e185984433bc815085",
-      "size": 58516,
+      "sha256": "f6987e6e4500b7b11746b5b278a392b20979e55252fd6ea4537c79820514d585",
+      "size": 59317,
       "mode": "100644"
     },
     {

@@ -432,12 +432,16 @@ void main() {
     final defaults = platform.requests.last.$2;
     expect(defaults['enableWifi'], isFalse);
     expect(defaults.containsKey('wifiConfiguration'), isFalse);
+    expect(defaults.containsKey('nfcConfiguration'), isFalse);
     expect(defaults['linuxDesktopId'], '');
+    expect(defaults['linuxBluetoothExclusive'], isFalse);
     await controller.installNativeDeviceApis(
         bluetooth: false,
         nfc: true,
         enableWifi: true,
         linuxDesktopId: 'dev.example.Host',
+        linuxBluetoothExclusive: true,
+        nfcConfiguration: const WeappNfcConfiguration(isoDep: true, nfcV: true),
         wifiConfiguration: const WeappWifiConfiguration(
             connectToNetworks: true, readCurrentNetwork: false));
     final explicit = platform.requests.last.$2;
@@ -445,6 +449,14 @@ void main() {
     expect(explicit['nfc'], isTrue);
     expect(explicit['enableWifi'], isTrue);
     expect(explicit['linuxDesktopId'], 'dev.example.Host');
+    expect(explicit['linuxBluetoothExclusive'], isTrue);
+    expect(explicit['nfcConfiguration'], {
+      'ndef': true,
+      'isoDep': true,
+      'mifareUltralight': false,
+      'nfcF': false,
+      'nfcV': true
+    });
     expect(explicit['wifiConfiguration'],
         {'connectToNetworks': true, 'readCurrentNetwork': false});
     await controller.close();

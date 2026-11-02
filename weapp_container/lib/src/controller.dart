@@ -79,6 +79,24 @@ class WeappWifiConfiguration {
       };
 }
 
+/// Explicit iOS tag technologies; CoreNFC verifies the signed entitlement.
+class WeappNfcConfiguration {
+  const WeappNfcConfiguration(
+      {this.ndef = true,
+      this.isoDep = false,
+      this.mifareUltralight = false,
+      this.nfcF = false,
+      this.nfcV = false});
+  final bool ndef, isoDep, mifareUltralight, nfcF, nfcV;
+  Map<String, Object?> toMap() => {
+        'ndef': ndef,
+        'isoDep': isoDep,
+        'mifareUltralight': mifareUltralight,
+        'nfcF': nfcF,
+        'nfcV': nfcV
+      };
+}
+
 /// Own a session independently of its widget. Explicitly await close() to persist
 /// storage and release native resources. Detaching a widget keeps its JS isolate.
 class WeappContainerController {
@@ -293,7 +311,9 @@ class WeappContainerController {
           bool nfc = false,
           bool enableWifi = false,
           WeappWifiConfiguration? wifiConfiguration,
+          WeappNfcConfiguration? nfcConfiguration,
           String linuxDesktopId = '',
+          bool linuxBluetoothExclusive = false,
           bool dedicatedAudioSession = false}) =>
       _invoke<void>('installNativeDeviceApis', {
         'bluetooth': bluetooth,
@@ -304,7 +324,10 @@ class WeappContainerController {
         'enableWifi': enableWifi,
         if (wifiConfiguration != null)
           'wifiConfiguration': wifiConfiguration.toMap(),
+        if (nfcConfiguration != null)
+          'nfcConfiguration': nfcConfiguration.toMap(),
         'linuxDesktopId': linuxDesktopId,
+        'linuxBluetoothExclusive': linuxBluetoothExclusive,
         'dedicatedAudioSession': dedicatedAudioSession,
       });
   Future<void> retryAccountCleanup() => _invoke<void>('retryAccountCleanup');
