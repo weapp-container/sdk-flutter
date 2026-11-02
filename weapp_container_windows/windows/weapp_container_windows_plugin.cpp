@@ -1,5 +1,6 @@
 #include "include/weapp_container_windows/weapp_container_windows_plugin.h"
 #include "registry.hpp"
+#include "native_device_apis.hpp"
 #include "native_preview_texture.hpp"
 #include <filesystem>
 #include <flutter/event_channel.h>
@@ -275,6 +276,9 @@ public:
                               status.code + ": " + status.message + "\n")
                                  .c_str());
         });
+    registry_->set_device_api_factory(native_device_api_factory([registrar]() -> void * {
+      auto *view=registrar->GetView();return view ? view->GetNativeWindow() : nullptr;
+    }));
     registry_->set_gpu_preview_factory(
         [registrar](Status& status, std::function<void(Status)> errors) -> std::shared_ptr<Texture> {
           auto* view = registrar->GetView();

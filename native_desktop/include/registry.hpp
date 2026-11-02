@@ -147,6 +147,21 @@ protected:
   std::shared_ptr<PresentationFeedback> feedback_ =
       std::make_shared<PresentationFeedback>();
 };
+// OS adapters are injected so the registry lifecycle tests use the public C
+// transport without linking a platform desktop library.
+class NativeDeviceApis {
+public:
+  virtual ~NativeDeviceApis() = default;
+  virtual Json configuration() const = 0;
+  virtual bool dispatch(const Json &) = 0;
+  virtual Status pump() = 0;
+  virtual Status retire() = 0;
+  virtual Status set_foreground(bool) = 0;
+  virtual Status update_components(const Json &) = 0;
+};
+using DeviceCommand = std::function<Status(const std::string &, const Json &, Json *)>;
+using DeviceFactory = std::function<std::unique_ptr<NativeDeviceApis>(
+    const Json &, const Json &, const std::string &, DeviceCommand, Status &)>;
 class Registry {
 public:
   using Factory = std::function<std::shared_ptr<Texture>(
@@ -163,6 +178,7 @@ public:
   void set_gpu_preview_factory(Factory factory) {
     gpu_factory_ = std::move(factory);
   }
+  void set_device_api_factory(DeviceFactory factory) { device_factory_ = std::move(factory); }
   void invoke(const std::string &, const Json &, Reply);
   void tick();
   void shutdown();
@@ -178,6 +194,12 @@ private:
     bool closing = false, closed = false, retiring = false, foreground = true,
          occluded = false, host_layout_observed = false;
     Json host_chrome, native_chrome, host_surface;
+    std::string account_cleanup;
+    bool account_native_cleanup = false;
+    Json device_options = nullptr;
+    std::unique_ptr<NativeDeviceApis> devices;
+    std::set<std::string> device_snapshot_names;
+    std::string device_session;
     Json load;
     Reply pending_load;
     std::vector<Reply> pending_prepares;
@@ -192,6 +214,7 @@ private:
   std::shared_ptr<Life> life_;
   std::string platform_, root_, epoch_, next_epoch_;
   Factory factory_, gpu_factory_;
+  DeviceFactory device_factory_;
   Emit emit_;
   Schedule schedule_;
   Log log_;
@@ -201,6 +224,9 @@ private:
   std::vector<Reply> initializers_;
   static bool cleanup(const std::shared_ptr<Entry> &, const Log &);
   Status ensure(Entry &);
+  Status prepare_devices(Entry &, bool register_live = false);
+  static Status retire_devices(Entry &);
+  Status refresh_device_owner(Entry &, const Json &);
   Status observe_layout(Entry &, const Metrics &);
   Status foreground(Entry &);
   void load(Entry &, const Json &, Reply);
@@ -208,6 +234,7 @@ private:
   void close(const std::shared_ptr<Entry> &, Reply);
   void finish_close(const std::shared_ptr<Entry> &);
   void settle_epoch();
+  Status prepare_account_cleanup(const std::shared_ptr<Entry> &);
   void drain(const std::shared_ptr<Entry> &);
   void report(int64_t, Status);
 };

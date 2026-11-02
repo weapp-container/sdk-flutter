@@ -283,6 +283,139 @@ Future<void> closeAtomic(
 }
 
 void main() {
+  test(
+      'account cleanup awaits every resource and ignores superseded completion',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final first = Completer<void>(), second = Completer<void>();
+    final cancelled = <String>[];
+    controller.registerAccountCleanupHandler((operation, cancellation) async {
+      unawaited(
+          cancellation.whenCancelled.then((_) => cancelled.add(operation)));
+      if (operation == 'first')
+        await first.future;
+      else
+        await second.future;
+    });
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'first'});
+    await Future<void>.delayed(Duration.zero);
+    expect(
+        platform.requests
+            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        isEmpty);
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'second'});
+    await Future<void>.delayed(Duration.zero);
+    first.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(cancelled, contains('first'));
+    expect(
+        platform.requests
+            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        isEmpty);
+    second.complete();
+    await Future<void>.delayed(Duration.zero);
+    final replies = platform.requests
+        .where((entry) => entry.$1 == 'completeAccountCleanup')
+        .toList();
+    expect(replies, hasLength(1));
+    expect(replies.single.$2['operationId'], 'second');
+    await controller.close();
+    await platform.source.close();
+  });
+  test(
+      'account cleanup failure reports blocked operation after other resources settle',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final resource = Completer<void>();
+    final unregister = controller.registerAccountCleanupHandler(
+        (_, __) => throw StateError('camera retirement failed'));
+    controller.registerAccountCleanupHandler((_, __) => resource.future);
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'cleanup'});
+    await Future<void>.delayed(Duration.zero);
+    expect(
+        platform.requests
+            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        isEmpty);
+    resource.complete();
+    await Future<void>.delayed(Duration.zero);
+    final reply = platform.requests
+        .singleWhere((entry) => entry.$1 == 'completeAccountCleanup');
+    expect((reply.$2['error'] as Map)['message'],
+        contains('camera retirement failed'));
+    unregister();
+    await controller.close();
+    await platform.source.close();
+  });
+  test('close waits for old cleanup then drains resources before native close',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final old = Completer<void>(), retire = Completer<void>();
+    final operations = <String>[], tokens = <WeappCancellationToken>[];
+    controller.registerAccountCleanupHandler((operation, token) {
+      operations.add(operation);
+      tokens.add(token);
+      return operation == 'switch' ? old.future : retire.future;
+    });
+    platform.emit(controller.id,
+        {'type': 'accountCleanupRequired', 'operationId': 'switch'});
+    await Future<void>.delayed(Duration.zero);
+    final closing = controller.close();
+    await Future<void>.delayed(Duration.zero);
+    expect(tokens.single.isCancelled, isTrue);
+    expect(operations, ['switch']);
+    expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
+    old.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(operations, ['switch', 'close:${controller.id}']);
+    expect(
+        platform.requests
+            .where((entry) => entry.$1 == 'completeAccountCleanup'),
+        isEmpty);
+    retire.complete();
+    await closing;
+    expect(
+        platform.requests.where((entry) => entry.$1 == 'close'), hasLength(1));
+    await platform.source.close();
+  });
+  test('failed custom close waits for every resource and remains retryable',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    final pending = Completer<void>();
+    var fail = true;
+    controller.registerAccountCleanupHandler((_, __) {
+      if (fail) throw StateError('device busy');
+    });
+    controller.registerAccountCleanupHandler((_, __) => pending.future);
+    final closing = controller.close();
+    var settled = false;
+    unawaited(closing.then((_) {
+      settled = true;
+    }, onError: (Object _) {
+      settled = true;
+    }));
+    await Future<void>.delayed(Duration.zero);
+    expect(settled, isFalse);
+    pending.complete();
+    await expectLater(closing, throwsStateError);
+    expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
+    await expectLater(controller.state(), throwsStateError);
+    fail = false;
+    await controller.close();
+    expect(controller.isClosed, isTrue);
+    await platform.source.close();
+  });
+
   late FakePlatform platform;
   setUp(() {
     platform = FakePlatform();

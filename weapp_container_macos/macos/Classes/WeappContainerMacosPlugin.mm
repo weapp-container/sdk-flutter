@@ -1,5 +1,6 @@
 #import "WeappContainerMacosPlugin.h"
 #include "registry.hpp"
+#include "native_device_apis.hpp"
 #import <CoreVideo/CoreVideo.h>
 #import <Metal/Metal.h>
 #include <mutex>
@@ -338,6 +339,10 @@ private:
         NSLog(@"WeApp Container deferred cleanup: %s: %s", status.code.c_str(),
               status.message.c_str());
       });
+  plugin->_registry->set_device_api_factory(native_device_api_factory([weak]() -> void * {
+    WeappContainerMacosPlugin *live=weak;
+    return live ? (__bridge void *)live->_hostView : nullptr;
+  }));
   FlutterMethodChannel *methods =
       [FlutterMethodChannel methodChannelWithName:@"dev.weapp.container/methods"
                                   binaryMessenger:registrar.messenger];

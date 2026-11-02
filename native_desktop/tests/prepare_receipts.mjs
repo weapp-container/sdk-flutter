@@ -27,11 +27,21 @@ try {
   const bytes = Buffer.from('isolated archive fixture');
   await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), bytes);
   const sha256 = createHash('sha256').update(bytes).digest('hex');
+  const wrapper = Buffer.from('isolated native device and preview wrapper fixture');
+  const wrapperSha = createHash('sha256').update(wrapper).digest('hex');
+  await writeFile(path.join(native, 'lib/libweapp_container_desktop.a'), wrapper);
+  for (const file of ['weapp/desktop.hpp', 'weapp/device_apis.hpp', 'weapp/native_preview.hpp', 'weapp_container_sdk_gl.h']) {
+    const source = await readFile(path.join(here, '../include', file));
+    for (const directory of [native, helper]) {
+      await mkdir(path.dirname(path.join(directory, 'include', file)), { recursive: true });
+      await writeFile(path.join(directory, 'include', file), source);
+    }
+  }
   const receipt = {
     schemaVersion: 1, sdkVersion: desktopProducerVersion, platform: 'macos-universal',
     sourceCommit: 'a'.repeat(40), sourceDirty: false, status: 'verified',
     native: [{ schemaVersion: 1, abiVersion: 1, sdkVersion: desktopProducerVersion, platform: 'macos', target: 'aarch64-apple-darwin', sourceCommit: 'b'.repeat(40), sourceDirty: false, status: 'built' }],
-    artifacts: [{ file: 'lib/libweapp_container_sdk.a', sha256 }],
+    artifacts: [{ file: 'lib/libweapp_container_sdk.a', sha256 }, {file:'lib/libweapp_container_desktop.a',sha256:wrapperSha}],
   };
   const run = async (value, success) => {
     await writeFile(path.join(native, 'package.json'), JSON.stringify(value));
@@ -47,6 +57,9 @@ try {
   const prepared = JSON.parse(await readFile(path.join(plugin, 'vendor/prepared.json'), 'utf8'));
   assert.equal(prepared.archiveSha256, sha256);
   assert.deepEqual(prepared.packageReceipt, receipt);
+  assert.equal(prepared.wrapperSha256,wrapperSha);
+  assert.ok(prepared.wrapperHeaders['weapp/device_apis.hpp']);
+  await run({...receipt,artifacts:receipt.artifacts.filter(value=>!value.file.includes('desktop.a'))},false);
   for (const part of ['vendor', 'native_shared']) await writeFile(path.join(plugin, part, 'stale'), 'old');
   await run(receipt, true);
   for (const part of ['vendor', 'native_shared']) await assert.rejects(readFile(path.join(plugin, part, 'stale')), { code: 'ENOENT' });
@@ -68,19 +81,9 @@ try {
   // GPU preview preparation binds the separate desktop adapter archive and
   // reviewed native-only headers before replacing any previous installation.
   await writeFile(path.join(native, 'lib/libweapp_container_sdk.a'), bytes);
-  const wrapper = Buffer.from('isolated native preview wrapper fixture');
-  const wrapperSha = createHash('sha256').update(wrapper).digest('hex');
-  await writeFile(path.join(native, 'lib/libweapp_container_desktop.a'), wrapper);
-  for (const file of ['weapp/desktop.hpp', 'weapp/native_preview.hpp', 'weapp_container_sdk_gl.h']) {
-    const source = await readFile(path.join(here, '../include', file));
-    for (const directory of [native, helper]) {
-      await mkdir(path.dirname(path.join(directory, 'include', file)), { recursive: true });
-      await writeFile(path.join(directory, 'include', file), source);
-    }
-  }
   const linux = { ...receipt, platform: 'linux-x64',
     native: [{ ...receipt.native[0], platform: 'linux', target: 'x86_64-unknown-linux-gnu' }],
-    artifacts: [...receipt.artifacts, { file: 'lib/libweapp_container_desktop.a', sha256: wrapperSha }] };
+    artifacts: receipt.artifacts };
   const runLinux = async (value, success) => {
     await writeFile(path.join(native, 'package.json'), JSON.stringify(value));
     const result = spawnSync(process.execPath, [path.join(helper, 'prepare.mjs'), '--target', 'linux', '--from', native], { encoding: 'utf8' });
@@ -92,7 +95,7 @@ try {
   assert.equal(preparedLinux.wrapperSha256, wrapperSha);
   assert.equal(preparedLinux.wrapperArchive, 'libweapp_container_desktop.a');
   assert.deepEqual(await readFile(path.join(linuxPlugin, 'lib/libweapp_container_desktop.a')), wrapper);
-  await runLinux({ ...linux, artifacts: receipt.artifacts }, false);
+  await runLinux({ ...linux, artifacts: receipt.artifacts.filter(value=>!value.file.includes('desktop.a')) }, false);
   await writeFile(path.join(native, 'lib/libweapp_container_desktop.a'), 'tampered preview adapter');
   await runLinux(linux, false);
   assert.deepEqual(await readFile(path.join(linuxPlugin, 'lib/libweapp_container_desktop.a')), wrapper);

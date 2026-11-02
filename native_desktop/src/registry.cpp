@@ -318,6 +318,8 @@ Status Metrics::parse(const Json &a, Metrics &out) {
   }
 }
 Registry::Entry::~Entry() {
+  if (devices) devices->retire();
+  devices.reset();
   if (native) {
     Buffer b;
     weapp_container_sdk_session_destroy(&native, &b.value);
@@ -356,6 +358,61 @@ Status Registry::observe_layout(Entry &e, const Metrics &metrics) {
   if (status) e.host_layout_observed = true;
   return status;
 }
+Status Registry::retire_devices(Entry &e) {
+  if(!e.devices)return {};
+  auto status=e.devices->retire();
+  if(status){e.devices.reset();e.device_session.clear();}
+  return status;
+}
+Status Registry::prepare_devices(Entry &e,bool register_live) {
+  if(e.devices || e.device_options.is_null())return {};
+  if(!device_factory_)return Status::error("ERR_UNSUPPORTED_CAPABILITY","native device adapters are not installed in this platform plugin");
+  if(!e.config.contains("hostServices"))return Status::error("ERR_HOST_SERVICES","native devices require trusted host services configuration");
+  try {
+    Status status;
+    auto driver=device_factory_(e.config.at("hostServices"),e.device_options,root_,[&e](const std::string &operation,const Json &payload,Json *output){
+      if(!e.native || e.closing || e.closed)return Status::error("ERR_CANCELLED","native device owner retired");
+      return command(e.native,operation.c_str(),payload,output);
+    },status);
+    if(!status || !driver)return status ? Status::error("ERR_NATIVE_DEVICES","native device driver is unavailable") : status;
+    auto native=driver->configuration();
+    if(!native.is_object() || !native.value("apis",Json()).is_array() || !native.value("syncValues",Json()).is_object())
+      return Status::error("ERR_NATIVE_DEVICES","native device configuration is malformed");
+    auto &trusted=e.config["hostServices"];
+    if(!trusted.contains("apis"))trusted["apis"]=Json::array();
+    if(!trusted.contains("syncValues"))trusted["syncValues"]=Json::object();
+    for(const auto &name:e.device_snapshot_names)trusted["syncValues"].erase(name);
+    e.device_snapshot_names.clear();
+    for(const auto &api:native["apis"]) {
+      if(!api.is_string())return Status::error("ERR_NATIVE_DEVICES","native API name must be a string");
+      if(std::find(trusted["apis"].begin(),trusted["apis"].end(),api)==trusted["apis"].end())trusted["apis"].push_back(api);
+    }
+    for(auto value=native["syncValues"].begin();value!=native["syncValues"].end();++value) {
+      trusted["syncValues"][value.key()]=value.value();e.device_snapshot_names.insert(value.key());
+    }
+    if(register_live && !native["syncValues"].empty()) {
+      status=command(e.native,"updateHostServiceSnapshots",{{"values",native["syncValues"]}});if(!status)return status;
+    }
+    e.devices=std::move(driver);return {};
+  }catch(const std::exception &error){return Status::error("ERR_NATIVE_DEVICES",error.what());}
+}
+Status Registry::refresh_device_owner(Entry &e,const Json &state) {
+  if(e.device_options.is_null())return {};
+  const auto switch_state=state.value("accountSwitch",Json());
+  const bool awaiting=state.value("status","")=="identitySwitching" && switch_state.is_object() && switch_state.value("phase","")=="awaitingPresentation";
+  if(state.value("status","")!="ready" && !awaiting)return {};
+  const auto incarnation=state.value("sessionId",Json());
+  if(!incarnation.is_string())return {}; // older-runtime preflight fails before host service installation
+  if(e.device_session==incarnation.get<std::string>() && e.devices)return {};
+  auto status=retire_devices(e);if(!status)return status;
+  const auto trusted=state.value("hostServicesState",Json());
+  if(!trusted.is_object())return Status::error("ERR_PROTOCOL_VERSION","runtime omitted accepted host services identity");
+  e.config["hostServices"]["application"]=trusted.at("application");
+  e.config["hostServices"]["account"]=trusted.at("account");
+  status=prepare_devices(e,true);
+  if(status)e.device_session=incarnation.get<std::string>();
+  return status;
+}
 Status Registry::ensure(Entry &e) {
   if (e.native) {
     return e.config.contains("hostLayout") && !e.host_layout_observed ? observe_layout(e, e.metrics) : Status{};
@@ -367,6 +424,7 @@ Status Registry::ensure(Entry &e) {
   display.erase("windowWidth");
   display.erase("windowHeight");
   Json config = e.config;
+  if(!e.device_options.is_null())config["managedFilesRoot"]=root_;
   config["engine"] = "quickjs";
   config["host"] = {{"kind", "desktop"},
                     {"platform", platform_},
@@ -380,6 +438,18 @@ Status Registry::ensure(Entry &e) {
       &b.value));
   if (!result)
     return result;
+  if(e.config.contains("hostServices")) {
+    Json capabilities;
+    result=command(e.native,"capabilities",Json::object(),&capabilities);
+    if(!result) return result;
+    if(capabilities.value("hostServices",Json::object()).value("protocolVersion","")!="1.0")
+      return Status::error("ERR_PROTOCOL_VERSION","Runtime does not support host services protocol 1.0");
+  }
+  if(!e.device_options.is_null()) {
+    result=prepare_devices(e);
+    if(result)result=command(e.native,"configureHostServices",e.config.at("hostServices"));
+    if(!result)return result;
+  }
   for (auto &method : e.methods)
     if (auto s = command(e.native, "registerHostMethod", {{"name", method}});
         !s)
@@ -401,6 +471,7 @@ Status Registry::ensure(Entry &e) {
 }
 Status Registry::foreground(Entry &e) {
   bool visible = e.foreground && bool(e.texture) && !e.retiring;
+  if(e.devices){auto status=e.devices->set_foreground(visible);if(!status)return status;}
   if (e.texture) {
     auto shown = e.texture->set_visible(visible && !e.occluded);
     if (!shown)
@@ -434,10 +505,18 @@ void Registry::load(Entry &e, const Json &a, Reply reply) {
     s = e.texture->suspend(e.native);
   }
   if (s) {
-    s = command(e.native, "load", a);
+    s = retire_devices(e);
+    if(s)s = command(e.native, "load", a);
     Json state;
     auto observed = command(e.native, "state", Json::object(), &state);
     if (observed && state.value("status", "") == "ready") {
+      if(state.value("hostServicesState",Json()).is_object()) {
+        const auto &trusted=state["hostServicesState"];
+        e.config["hostServices"]["application"]=trusted.at("application");
+        e.config["hostServices"]["account"]=trusted.at("account");
+      }
+      auto devices=prepare_devices(e,true);if(s&&!devices)s=devices;
+      if(state.value("sessionId",Json()).is_string())e.device_session=state.at("sessionId").get<std::string>();
       if (s && state.contains("hostChrome") &&
           state["hostChrome"].is_object()) {
         e.host_chrome = state["hostChrome"];
@@ -527,6 +606,8 @@ void Registry::close(const std::shared_ptr<Entry> &e, Reply reply) {
       return;
     }
   }
+  auto device_status=retire_devices(*e);
+  if(!device_status){auto replies=std::exchange(e->closes,{});for(auto &r:replies)r(device_status,{});return;}
   e->closing = true;
   e->close_status = {};
   Json result;
@@ -587,6 +668,21 @@ void Registry::settle_epoch() {
   for (auto &r : replies)
     r(result, nullptr);
 }
+Status Registry::prepare_account_cleanup(const std::shared_ptr<Entry> &e) {
+  if (e->account_cleanup.empty()) return Status::error("ERR_ACCOUNT_CLEANUP","No account cleanup is pending");
+  if (!e->account_native_cleanup) {
+    if(auto status=retire_devices(*e);!status)return status;
+    if (e->texture) {
+      e->texture->invalidate_presentation();
+      auto status=e->texture->suspend(e->native);
+      if(!status) return status;
+    }
+    e->host_surface=nullptr; e->host_layout_observed=false; e->host_chrome=nullptr;
+    e->account_native_cleanup=true;
+  }
+  if(emit_) emit_({{"id",e->id},{"event",{{"type","accountCleanupRequired"},{"operationId",e->account_cleanup}}}});
+  return {};
+}
 void Registry::drain(const std::shared_ptr<Entry> &e) {
   if (!e->native)
     return;
@@ -598,6 +694,27 @@ void Registry::drain(const std::shared_ptr<Entry> &e) {
   }
   for (auto &event : events) {
     auto type = event.value("type", "");
+    if (type == "accountSwitch") {
+      if (event.contains("account") && event["account"].is_object())
+        e->config["hostServices"]["account"] = event["account"];
+      if(event.contains("syncValues") && event["syncValues"].is_object())
+        e->config["hostServices"]["syncValues"]=event["syncValues"];
+      auto phase = event.value("receipt", Json::object()).value("phase", "");
+      if (phase == "revoking") {
+        e->account_cleanup=event.at("receipt").at("operationId").get<std::string>();
+        e->account_native_cleanup=false;
+        report(e->id,prepare_account_cleanup(e));
+      } else if (phase == "awaitingPresentation") {
+        Json owner_state;auto status=command(e->native,"state",Json::object(),&owner_state);
+        if(status)status=refresh_device_owner(*e,owner_state);
+        report(e->id,status);
+        if(status&&e->texture)report(e->id, e->texture->resume(e->native));
+      }
+    }
+    if(e->devices && (type=="hostCall" || type=="hostCallCancelled")) {
+      try{if(e->devices->dispatch(event))continue;}
+      catch(const std::exception &error){report(e->id,Status::error("ERR_NATIVE_DEVICES",error.what()));}
+    }
     if (type == "storageFlushed") {
       auto ticket = event.value("ticket", uint64_t(0));
       auto found = e->flushes.find(ticket);
@@ -659,10 +776,21 @@ void Registry::tick() {
         }
       }
     }
+    if(!e->device_options.is_null()) {
+      Json owner_state;auto status=command(e->native,"state",Json::object(),&owner_state);
+      if(status)status=refresh_device_owner(*e,owner_state);
+      report(e->id,status);
+    }
+    if(e->devices) {
+      Json components;auto status=command(e->native,"hostComponents",Json::object(),&components);
+      if(status)status=e->devices->update_components(components);
+      if(status)status=e->devices->pump();
+      report(e->id,status);
+    }
     report(e->id, command(e->native, "pump"));
     Json state;
     if (command(e->native, "state", Json::object(), &state) &&
-        state.value("status", "") == "ready" && e->texture && !e->retiring &&
+        state.value("presentationEnabled", false) && e->texture && !e->retiring &&
         e->foreground && !e->occluded &&
         state.value("chromeGeometryReady", true))
       report(e->id,
@@ -844,6 +972,11 @@ void Registry::invoke(const std::string &method, const Json &args,
         }
       }
       if (status) status = command(e->native, operation.c_str(), body, &result);
+      if (operation == "applyDevPackAttempt" && !e->device_options.is_null()) {
+        Json accepted;auto observed=command(e->native,"state",Json::object(),&accepted);
+        if(observed)observed=refresh_device_owner(*e,accepted);
+        if(status && !observed)status=observed;
+      }
       if (operation == "applyDevPackAttempt") {
         auto lifecycle = foreground(*e);
         if (status && !lifecycle) status = lifecycle;
@@ -944,6 +1077,8 @@ void Registry::invoke(const std::string &method, const Json &args,
         Json state;
         s = command(e->native, "state", Json::object(), &state);
         if (s && state.value("status", "") == "empty") {
+          s=retire_devices(*e);
+          if(!s){reply(s,{});return;}
           Buffer buffer;
           s = buffer.read(
               weapp_container_sdk_session_destroy(&e->native, &buffer.value));
@@ -1125,6 +1260,60 @@ void Registry::invoke(const std::string &method, const Json &args,
       reply(s, nullptr);
       return;
     }
+    if (method == "completeAccountCleanup") {
+      const auto operation=args.at("operationId").get<std::string>();
+      if(operation!=e->account_cleanup || !e->account_native_cleanup) { reply(Status::error("ERR_ACCOUNT_CLEANUP","Stale or incomplete native cleanup"),{}); return; }
+      if(args.contains("error")) {
+        report(e->id,Status::error("ERR_ACCOUNT_CLEANUP",args.at("error").value("message","Account cleanup failed")));
+        reply({},nullptr); return;
+      }
+      auto status=command(e->native,"acknowledgeAccountCleanup",{{"operationId",operation}});
+      if(status) {
+        e->account_cleanup.clear();
+        if(e->config.contains("hostLayout")) status=observe_layout(*e,e->metrics);
+      }
+      reply(status,nullptr); return;
+    }
+    if (method == "retryAccountCleanup") { reply(prepare_account_cleanup(e),nullptr); return; }
+    if (method == "installNativeDeviceApis") {
+      if(e->devices){reply(Status::error("ERR_BUSY","native devices are already installed for this owner"),{});return;}
+      if(!e->config.contains("hostServices")){reply(Status::error("ERR_HOST_SERVICES","configure trusted host services before native devices"),{});return;}
+      if(!device_factory_){reply(Status::error("ERR_UNSUPPORTED_CAPABILITY","native device adapter is unavailable"),{});return;}
+      if(payload.contains("allowedNetworkOrigins")) {
+        const auto &origins=payload.at("allowedNetworkOrigins");
+        if(!origins.is_array() || origins.size()>128){reply(Status::error("ERR_INVALID_ARGUMENT","allowedNetworkOrigins must be a bounded list"),{});return;}
+        for(const auto &origin:origins)if(!origin.is_string() || origin.get<std::string>().size()>2048){reply(Status::error("ERR_INVALID_ARGUMENT","network origin must be a bounded string"),{});return;}
+      }
+      e->device_options=payload;
+      auto status=e->native?prepare_devices(*e):Status{};
+      if(status && e->native)status=command(e->native,"configureHostServices",e->config.at("hostServices"));
+      reply(status,nullptr);return;
+    }
+    if (method == "configureHostServices") {
+      Status status;
+      if(e->native) {
+        Json capabilities;
+        status=command(e->native,"capabilities",Json::object(),&capabilities);
+        if(status && capabilities.value("hostServices",Json::object()).value("protocolVersion","")!="1.0")
+          status=Status::error("ERR_PROTOCOL_VERSION","Runtime does not support host services protocol 1.0");
+        if(status) status=command(e->native,"configureHostServices",payload);
+      }
+      if (status) e->config["hostServices"] = payload;
+      reply(status, nullptr);
+      return;
+    }
+    if (method == "registerApiHandler") {
+      if (!e->config.contains("hostServices")) { reply(Status::error("ERR_INVALID_ARGUMENT","configure trusted host services first"),{}); return; }
+      auto status = e->native ? command(e->native, "registerApiHandler", payload) : Status{};
+      if (status) {
+        auto &apis=e->config["hostServices"]["apis"];
+        if(apis.is_null()) apis=Json::array();
+        const auto name=args.at("name").get<std::string>();
+        if(std::find(apis.begin(),apis.end(),Json(name))==apis.end()) apis.push_back(name);
+      }
+      reply(status,nullptr);
+      return;
+    }
     if (method == "setForeground") {
       e->foreground = args.at("foreground").get<bool>();
       reply(foreground(*e), nullptr);
@@ -1143,8 +1332,12 @@ void Registry::invoke(const std::string &method, const Json &args,
     }
     static const std::set<std::string> allowed = {
         "navigate",     "back",         "switchTab",        "sendMessage",
-        "state",        "capabilities", "completeHostCall", "input",
-        "flushStorage", "devState",     "clearDevStorage"};
+        "state",        "capabilities", "hostComponents", "completeHostCall", "input",
+        "flushStorage", "devState",     "clearDevStorage",
+        "hostApiEvent", "hostComponentFrame", "hostComponentEvent", "authorizePhoneButton", "prepareAccountHostServiceSnapshots", "updateHostServiceSnapshots", "switchAccount", "queryAccountSwitch",
+        "updateAccountSwitchLaunch", "retryAccountSwitch", "cancelAccountSwitch",
+        "createHostBinary", "readHostBinary", "retainHostBinary", "releaseHostBinary",
+        "authorizeInstalledPack", "migrateLegacyStorage", "deleteAccountData"};
     if (!allowed.count(method)) {
       reply(Status::error("ERR_UNSUPPORTED",
                           "unknown desktop plugin method: " + method),
@@ -1153,6 +1346,11 @@ void Registry::invoke(const std::string &method, const Json &args,
     }
     Json result;
     auto s = command(e->native, method.c_str(), payload, &result);
+    if(s && (method=="prepareAccountHostServiceSnapshots" || method=="updateHostServiceSnapshots")) {
+      auto &snapshots=e->config["hostServices"]["syncValues"];
+      if(snapshots.is_null()) snapshots=Json::object();
+      snapshots.update(payload.at("values"));
+    }
     if (s && method == "capabilities") s = prepared_restart_capabilities(result);
     if (s && method == "clearDevStorage") {
       s = command(e->native, "flushStorage", Json::object(), &result);
@@ -1167,10 +1365,7 @@ void Registry::invoke(const std::string &method, const Json &args,
           std::move(reply));
       return;
     }
-    reply(s,
-          method == "state" || method == "capabilities" || method == "devState"
-              ? result
-              : Json());
+    reply(s,result);
   } catch (const std::exception &error) {
     reply(Status::error("ERR_INVALID_ARGUMENT", error.what()), {});
   }
@@ -1178,6 +1373,7 @@ void Registry::invoke(const std::string &method, const Json &args,
 bool Registry::cleanup(const std::shared_ptr<Entry> &e, const Log &log) {
   if (e->retiring)
     return false;
+  if(auto status=retire_devices(*e);!status){log(status);return false;}
   if (e->texture) {
     e->texture->invalidate_presentation();
     auto status = e->texture->suspend(e->native);

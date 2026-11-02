@@ -13,12 +13,18 @@ class WeappContainerEvent {
 }
 
 class WeappHostError implements Exception {
-  const WeappHostError(this.code, this.message, {this.retryable = false});
+  const WeappHostError(this.code, this.message,
+      {this.retryable = false, this.details = const {}});
   final String code;
   final String message;
   final bool retryable;
-  Map<String, Object?> toMap() =>
-      {'code': code, 'message': message, 'retryable': retryable};
+  final Map<String, Object?> details;
+  Map<String, Object?> toMap() => {
+        'code': code,
+        'message': message,
+        'retryable': retryable,
+        'details': details
+      };
 }
 
 class WeappCancellationToken {
@@ -40,16 +46,26 @@ class WeappCancellationToken {
 }
 
 class WeappHostCall {
-  WeappHostCall._(
-      this.id, this.method, this.payload, this.deadlineNs, this.cancellation);
+  WeappHostCall._(this.id, this.method, this.payload, this.deadlineNsDecimal,
+      this.cancellation, this.context, this.cancelToken);
   final String id;
   final String method;
   final Object? payload;
-  final int? deadlineNs;
+
+  /// Exact unsigned native monotonic deadline.
+  final String? deadlineNsDecimal;
+  int? get deadlineNs =>
+      deadlineNsDecimal == null ? null : int.tryParse(deadlineNsDecimal!);
   final WeappCancellationToken cancellation;
+
+  /// Original native call identity survives transport ID remapping.
+  final Map<String, Object?>? context;
+  final String? cancelToken;
 }
 
 typedef WeappHostMethod = FutureOr<Object?> Function(WeappHostCall call);
+typedef WeappAccountCleanup = FutureOr<void> Function(
+    String operationId, WeappCancellationToken cancellation);
 
 /// Own a session independently of its widget. Explicitly await close() to persist
 /// storage and release native resources. Detaching a widget keeps its JS isolate.
@@ -81,8 +97,23 @@ class WeappContainerController {
       }
       if (event.type == 'hostCall') {
         unawaited(_hostCall(event.fields));
+      } else if (event.type == 'accountCleanupRequired') {
+        if (!_closeRequested) {
+          final task = _cleanupAccount(event.fields['operationId'] as String);
+          _cleanupTasks.add(task);
+          unawaited(task.whenComplete(() => _cleanupTasks.remove(task)));
+        }
       } else if (event.type == 'hostCallCancelled') {
         _calls.remove(event.fields['callId'])?.cancellation._cancel();
+      } else if (event.type == 'accountSwitch' &&
+          (event.fields['receipt'] as Map?)?['phase'] == 'revoking') {
+        _cleanupCancellation?._cancel();
+        for (final call in _calls.values) {
+          call.cancellation._cancel();
+        }
+        _calls.clear();
+        _acceptedHostLayout = null;
+        _pendingHostLayout = null;
       }
       _events.add(event);
     }, onError: _events.addError);
@@ -142,7 +173,11 @@ class WeappContainerController {
   final WeappContainerPlatform _platform;
   final _events = StreamController<WeappContainerEvent>.broadcast();
   final _methods = <String, WeappHostMethod>{};
+  final _apiHandlers = <String, WeappHostMethod>{};
   final _calls = <String, WeappHostCall>{};
+  final _cleanupHandlers = <WeappAccountCleanup>{};
+  final _cleanupTasks = <Future<void>>{};
+  WeappCancellationToken? _cleanupCancellation;
   late final StreamSubscription<Map<String, Object?>> _subscription;
   Future<void>? _closing;
   bool _closeRequested = false;
@@ -171,7 +206,7 @@ class WeappContainerController {
 
   Future<T?> _invoke<T>(String method,
       [Map<String, Object?> arguments = const {}]) {
-    if (_closed || _closing != null)
+    if (_closed || _closeRequested)
       return Future.error(StateError('Session is closing or closed'));
     return _platform.invoke<T>(method, {'id': id, ...arguments});
   }
@@ -184,6 +219,122 @@ class WeappContainerController {
     await _invoke<void>('registerHostMethod', {'name': name});
     _methods[name] = method;
   }
+
+  Future<void> configureHostServices(Map<String, Object?> configuration) async {
+    if (_loadRequested)
+      throw StateError('Configure trusted host services before load');
+    await _invoke<void>('configureHostServices', _layoutCopy(configuration));
+  }
+
+  Future<void> registerApiHandler(String name, WeappHostMethod handler) async {
+    if (_loadRequested) throw StateError('Register API handlers before load');
+    if (_apiHandlers.containsKey(name))
+      throw ArgumentError.value(name, 'name', 'Already registered');
+    await _invoke<void>('registerApiHandler', {'name': name});
+    _apiHandlers[name] = handler;
+  }
+
+  /// Register cleanup for custom resources; failure leaves account startup blocked.
+  void Function() registerAccountCleanupHandler(WeappAccountCleanup handler) {
+    if (_closed || _closeRequested)
+      throw StateError('Session is closing or closed');
+    _cleanupHandlers.add(handler);
+    return () => _cleanupHandlers.remove(handler);
+  }
+
+  Future<void> _cleanupAccount(String operationId) async {
+    _cleanupCancellation?._cancel();
+    final cancellation = WeappCancellationToken();
+    _cleanupCancellation = cancellation;
+    Object? failure;
+    await Future.wait(_cleanupHandlers.toList().map((handler) async {
+      try {
+        await handler(operationId, cancellation);
+      } catch (error) {
+        failure ??= error;
+      }
+    }));
+    if (cancellation.isCancelled || _closed || _closeRequested) return;
+    try {
+      await _invoke<void>('completeAccountCleanup', {
+        'operationId': operationId,
+        if (failure != null)
+          'error': {
+            'code': 'ERR_ACCOUNT_CLEANUP',
+            'message': failure.toString()
+          }
+      });
+    } catch (error, stack) {
+      if (!_closed && !_closeRequested) _events.addError(error, stack);
+    } finally {
+      if (identical(_cleanupCancellation, cancellation))
+        _cleanupCancellation = null;
+    }
+  }
+
+  /// Install OS-backed adapters; native permissions remain separately authorized.
+  Future<void> installNativeDeviceApis(
+          {bool bluetooth = true,
+          List<String> allowedNetworkOrigins = const []}) =>
+      _invoke<void>('installNativeDeviceApis', {
+        'bluetooth': bluetooth,
+        'allowedNetworkOrigins': List<String>.from(allowedNetworkOrigins)
+      });
+  Future<void> retryAccountCleanup() => _invoke<void>('retryAccountCleanup');
+  Future<List<Object?>> hostComponents() async =>
+      List<Object?>.from((await _invoke<List>('hostComponents'))!);
+  Future<void> authorizeInstalledPack(Map<String, Object?> application) =>
+      _invoke<void>('authorizeInstalledPack', _layoutCopy(application));
+  Future<void> migrateLegacyStorage(String sourceKey) =>
+      _invoke<void>('migrateLegacyStorage', {'sourceKey': sourceKey});
+  Future<Map<String, Object?>> deleteAccountData(String principalId) async =>
+      Map<String, Object?>.from((await _invoke<Map>(
+          'deleteAccountData', {'principalId': principalId}))!);
+  Future<void> emitHostApiEvent(Map<String, Object?> event) =>
+      _invoke<void>('hostApiEvent', _layoutCopy(event));
+  Future<Map<String, Object?>> submitHostComponentFrame(
+          Map<String, Object?> frame) async =>
+      Map<String, Object?>.from(
+          (await _invoke<Map>('hostComponentFrame', frame))!);
+  Future<void> emitHostComponentEvent(Map<String, Object?> event) =>
+      _invoke<void>('hostComponentEvent', _layoutCopy(event));
+  Future<void> authorizePhoneButton(String nodeId) =>
+      _invoke<void>('authorizePhoneButton', {'nodeId': nodeId});
+  Future<void> prepareAccountHostServiceSnapshots(
+          String operationId, Map<String, Object?> values) =>
+      _invoke<void>('prepareAccountHostServiceSnapshots',
+          {'operationId': operationId, 'values': _layoutCopy(values)});
+  Future<void> updateHostServiceSnapshots(Map<String, Object?> values) =>
+      _invoke<void>(
+          'updateHostServiceSnapshots', {'values': _layoutCopy(values)});
+  Future<Map<String, Object?>> switchAccount(Map<String, Object?> account,
+          {Map<String, Object?> launches = const {}}) async =>
+      Map<String, Object?>.from((await _invoke<Map>(
+          'switchAccount', {'account': account, 'launches': launches}))!);
+  Future<Map<String, Object?>?> queryAccountSwitch(
+      {String? operationId}) async {
+    final value = await _invoke<Map>('queryAccountSwitch',
+        {if (operationId != null) 'operationId': operationId});
+    return value == null ? null : Map<String, Object?>.from(value);
+  }
+
+  Future<void> updateAccountSwitchLaunch(Map<String, Object?> options) =>
+      _invoke<void>('updateAccountSwitchLaunch', {'options': options});
+  Future<void> retryAccountSwitch({Map<String, Object?> options = const {}}) =>
+      _invoke<void>('retryAccountSwitch', {'options': options});
+  Future<void> cancelAccountSwitch(String operationId) =>
+      _invoke<void>('cancelAccountSwitch', {'operationId': operationId});
+  Future<Map<String, Object?>> createHostBinary(List<int> bytes) async =>
+      Map<String, Object?>.from(
+          (await _invoke<Map>('createHostBinary', {'bytes': bytes}))!);
+  Future<List<int>> readHostBinary(String handle,
+          {int offset = 0, required int length}) async =>
+      List<int>.from((await _invoke<List>('readHostBinary',
+          {'id': handle, 'offset': offset, 'length': length}))!);
+  Future<void> retainHostBinary(String handle) =>
+      _invoke<void>('retainHostBinary', {'id': handle});
+  Future<void> releaseHostBinary(String handle) =>
+      _invoke<void>('releaseHostBinary', {'id': handle});
 
   Future<void> load(String packPath,
       {String? route,
@@ -375,6 +526,11 @@ class WeappContainerController {
     if (_closed) return Future.value();
     if (!_closeRequested) {
       _closeRequested = true;
+      _cleanupCancellation?._cancel();
+      for (final call in _calls.values) {
+        call.cancellation._cancel();
+      }
+      _calls.clear();
       final listeners = _closeListeners.toList();
       _closeListeners.clear();
       for (final listener in listeners) {
@@ -386,8 +542,22 @@ class WeappContainerController {
 
   Future<void> _close() async {
     try {
+      if (_cleanupTasks.isNotEmpty) await Future.wait(_cleanupTasks.toList());
+      if (_cleanupHandlers.isNotEmpty) {
+        final cancellation = WeappCancellationToken();
+        Object? failure;
+        await Future.wait(_cleanupHandlers.toList().map((handler) async {
+          try {
+            await handler('close:$id', cancellation);
+          } catch (error) {
+            failure ??= error;
+          }
+        }));
+        if (failure != null) throw failure!;
+      }
       await _platform.invoke<void>('close', {'id': id});
       _closed = true;
+      _cleanupHandlers.clear();
       for (final call in _calls.values) {
         call.cancellation._cancel();
       }
@@ -406,12 +576,17 @@ class WeappContainerController {
         callId,
         event['method'] as String,
         event['payload'],
-        (event['deadlineNs'] as num?)?.toInt(),
-        WeappCancellationToken());
+        event['deadlineNs']?.toString(),
+        WeappCancellationToken(),
+        event['context'] is Map
+            ? Map<String, Object?>.unmodifiable(
+                _layoutCopy(event['context'] as Map))
+            : null,
+        event['cancelToken'] as String?);
     _calls[callId] = call;
     Map<String, Object?> completion;
     try {
-      final method = _methods[call.method];
+      final method = _apiHandlers[call.method] ?? _methods[call.method];
       if (method == null)
         throw const WeappHostError(
             'unsupported', 'Host method is not registered');
@@ -422,10 +597,13 @@ class WeappContainerController {
           : WeappHostError('invalid_request', error.toString());
       completion = {'error': failure.toMap()};
     }
-    if (_calls.remove(callId) != call ||
+    if (_calls[callId] != call ||
         call.cancellation.isCancelled ||
         _closed ||
         _closing != null) return;
+    final retained = event['retainUntilCancelled'] == true &&
+        completion.containsKey('result');
+    if (!retained) _calls.remove(callId);
     try {
       await _invoke<void>(
           'completeHostCall', {'callId': callId, ...completion});
@@ -433,6 +611,7 @@ class WeappContainerController {
       // Native cancellation can win after the Dart handler has completed.
       if (error.code != 'cancelled' &&
           error.code != 'ERR_STALE_CALL' &&
+          error.code != 'ERR_IDENTITY_SWITCHING' &&
           !_closed) _events.addError(error, stack);
     } catch (error, stack) {
       if (!_closed) _events.addError(error, stack);

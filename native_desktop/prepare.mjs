@@ -38,17 +38,17 @@ const headerSha256 = createHash('sha256').update(headerBytes).digest('hex');
 // checkout is compiled while preparing a consumer.
 let wrapperBytes, wrapperArchive, wrapperSha256;
 const wrapperHeaders = new Map();
-if (target !== 'macos') {
+{
   wrapperArchive = target === 'windows' ? 'weapp_container_desktop.lib' : 'libweapp_container_desktop.a';
   const file = `lib/${wrapperArchive}`;
   const artifact = receipt.artifacts?.find(value => value.file === file);
   wrapperBytes = await readFile(path.join(native, file));
   wrapperSha256 = createHash('sha256').update(wrapperBytes).digest('hex');
-  if (!artifact || artifact.sha256 !== wrapperSha256) throw new Error('Native preview wrapper archive SHA256 does not match the package receipt');
-  for (const file of ['weapp/desktop.hpp', 'weapp/native_preview.hpp', 'weapp_container_sdk_gl.h']) {
+  if (!artifact || artifact.sha256 !== wrapperSha256) throw new Error('Native device/preview wrapper archive SHA256 does not match the package receipt');
+  for (const file of ['weapp/desktop.hpp', 'weapp/device_apis.hpp', 'weapp/native_preview.hpp', 'weapp_container_sdk_gl.h']) {
     const bytes = await readFile(path.join(native, 'include', file));
     const expected = await readFile(path.join(here, 'include', file));
-    if (!bytes.equals(expected)) throw new Error(`Installed native preview header differs from the reviewed contract: ${file}`);
+    if (!bytes.equals(expected)) throw new Error(`Installed native device/preview header differs from the reviewed contract: ${file}`);
     wrapperHeaders.set(file, bytes);
   }
 }

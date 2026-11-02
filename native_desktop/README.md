@@ -14,13 +14,13 @@ node native_desktop/prepare.mjs --target windows --from C:/path/to/windows-x64
 node native_desktop/prepare.mjs --target linux --from /path/to/linux-x64
 ```
 
-The command copies the core archive, C header, notices and common source into
+The command copies the core and desktop device/preview wrapper archives, reviewed C/C++ headers, notices and common source into
 that plugin package. Distribute the prepared directory tree, including generated
 `vendor` and `native_shared` directories. A consuming project needs no repository
 checkout or Rust toolchain. Public registry publication is outside this preview.
-Preparation requires a verified `0.1.0-preview.5.1` native package receipt with
+Preparation requires a verified native package receipt matching `SDK_VERSION` with
 clean source commits for the package and every native slice. It checks the core
-archive SHA256, clears old generated files, and preserves the complete receipt
+and wrapper archive SHA256 plus every reviewed header, clears old generated files, and preserves the complete receipt
 and archive hash in `vendor/prepared.json`.
 
 macOS uses Metal directly into CVPixelBuffer IOSurfaces, fences the same GPU
@@ -75,3 +75,18 @@ This check covers X11; Wayland needs separate acceptance on a Wayland session.
 macOS requires version 12.0 or newer, matching the native SDK archive.
 Flutter 3.47.7 currently builds the macOS plugin through CocoaPods; Swift Package
 Manager packaging is not included in this preview.
+
+`installNativeDeviceApis` opts in to the reusable desktop OS adapter. The native
+registry receives trusted application/account configuration separately from guest
+payloads, obtains the core-vended private file scope and merges only installed
+APIs and observed synchronous snapshots. `allowedNetworkOrigins` is a host-owned
+allowlist; its default is empty. Native OS calls are consumed in the registry,
+while unclaimed business calls continue through Dart. Platform callbacks only
+enqueue records; the existing owner timer pumps completions into QuickJS.
+
+The public controller survives account switches and runtime restarts. Old OS
+resources retire before the texture cleanup handshake is acknowledged. The next
+driver binds the latest accepted pack, account epoch and runtime incarnation;
+fresh snapshots are published only after the new internal owner exists. Hidden
+views pass foreground state into the device adapter. No device support or
+merchant acceptance is inferred from successful plugin compilation.

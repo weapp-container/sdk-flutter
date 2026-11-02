@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "sdkVersion": "0.1.0-preview.5.7",
-  "sourceBaseCommit": "532aef85ab61f8c05e5961b1ca7027a2759bb162",
-  "review": "Reviewed preview.5.7 source metadata with App17 retirement-owner diagnostics; preserve historical ORIGIN and preview.5.3 artifact lock.",
+  "sdkVersion": "0.1.0-preview.6.0",
+  "sourceBaseCommit": "a03447e64fe6eba3988e9f8c3ee9fcc50abed118",
+  "review": "Host services controllers, stable account switching, cleanup barriers and OS device factories; source validation only",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,7 +41,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "cea227a8e968f1a7e04a79b50c7dea6057e21348aad04a61843185d980038c65",
+      "sha256": "3693735069190d65c0d0686ca1fe643b7c4054c842478448606577e4fab8dad8",
       "size": 14348,
       "mode": "100644"
     },
@@ -101,14 +101,20 @@
     },
     {
       "path": "native_desktop/README.md",
-      "sha256": "cc5f801dcd60c24bf4e93de279e0e713cdd886c781de53e7b3882201d032820a",
-      "size": 4959,
+      "sha256": "0fd1aac773b65ee628d2a155d75fe0b8f7bd80098d67aac708867ae48da579c4",
+      "size": 6063,
       "mode": "100644"
     },
     {
       "path": "native_desktop/include/native_chrome_overlay.hpp",
       "sha256": "05bf629b7fab8b5cf93d17e1b18355ae27ebd274ec317dee1d59189395d8ffdf",
       "size": 34769,
+      "mode": "100644"
+    },
+    {
+      "path": "native_desktop/include/native_device_apis.hpp",
+      "sha256": "43d0fa210f0d6245d6632753b6b3812e9e87a8f178a231658b792bcd16878f2f",
+      "size": 4804,
       "mode": "100644"
     },
     {
@@ -119,14 +125,20 @@
     },
     {
       "path": "native_desktop/include/registry.hpp",
-      "sha256": "f0179d348479ea99038bddc1c5ce568002f376545906b6e2d94002996e0e6d3e",
-      "size": 7398,
+      "sha256": "bc5cd913c8fa34b18ab9dd2e47d3728b38518e627ae59992b8fe08b235adb5ab",
+      "size": 8679,
       "mode": "100644"
     },
     {
       "path": "native_desktop/include/weapp/desktop.hpp",
-      "sha256": "5a0871ccc105a2605eafcb90409ebd31d30e4f11c26255b6c0536f3d3652470a",
-      "size": 5383,
+      "sha256": "2e2db85ab74cec801f9fe6d9f9b5c9ca7d1fee6734226a399ec0679204a91d13",
+      "size": 5828,
+      "mode": "100644"
+    },
+    {
+      "path": "native_desktop/include/weapp/device_apis.hpp",
+      "sha256": "4b2a2c4df19b5529e757b2a35a9be35fe1ec48e9d3c522ca9985d36fcd3d0a23",
+      "size": 1278,
       "mode": "100644"
     },
     {
@@ -149,14 +161,14 @@
     },
     {
       "path": "native_desktop/prepare.mjs",
-      "sha256": "dd17dd6bb679426bde25639af8c2dfdfa4ff618567d32e3bd09b7f6a333b8faf",
-      "size": 5990,
+      "sha256": "10c57fcdce8185ac6194c37a407b3b8f3fa98de1c1c95e781fdc07c8d98422df",
+      "size": 6005,
       "mode": "100644"
     },
     {
       "path": "native_desktop/src/registry.cpp",
-      "sha256": "b964c6bf0cf0cca2969c3d45a06a13380e61d0d8a509e3b0a9bcc94746d3c1da",
-      "size": 50036,
+      "sha256": "9c2900e6cb6cdf92be13b66e301e4b160c89e94e07e3596fd4a860aee2d01b60",
+      "size": 61672,
       "mode": "100644"
     },
     {
@@ -209,8 +221,8 @@
     },
     {
       "path": "native_desktop/tests/prepare_receipts.mjs",
-      "sha256": "47447b1c21454df7b131c4067ff0bc4783bda622bba3e3e542ff974f04463b19",
-      "size": 7414,
+      "sha256": "14a0e1f6d4ca71595ed71f78fe708e0cdfc399bd930d1da428511a77929af162",
+      "size": 7713,
       "mode": "100644"
     },
     {
@@ -221,8 +233,8 @@
     },
     {
       "path": "native_desktop/tests/registry_failures.cpp",
-      "sha256": "f0095899517754fa291fe1f4a39b01a9ec509c457b58ec8db9b8486bb3dd224c",
-      "size": 52676,
+      "sha256": "5750ed547a78084424e17a3f063b7776c3fd678ae2806eb3054b8eb327562302",
+      "size": 57275,
       "mode": "100644"
     },
     {
@@ -335,7 +347,7 @@
     },
     {
       "path": "tools/runtime-artifacts.mjs",
-      "sha256": "8d98a8f023a034d020d27255b88b2715a52e2407a4a68ff1f513f79767a511ab",
+      "sha256": "0c38d445b7846eca5c9f3804c01f947c40faaddba351eec3db3d0cb3adf9d958",
       "size": 19339,
       "mode": "100644"
     },
@@ -383,8 +395,8 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "50e4899be274f9c7f7cdb17986053ae2da6204875f623010e32ba0709171820e",
-      "size": 18117,
+      "sha256": "d3df90adebf5fadc727799624982edaa473cc45bfe4d9f179475a2c0672f1f65",
+      "size": 26168,
       "mode": "100644"
     },
     {
@@ -413,14 +425,14 @@
     },
     {
       "path": "weapp_container/pubspec.yaml",
-      "sha256": "758c7f5c0003152dbd41ac824fc23be2957d07540d7a42560d77b99ffb92edda",
+      "sha256": "9db155fbd167c43c39c79072ad135c396bb5f748f778370c4ad8c7965c8d7171",
       "size": 1060,
       "mode": "100644"
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "8f758093530bc90c67f126a02d7260a18e3f8137d21a343674655248731292a9",
-      "size": 72146,
+      "sha256": "ccfb65fe3578850415c68809fa06834bd45ec47983ec1e8c52277eb1916d23b3",
+      "size": 77500,
       "mode": "100644"
     },
     {
@@ -503,7 +515,7 @@
     },
     {
       "path": "weapp_container_android/android/build.gradle",
-      "sha256": "7c79b7dee86f11f2a5e8416f2651dd5673a5bd2cd06b308c89049a0dff9e54b5",
+      "sha256": "04e235f312c8623b5398baa2365bb3e8ab3de0a2117c8b9eb10a4152dc01ab1d",
       "size": 1558,
       "mode": "100644"
     },
@@ -533,8 +545,8 @@
     },
     {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "93ab4a4d90cedcad18142bb5fc0deb611eb54afdebd773caf3305707bf35d2f7",
-      "size": 30056,
+      "sha256": "fe1ee8e322c5db76d5d047b796fc9ebdf915eab9fb5961db1b8f2a6163217887",
+      "size": 36549,
       "mode": "100644"
     },
     {
@@ -563,7 +575,7 @@
     },
     {
       "path": "weapp_container_android/pubspec.yaml",
-      "sha256": "977a26a5b3bcd2b77cb7a311242e6c0f59aabc2ed14e3c8ed81ab0804e73abee",
+      "sha256": "0ac272ad6d362dd2a2ff2437b6e82a16d418e464ba5d3b092e75aad93b64c035",
       "size": 447,
       "mode": "100644"
     },
@@ -593,13 +605,13 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "0aa6824a7b02573129723f9edcc99490cddaff6275103a91280a34497a72bdcd",
-      "size": 52348,
+      "sha256": "b32cd04c519ecdb119431ca703de768b71595b95012cd22a4f8dad4a423234e4",
+      "size": 57909,
       "mode": "100644"
     },
     {
       "path": "weapp_container_ios/ios/weapp_container_ios.podspec",
-      "sha256": "911351adb01f4ef4611c92baf6ed261b6baa8db9d31f83449c353f844b309a6c",
+      "sha256": "d5aa5f159ff437be5dfd3d65f0b8d0a1350cf5b6ab8de0bb6fb8fad4170359dd",
       "size": 1285,
       "mode": "100644"
     },
@@ -611,7 +623,7 @@
     },
     {
       "path": "weapp_container_ios/pubspec.yaml",
-      "sha256": "af483015ff0c72b944e075e1c2ca8f6aac0bf3c2f358d44b3487bf76108d91b0",
+      "sha256": "124cd20101c8cdb15fa7edbd9513e1485e8f122a7f9f760149f893a0c9662b45",
       "size": 390,
       "mode": "100644"
     },
@@ -647,8 +659,8 @@
     },
     {
       "path": "weapp_container_linux/linux/CMakeLists.txt",
-      "sha256": "c7c429ce7b65dc9bcc3a66090b698c72d173b365d60b0303bb4c31d62f6f5ab8",
-      "size": 1504,
+      "sha256": "c64c77508b8e2503d2c2bbb8451c68728db67eae154620f9f803f34341be7963",
+      "size": 1822,
       "mode": "100644"
     },
     {
@@ -659,13 +671,13 @@
     },
     {
       "path": "weapp_container_linux/linux/weapp_container_linux_plugin.cc",
-      "sha256": "49b4c709557a3bc637f18f0e0bf79eca28d313523bd212d116ad59c71a28136f",
-      "size": 15528,
+      "sha256": "5ad5432adc861545a77fd454cac9a94dc299c87e4987f679d27e9a1024bed622",
+      "size": 15752,
       "mode": "100644"
     },
     {
       "path": "weapp_container_linux/pubspec.yaml",
-      "sha256": "7a3326ff994102e22e42626c4dd44e54868d6bc220281a622648169c3e6728c9",
+      "sha256": "3992b244c9099788d164d40f75370055fd7aba4ceaafb1acbe4837048f739d80",
       "size": 368,
       "mode": "100644"
     },
@@ -695,19 +707,19 @@
     },
     {
       "path": "weapp_container_macos/macos/Classes/WeappContainerMacosPlugin.mm",
-      "sha256": "2f74d2856cbefab9dc64765083b3a9e8057320297f7fc6c209d2f3ec0dfb127a",
-      "size": 16276,
+      "sha256": "1634f1baad0b511443e13efa72f970463d2331f16ee9e363872a200ae58be7a4",
+      "size": 16512,
       "mode": "100644"
     },
     {
       "path": "weapp_container_macos/macos/weapp_container_macos.podspec",
-      "sha256": "ae801788e3a739ddcc97650ad57b16484571a091802923a751a84d0bf68155c3",
-      "size": 1234,
+      "sha256": "a87a15c42c904725470ced0a49d995729f8aa4ff45fffb2294e3522af3d07444",
+      "size": 1379,
       "mode": "100644"
     },
     {
       "path": "weapp_container_macos/pubspec.yaml",
-      "sha256": "31f17760894fda446c1bb298e01fe7ca7508450e8d485c9e4d5d58e52a91036b",
+      "sha256": "414754901e9384ba59fde650b33273e8ef65c320e3535f6d92df90a99c54c0ed",
       "size": 367,
       "mode": "100644"
     },
@@ -743,7 +755,7 @@
     },
     {
       "path": "weapp_container_platform_interface/pubspec.yaml",
-      "sha256": "0d5cf345c15e822a94fe9b12476d42becdd479ca38329a4e2ca766b25318d1c0",
+      "sha256": "a4886144a9b0385bbc9d6b1bc3da146ed41a7cffa90e089fe8870e1a3ec6d6e1",
       "size": 283,
       "mode": "100644"
     },
@@ -767,14 +779,14 @@
     },
     {
       "path": "weapp_container_windows/pubspec.yaml",
-      "sha256": "114591519ece52c451bb5081a2007e20e3473094603e188391e7f8863efe58d3",
+      "sha256": "e4d7e29f8786a40ae622142d3f0ea66fcf5a1287cc8dd298bf67802018acbdb2",
       "size": 376,
       "mode": "100644"
     },
     {
       "path": "weapp_container_windows/windows/CMakeLists.txt",
-      "sha256": "6e36e222a00133892b13d271c617545b239357a73b7d71b153f38208953432d1",
-      "size": 1609,
+      "sha256": "297d6be7af660eb7f06ba912c5bfd34c65ecfecb8dccb0446a5cbb9a87601fb0",
+      "size": 1694,
       "mode": "100644"
     },
     {
@@ -785,8 +797,8 @@
     },
     {
       "path": "weapp_container_windows/windows/weapp_container_windows_plugin.cpp",
-      "sha256": "fef23ddde16801776e769185c3c4858a05164ce39be4f2b94a1963cae2e94934",
-      "size": 14339,
+      "sha256": "93a477d9f06c50b7ba64ba3f2df022bad9b410bb85aad7c47c6de63f7a54aa11",
+      "size": 14559,
       "mode": "100644"
     }
   ]

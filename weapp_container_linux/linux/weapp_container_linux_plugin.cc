@@ -1,5 +1,6 @@
 #include "include/weapp_container_linux/weapp_container_linux_plugin.h"
 #include "registry.hpp"
+#include "native_device_apis.hpp"
 #include "native_preview_texture.hpp"
 #include <filesystem>
 #if defined(GDK_WINDOWING_X11)
@@ -307,6 +308,9 @@ void weapp_container_linux_plugin_register_with_registrar(
       GTK_WIDGET(g_object_ref(fl_plugin_registrar_get_view(registrar))),
       [](GtkWidget* value) { g_object_unref(value); });
   plugin->view = view;
+  plugin->registry->set_device_api_factory(native_device_api_factory([view]() -> void * {
+    auto *top=gtk_widget_get_toplevel(view.get());return GTK_IS_WINDOW(top) ? top : nullptr;
+  }));
   plugin->registry->set_gpu_preview_factory(
       [view](Status& status, std::function<void(Status)> errors) -> std::shared_ptr<Texture> {
         auto* parent = gtk_widget_get_parent(view.get());

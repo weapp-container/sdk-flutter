@@ -13,7 +13,7 @@ struct weapp_container_sdk_session {
   uint64_t surface_sequence = 9007199254740992ULL, observation_sequence = 9007199254740992ULL, attempt_sequence = 9007199254740992ULL, pack_sequence = 9007199254740992ULL;
   bool atomic = false;
   Json host_surface, pending_layout, accepted_layout, accepted_pack;
-  Json events = Json::array(), attempts = Json::object();
+  Json events = Json::array(), attempts = Json::object(), host_services = nullptr;
   std::thread::id owner = std::this_thread::get_id();
 };
 static int destroy_failures = 0, live_sessions = 0;
@@ -22,6 +22,7 @@ static int guest_loads = 0;
 static int host_attach_failures = 0, host_observe_failures = 0;
 static std::vector<std::pair<std::string, Json>> operations;
 static Json native_config;
+static weapp_container_sdk_session *last_created_session=nullptr;
 static bool presentation_required = false, ack_advances_frame = false;
 // Passive responses can be independently corrupted without mutating an SDK
 // session, creating an observation or executing a guest in these checks.
@@ -51,6 +52,8 @@ int32_t weapp_container_sdk_session_new(const uint8_t *config, size_t length,
                                         weapp_container_sdk_buffer *b) {
   native_config = Json::parse(config, config + length);
   *s = new weapp_container_sdk_session;
+  last_created_session=*s;
+  (*s)->host_services=native_config.value("hostServices",Json());
   (*s)->atomic = native_config.contains("hostLayout");
   ++live_sessions;
   return response(b, nullptr);
@@ -65,6 +68,8 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
   operations.emplace_back(op, Json::parse(payload, payload + payload_length));
   assert(s->owner == std::this_thread::get_id());
   const auto arguments = operations.back().second;
+  if(op=="configureHostServices"){s->host_services=arguments;return response(b,nullptr);}
+  if(op=="hostComponents")return response(b,Json::array());
   if (op == "hostSurface") {
     if (arguments.at("action") == "attach") {
       if (host_attach_failures > 0) { --host_attach_failures; return response(b, nullptr, false, "ERR_TRANSIENT_SURFACE"); }
@@ -194,6 +199,9 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
                         {"status", s->closed  ? "closed"
                                    : s->ready ? "ready"
                                               : "empty"},
+                        {"presentationEnabled",s->ready&&!s->closed},
+                        {"sessionId",s->ready?Json("runtime-"+std::to_string(s->generation)):Json()},
+                        {"hostServicesState",s->host_services.is_object()?Json{{"application",s->host_services.at("application")},{"account",s->host_services.at("account")}}:Json()},
                         {"foreground", s->foreground},
                         {"generation", s->generation},
                         {"frameRevision", s->revision},
@@ -205,7 +213,7 @@ int32_t weapp_container_sdk_session_command(weapp_container_sdk_session *s,
     return response(b, events);
   }
   if (op == "capabilities") {
-    Json caps = {{"pack", {{"devReload", {{"protocolVersion", "1.0"}}}}}};
+    Json caps = {{"hostServices",{{"protocolVersion","1.0"}}},{"pack", {{"devReload", {{"protocolVersion", "1.0"}}}}}};
     caps["chrome"] = {{"nativeMarker", "retained"},
       {"atomicLayout", {{"protocolVersion", "1.0"}}}};
     return response(b, caps);
@@ -1047,6 +1055,51 @@ int main() {
     assert(live_sessions == 0 && operations.size() == before_unmeasured);
     call(*r, "close", {{"id", id}}); r.reset();
     std::cout << "PASS " << checked << " prepared restart proof checks, exact passive journal/CAS/tuple, typed View fault, empty owner and legacy isolation\n";
+  }
+  // Registry owns the OS driver separately from Dart business callbacks. Every
+  // runtime incarnation and account epoch receives a fresh trusted scope.
+  {
+    struct DeviceProbe {int live=0,retired=0,dispatched=0,pumped=0;std::vector<Json> scopes;};
+    class Devices final: public NativeDeviceApis {
+      std::shared_ptr<DeviceProbe> probe_;bool retired_=false;
+    public:
+      explicit Devices(std::shared_ptr<DeviceProbe> probe):probe_(std::move(probe)){++probe_->live;}
+      ~Devices(){retire();}
+      Json configuration()const override{return {{"apis",Json::array({"wx.getLocation"})},{"syncValues",{{"wx.getAppAuthorizeSetting",{{"locationAuthorized","not determined"}}}}}};}
+      bool dispatch(const Json &event)override{if(event.value("method","")=="wx.getLocation"){++probe_->dispatched;return true;}return false;}
+      Status pump()override{++probe_->pumped;return {};}
+      Status set_foreground(bool)override{return {};}
+      Status retire()override{if(!retired_){retired_=true;--probe_->live;++probe_->retired;}return {};}
+      Status update_components(const Json &nodes)override{assert(nodes.is_array());return {};}
+    };
+    auto devices=std::make_shared<DeviceProbe>();
+    r=make();r->set_device_api_factory([devices](const Json &trusted,const Json &options,const std::string &root,DeviceCommand,Status &)->std::unique_ptr<NativeDeviceApis>{
+      assert(root=="/unused");assert(options.at("allowedNetworkOrigins")==Json::array({"https://api.example.test"}));devices->scopes.push_back(trusted);return std::make_unique<Devices>(devices);
+    });
+    call(*r,"initialize",{{"clientEpoch","native-devices"}});
+    id=call(*r,"create",{{"storageKey",nullptr}}).at("id").get<int64_t>();
+    Json trusted={{"application",{{"hostAppId","host"},{"tenantId","tenant"},{"publisherId","publisher"},{"appId","app"},{"environment","release"},{"version","1"},{"packRoot",std::string(64,'a')}}},{"account",{{"principalId","alice"},{"epoch","9007199254740993"}}},{"apis",Json::array()},{"syncValues",Json::object()}};
+    auto configure=trusted;configure["id"]=id;call(*r,"configureHostServices",configure);
+    call(*r,"installNativeDeviceApis",{{"id",id},{"allowedNetworkOrigins",Json::array({"https://api.example.test"})}});
+    assert(devices->live==0);
+    call(*r,"attach",metrics(id));call(*r,"load",{{"id",id},{"packPath","/native-devices"}});
+    assert(devices->live==1&&devices->retired==1);
+    assert(last_created_session->host_services.at("syncValues").contains("wx.getAppAuthorizeSetting"));
+    auto *owner=last_created_session;
+    owner->events.push_back({{"type","hostCall"},{"callId","native-call"},{"method","wx.getLocation"}});r->tick();
+    assert(devices->dispatched==1&&devices->pumped>0);
+    const auto before_rebuild=devices->retired;
+    call(*r,"load",{{"id",id},{"packPath","/native-devices"}});assert(devices->retired==before_rebuild+1&&devices->live==1);
+    Json next_account={{"principalId","bob"},{"epoch","9007199254740994"}};
+    owner->host_services["account"]=next_account;
+    owner->events.push_back({{"type","accountSwitch"},{"account",next_account},{"syncValues",Json::object()},{"receipt",{{"phase","revoking"},{"operationId","account-op"}}}});r->tick();
+    assert(devices->live==0);
+    assert(call_status(*r,"completeAccountCleanup",{{"id",id},{"operationId","stale"}}).code=="ERR_ACCOUNT_CLEANUP");
+    call(*r,"completeAccountCleanup",{{"id",id},{"operationId","account-op"}});r->tick();
+    assert(devices->live==1&&devices->scopes.back().at("account").at("principalId")=="bob");
+    assert(devices->scopes.back().at("account").at("epoch")=="9007199254740994");
+    call(*r,"close",{{"id",id}});r.reset();assert(devices->live==0&&live_sessions==0);
+    std::cout<<"PASS injected native devices, exact epoch, owner replacement, accepted scope, native cleanup handshake and isolated teardown\n";
   }
   PresentationFeedback bounded;
   auto older = bounded.submitted({1, 1}), newer = bounded.submitted({1, 2});

@@ -1,5 +1,6 @@
 package dev.weapp.container.flutter
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Point
@@ -12,6 +13,8 @@ import android.view.View
 import android.view.WindowInsets
 import com.sonofmagic.weapp.container.sdk.*
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.*
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
@@ -24,7 +27,39 @@ import java.util.concurrent.ExecutionException
 import kotlin.math.roundToInt
 
 /** Per-engine registry. The native SDK owns worker/runtime/GLES operations. */
-class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
+class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, ActivityAware, PluginRegistry.RequestPermissionsResultListener {
+    private var activityBinding:ActivityPluginBinding?=null
+    private var nextPermission=39000
+    private data class PermissionRequest(val call:HostCall,val permissions:Array<String>,val completion:(Boolean)->Unit)
+    private val permissionRequests=mutableMapOf<Int,PermissionRequest>()
+    private val permissionBroker=AndroidPermissionBroker { permissions,call,completion ->
+        val activity=activityBinding?.activity
+        if(activity==null || call.isCancelled) completion(false)
+        else {
+            val id=nextPermission++; if(nextPermission>=65000) nextPermission=39000
+            permissionRequests[id]=PermissionRequest(call,permissions,completion)
+            val previous=call.onCancel
+            call.onCancel={ try { previous?.invoke() } finally { permissionRequests.remove(id)?.completion?.invoke(false) } }
+            activity.requestPermissions(permissions,id)
+        }
+    }
+    override fun onAttachedToActivity(binding:ActivityPluginBinding) {
+        activityBinding=binding; binding.addRequestPermissionsResultListener(this)
+        sessions.values.forEach { it.deviceApis?.rebindActivity(binding.activity); it.bluetoothApis?.rebindActivity(binding.activity); it.mediaApis?.rebindActivity(binding.activity) }
+    }
+    private fun detachActivity() {
+        activityBinding?.removeRequestPermissionsResultListener(this); activityBinding=null
+        sessions.values.forEach { it.deviceApis?.rebindActivity(null); it.bluetoothApis?.rebindActivity(null); it.mediaApis?.rebindActivity(null) }
+        permissionRequests.values.toList().forEach { it.completion(false) }; permissionRequests.clear()
+    }
+    override fun onDetachedFromActivityForConfigChanges()=detachActivity()
+    override fun onReattachedToActivityForConfigChanges(binding:ActivityPluginBinding)=onAttachedToActivity(binding)
+    override fun onDetachedFromActivity()=detachActivity()
+    override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<out String>,grantResults:IntArray):Boolean {
+        val request=permissionRequests.remove(requestCode) ?: return false
+        request.completion(!request.call.isCancelled && request.permissions.all { permission -> activityBinding?.activity?.checkSelfPermission(permission)==android.content.pm.PackageManager.PERMISSION_GRANTED })
+        return true
+    }
     private lateinit var app: Context
     private lateinit var methods: MethodChannel
     private lateinit var events: EventChannel
@@ -41,6 +76,12 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         var closing: CompletableFuture<Unit>? = null
         var retiringView: CompletableFuture<Unit>? = null
         val replies = mutableMapOf<String, HostReply>()
+        val retainedCalls = mutableSetOf<String>()
+        var accountCleanup: Pair<String, CompletableFuture<Unit>>? = null
+        var deviceApis:AndroidDeviceApis?=null
+        var bluetoothApis:AndroidBluetoothApis?=null
+        var managedFiles:AndroidManagedFiles?=null
+        var mediaApis:AndroidNativeMedia?=null
         var clientChrome: JSONObject? = null
         var preparedClientChrome: JSONObject? = null
         var measurementEpoch = 0L
@@ -66,6 +107,7 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
         })
     }
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        detachActivity()
         detached = true; sink = null
         methods.setMethodCallHandler(null); events.setStreamHandler(null)
         retiring.add(this)
@@ -102,6 +144,13 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 if (layout != null) require(layout["protocolVersion"] == "1.0" && layout["atomic"] == true) { "hostLayout requires atomic protocol 1.0" }
                 val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics, atomicHostLayout = layout != null), devDiagnostics)
                 sessions[id] = entry
+                entry.session.accountCleanupHandler = { operationId ->
+                    val pending=CompletableFuture<Unit>()
+                    entry.accountCleanup?.second?.completeExceptionally(ContainerException("ERR_CANCELLED","Account cleanup superseded"))
+                    entry.accountCleanup=operationId to pending
+                    emit(id,mapOf("type" to "accountCleanupRequired","operationId" to operationId))
+                    pending
+                }
                 entry.session.eventListener = ContainerEventListener { emit(id, it) }
                 result.success(mapOf("id" to id)); return
             }
@@ -110,18 +159,41 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
             val entry = requireEntry(id)
             val session = entry.session
             val operation: CompletableFuture<*> = when (call.method) {
-                "registerHostMethod" -> {
+                "installNativeDeviceApis" -> {
+                    check(entry.deviceApis==null) { "Native devices already installed" }
+                    val activity=checkNotNull(activityBinding?.activity) { "A foreground Flutter Activity is required" }
+                    val driver=AndroidDeviceApis(activity,permissionBroker); entry.deviceApis=driver
+                    val files=AndroidManagedFiles(app); entry.managedFiles=files
+                    val media=AndroidNativeMedia(activity,files,permissionBroker); entry.mediaApis=media
+                    val tasks=mutableListOf(driver.install(session),files.install(session),media.install(session))
+                    if(args["bluetooth"]!=false) { val ble=AndroidBluetoothApis(activity,permissionBroker); entry.bluetoothApis=ble; tasks.add(ble.install(session)) }
+                    CompletableFuture.allOf(*tasks.toTypedArray())
+                }
+                "completeAccountCleanup" -> {
+                    val operationId=args["operationId"] as String
+                    val pending=entry.accountCleanup
+                    require(pending?.first==operationId) { "Account cleanup belongs to another operation" }
+                    entry.accountCleanup=null
+                    val error=args["error"] as? Map<*,*>
+                    if(error!=null) pending!!.second.completeExceptionally(ContainerException("ERR_ACCOUNT_CLEANUP",error["message"] as? String ?: "Account cleanup failed"))
+                    else pending!!.second.complete(Unit)
+                    CompletableFuture.completedFuture(Unit)
+                }
+                "registerHostMethod", "registerApiHandler" -> {
                     val name = args["name"] as String
-                    session.registerHostMethod(name, HostMethod { hostCall, reply ->
+                    val handler = HostMethod { hostCall, reply ->
                         entry.replies[hostCall.id] = reply
+                        if(hostCall.keepsResourceAlive) entry.retainedCalls.add(hostCall.id)
                         hostCall.onCancel = {
                             entry.replies.remove(hostCall.id)
+                            entry.retainedCalls.remove(hostCall.id)
                             emit(id, mapOf("type" to "hostCallCancelled", "callId" to hostCall.id))
                         }
                         if (!hostCall.isCancelled) emit(id, mapOf("type" to "hostCall", "callId" to hostCall.id,
-                            "method" to hostCall.method, "payload" to codec(hostCall.payload), "deadlineNs" to hostCall.deadlineNs,
-                            "cancelToken" to hostCall.cancelToken))
-                    })
+                            "method" to hostCall.method, "payload" to codec(hostCall.payload), "deadlineNs" to hostCall.deadlineNsDecimal,
+                            "cancelToken" to hostCall.cancelToken, "context" to codec(hostCall.context), "retainUntilCancelled" to hostCall.keepsResourceAlive))
+                    }
+                    if (call.method == "registerApiHandler") session.registerApiHandler(name, handler) else session.registerHostMethod(name, handler)
                 }
                 "load" -> session.load(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) }, args["initialHostLayout"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
                 "applyDevPack" -> session.applyDevPack(PackSource.Directory(File(args["packPath"] as String)), LoadOptions(args["route"] as? String, jsonObject(args["options"]), args["initialHostChrome"]?.let { jsonObject(it) }, args["initialHostLayout"]?.let { jsonObject(it) })).whenComplete { _, error -> if(error==null) acceptPreparedChrome(entry,args) }
@@ -165,7 +237,8 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                     require(args.containsKey("result") xor args.containsKey("error")) { "Provide exactly one of result/error" }
                     val value = if (args.containsKey("result")) json(args["result"]) else null
                     val failure = if (args.containsKey("error")) args["error"] as Map<*, *> else null
-                    val reply = entry.replies.remove(args["callId"] as String)
+                    val transportCallId = args["callId"] as String
+                    val reply = if(args.containsKey("result") && entry.retainedCalls.contains(transportCallId)) entry.replies[transportCallId] else entry.replies.remove(transportCallId)
                     if (reply == null) { result.error("cancelled", "Call no longer accepts completion", null); return }
                     if (args.containsKey("result")) reply.resolve(value)
                     else {
@@ -175,10 +248,11 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                             "cancelled" -> HostErrorCode.CANCELLED; "unsupported" -> HostErrorCode.UNSUPPORTED
                             else -> HostErrorCode.INVALID_REQUEST
                         }
-                        reply.reject(code, error["message"] as? String ?: "Host method failed", error["retryable"] as? Boolean ?: false)
+                        reply.reject(code, error["message"] as? String ?: "Host method failed", error["retryable"] as? Boolean ?: false, jsonObject(error["details"]))
                     }
                     CompletableFuture.completedFuture(Unit)
                 }
+                "hostComponents", "authorizeInstalledPack", "migrateLegacyStorage", "deleteAccountData", "retryAccountCleanup", "configureHostServices", "hostApiEvent", "hostComponentFrame", "hostComponentEvent", "authorizePhoneButton", "prepareAccountHostServiceSnapshots", "updateHostServiceSnapshots", "switchAccount", "queryAccountSwitch", "updateAccountSwitchLaunch", "acknowledgeAccountCleanup", "retryAccountSwitch", "cancelAccountSwitch", "createHostBinary", "readHostBinary", "retainHostBinary", "releaseHostBinary" -> session.hostServicesCommand(call.method, jsonObject(args.filterKeys { it != "id" }))
                 else -> { result.notImplemented(); return }
             }
             settle(operation, result, call.method, entry, args)
@@ -374,10 +448,11 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
     }
     private fun closeEntry(id: Long, entry: Entry): CompletableFuture<Unit> {
         entry.closing?.let { return it }
+        entry.accountCleanup?.second?.completeExceptionally(ContainerException("ERR_CANCELLED","Session closing")); entry.accountCleanup=null
         retireView(entry)
         val done = CompletableFuture<Unit>(); entry.closing = done
         entry.session.closeAsync().whenComplete { _, error ->
-            if (error == null) { sessions.remove(id); closed.add(id); entry.replies.clear(); done.complete(Unit) }
+            if (error == null) { sessions.remove(id); closed.add(id); entry.replies.clear(); entry.retainedCalls.clear(); entry.deviceApis?.close(); entry.bluetoothApis?.close(); entry.mediaApis?.close(); entry.managedFiles?.close(); done.complete(Unit) }
             else { entry.closing = null; done.completeExceptionally(error) }
         }
         return done

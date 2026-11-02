@@ -371,11 +371,17 @@ import UIKit
         var closing: Task<Void, Error>?
         var retiringView: Task<Void, Error>?
         var calls: [String: CheckedContinuation<WeappJSON, Error>] = [:]
+        var accountCleanup: (operationId:String,continuation:CheckedContinuation<Void,Error>)?
+        var deviceApis:WeappDeviceApis?
+        var bluetoothApis:WeappBluetoothApis?
+        var managedFiles:WeappManagedFiles?
+        var mediaApis:WeappNativeMedia?
         var clientChrome: [String: Any]?
         var preparedClientChrome: [String: Any]?
         var measurementLifetime = UUID()
         init(_ session: WeappContainerSession) { self.session = session }
     }
+    private weak var devicePresenter:UIViewController?
     private var entries: [Int64: Entry] = [:]
     private var closed: Set<Int64> = []
     private var nextID: Int64 = 1
@@ -388,6 +394,7 @@ import UIKit
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let plugin = WeappContainerIosPlugin()
+        plugin.devicePresenter=registrar.viewController
         registrar.addMethodCallDelegate(plugin, channel: FlutterMethodChannel(name: "dev.weapp.container/methods", binaryMessenger: registrar.messenger()))
         FlutterEventChannel(name: "dev.weapp.container/events", binaryMessenger: registrar.messenger()).setStreamHandler(plugin)
         registrar.register(Factory(plugin), withId: "dev.weapp.container/view")
@@ -453,6 +460,22 @@ import UIKit
             }
             let id = nextID; nextID += 1
             let entry = Entry(WeappContainerSession(configuration: configuration)); entries[id] = entry
+            entry.session.onAccountCleanup = { [weak self, weak entry] operationId in
+                guard let self,let entry else { throw CancellationError() }
+                entry.accountCleanup?.continuation.resume(throwing:CancellationError()); entry.accountCleanup=nil
+                try await withTaskCancellationHandler(operation: {
+                    try Task.checkCancellation()
+                    try await withCheckedThrowingContinuation { (continuation:CheckedContinuation<Void,Error>) in
+                        entry.accountCleanup=(operationId,continuation)
+                        self.emit(id,["type":"accountCleanupRequired","operationId":operationId])
+                    }
+                }, onCancel: {
+                    Task { @MainActor [weak entry] in
+                        guard let entry,entry.accountCleanup?.operationId==operationId else { return }
+                        entry.accountCleanup?.continuation.resume(throwing:CancellationError()); entry.accountCleanup=nil
+                    }
+                })
+            }
             entry.session.onEvent = { [weak self] event in self?.event(id, event) }
             return ["id": id]
         }
@@ -462,6 +485,18 @@ import UIKit
         guard let entry = entries[id] else { throw WeappContainerError(code: "ERR_CLOSED", message: "Unknown or retired session") }
         let session = entry.session
         switch call.method {
+        case "installNativeDeviceApis":
+            guard entry.deviceApis==nil else { throw fail("Native devices already installed") }
+            guard let presenter=devicePresenter else { throw fail("A Flutter view controller is required") }
+            let driver=WeappDeviceApis(presenter:presenter); try driver.install(in:session); entry.deviceApis=driver
+            let files=try WeappManagedFiles(); try files.install(in:session); entry.managedFiles=files
+            let media=WeappNativeMedia(presenter:presenter,files:files,allowedMediaOrigins:Set((args["allowedNetworkOrigins"] as? [String]) ?? [])); try media.install(in:session); entry.mediaApis=media
+            if args["bluetooth"] as? Bool != false { let ble=WeappBluetoothApis(presenter:presenter); try ble.install(in:session); entry.bluetoothApis=ble }
+        case "completeAccountCleanup":
+            guard let pending=entry.accountCleanup,pending.operationId==args["operationId"] as? String else { throw fail("Account cleanup belongs to another operation") }
+            entry.accountCleanup=nil
+            if let failure=args["error"] as? [String:Any] { pending.continuation.resume(throwing:WeappContainerError(code:"ERR_ACCOUNT_CLEANUP",message:failure["message"] as? String ?? "Account cleanup failed")) }
+            else { pending.continuation.resume() }
         case "registerHostMethod":
             let name = try string(args, "name")
             try session.registerHostMethod(name) { [weak self, weak entry] payload in
@@ -481,6 +516,36 @@ import UIKit
                     }
                 })
             }
+        case "registerApiHandler":
+            let name = try string(args, "name")
+            try session.registerApiHandler(name) { [weak self, weak entry] apiCall in
+                guard let self, let entry else { throw WeappHostError(code: .cancelled, message: "Engine retired") }
+                let callID = "flutter-\(self.nextCall)"; self.nextCall += 1
+                if apiCall.keepsResourceAlive {
+                    apiCall.cancellation.onCancel { [weak self, weak entry] in
+                        guard let self, let entry else { return }
+                        entry.calls.removeValue(forKey:callID)?.resume(throwing:WeappHostError(code:.cancelled,message:"Host resource released"))
+                        self.emit(id,["type":"hostCallCancelled","callId":callID])
+                    }
+                }
+                return try await withTaskCancellationHandler(operation: {
+                    try Task.checkCancellation()
+                    return try await withCheckedThrowingContinuation { continuation in
+                        entry.calls[callID] = continuation
+                        self.emit(id, ["type":"hostCall", "callId":callID, "method":name,
+                            "payload":self.codec(apiCall.payload), "context":self.codec(apiCall.context),
+                            "deadlineNs":apiCall.deadlineNs as Any? ?? NSNull(), "cancelToken":apiCall.cancelToken as Any? ?? NSNull(), "retainUntilCancelled":apiCall.keepsResourceAlive])
+                    }
+                }, onCancel: {
+                    Task { @MainActor in
+                        guard let pending = entry.calls.removeValue(forKey:callID) else { return }
+                        self.emit(id, ["type":"hostCallCancelled", "callId":callID])
+                        pending.resume(throwing:WeappHostError(code:.cancelled,message:"Host API cancelled"))
+                    }
+                })
+            }
+        case "hostComponents", "authorizeInstalledPack", "migrateLegacyStorage", "deleteAccountData", "retryAccountCleanup", "configureHostServices", "hostApiEvent", "hostComponentFrame", "hostComponentEvent", "authorizePhoneButton", "prepareAccountHostServiceSnapshots", "updateHostServiceSnapshots", "switchAccount", "queryAccountSwitch", "updateAccountSwitchLaunch", "acknowledgeAccountCleanup", "retryAccountSwitch", "cancelAccountSwitch", "createHostBinary", "readHostBinary", "retainHostBinary", "releaseHostBinary":
+            return codec(try session.hostServicesCommand(call.method, try object(args.filter { $0.key != "id" })))
         case "load":
             try await session.load(packURL: URL(fileURLWithPath: try string(args, "packPath")), route: args["route"] as? String, options: try object(args["options"]), initialHostChrome: args["initialHostChrome"] == nil ? nil : try object(args["initialHostChrome"]), initialHostLayout: args["initialHostLayout"] == nil ? nil : try object(args["initialHostLayout"]))
             acceptPreparedChrome(entry,args)
@@ -535,7 +600,7 @@ import UIKit
             if args.keys.contains("error") {
                 guard let error = args["error"] as? [String: Any] else { throw fail("Expected host error object") }
                 completion = .failure(WeappHostError(code: WeappHostError.Code(rawValue: error["code"] as? String ?? "") ?? .invalidRequest,
-                    message: error["message"] as? String ?? "Host method failed", retryable: error["retryable"] as? Bool ?? false))
+                    message: error["message"] as? String ?? "Host method failed", retryable: error["retryable"] as? Bool ?? false, details: try object(error["details"])))
             } else { completion = .success(try json(args["result"])) }
             guard let pending = entry.calls.removeValue(forKey: callID) else { throw WeappHostError(code: .cancelled, message: "Call no longer accepts completion") }
             pending.resume(with: completion)
@@ -703,13 +768,14 @@ import UIKit
     }
     private func close(_ id: Int64, _ entry: Entry) async throws {
         entry.measurementLifetime = UUID()
+        entry.accountCleanup?.continuation.resume(throwing:CancellationError()); entry.accountCleanup=nil
         if let operation = entry.closing { return try await operation.value }
         let operation = Task { @MainActor in
             try await entry.session.close()
             try await self.retireView(entry)
         }
         entry.closing = operation
-        do { try await operation.value; entries.removeValue(forKey: id); closed.insert(id) }
+        do { try await operation.value; entry.deviceApis?.close(); entry.bluetoothApis?.close(); entry.mediaApis?.close(); entries.removeValue(forKey: id); closed.insert(id) }
         catch { entry.closing = nil; throw error }
     }
     private func retireAll() async throws {
