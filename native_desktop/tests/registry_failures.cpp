@@ -1059,7 +1059,7 @@ int main() {
   // Registry owns the OS driver separately from Dart business callbacks. Every
   // runtime incarnation and account epoch receives a fresh trusted scope.
   {
-    struct DeviceProbe {int live=0,retired=0,dispatched=0,pumped=0;std::vector<Json> scopes;};
+    struct DeviceProbe {bool pending=false;int retirement_attempts=0;int live=0,retired=0,dispatched=0,pumped=0;std::vector<Json> scopes;};
     class Devices final: public NativeDeviceApis {
       std::shared_ptr<DeviceProbe> probe_;bool retired_=false;
     public:
@@ -1069,7 +1069,7 @@ int main() {
       bool dispatch(const Json &event)override{if(event.value("method","")=="wx.getLocation"){++probe_->dispatched;return true;}return false;}
       Status pump()override{++probe_->pumped;return {};}
       Status set_foreground(bool)override{return {};}
-      Status retire()override{if(!retired_){retired_=true;--probe_->live;++probe_->retired;}return {};}
+      Status retire()override{++probe_->retirement_attempts;if(probe_->pending)return Status::error("ERR_RESOURCE_CLEANUP_PENDING","native cleanup pending");if(!retired_){retired_=true;--probe_->live;++probe_->retired;}return {};}
       Status update_components(const Json &nodes)override{assert(nodes.is_array());return {};}
     };
     auto devices=std::make_shared<DeviceProbe>();
@@ -1091,15 +1091,21 @@ int main() {
     const auto before_rebuild=devices->retired;
     call(*r,"load",{{"id",id},{"packPath","/native-devices"}});assert(devices->retired==before_rebuild+1&&devices->live==1);
     Json next_account={{"principalId","bob"},{"epoch","9007199254740994"}};
-    owner->host_services["account"]=next_account;
+    owner->host_services["account"]=next_account;devices->pending=true;
+    const auto attempts_before=devices->retirement_attempts;
     owner->events.push_back({{"type","accountSwitch"},{"account",next_account},{"syncValues",Json::object()},{"receipt",{{"phase","revoking"},{"operationId","account-op"}}}});r->tick();
-    assert(devices->live==0);
+    assert(devices->live==1 && devices->retirement_attempts>attempts_before);
+    assert(call_status(*r,"completeAccountCleanup",{{"id",id},{"operationId","account-op"}}).code=="ERR_ACCOUNT_CLEANUP");
+    r->tick();assert(devices->live==1 && devices->retirement_attempts>attempts_before+1);
+    devices->pending=false;r->tick();assert(devices->live==0);
     assert(call_status(*r,"completeAccountCleanup",{{"id",id},{"operationId","stale"}}).code=="ERR_ACCOUNT_CLEANUP");
     call(*r,"completeAccountCleanup",{{"id",id},{"operationId","account-op"}});r->tick();
     assert(devices->live==1&&devices->scopes.back().at("account").at("principalId")=="bob");
     assert(devices->scopes.back().at("account").at("epoch")=="9007199254740994");
-    call(*r,"close",{{"id",id}});r.reset();assert(devices->live==0&&live_sessions==0);
-    std::cout<<"PASS injected native devices, exact epoch, owner replacement, accepted scope, native cleanup handshake and isolated teardown\n";
+    devices->pending=true;
+    assert(call_status(*r,"close",{{"id",id}}).code=="ERR_RESOURCE_CLEANUP_PENDING" && devices->live==1);
+    devices->pending=false;call(*r,"close",{{"id",id}});r.reset();assert(devices->live==0&&live_sessions==0);
+    std::cout<<"PASS pending native drain retention/recovery, injected native devices, exact epoch, owner replacement, accepted scope, native cleanup handshake and isolated teardown\n";
   }
   PresentationFeedback bounded;
   auto older = bounded.submitted({1, 1}), newer = bounded.submitted({1, 2});

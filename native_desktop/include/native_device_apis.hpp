@@ -60,6 +60,7 @@ inline DeviceFactory native_device_api_factory(std::function<void *()> parent) {
       native.application=std::get<desktop::Value::Object>(device_adapter::decode(trusted.at("application")).data);
       native.account=std::get<desktop::Value::Object>(device_adapter::decode(trusted.at("account")).data);
       native.native_parent=parent ? parent() : nullptr;
+      native.linux_desktop_id=options.value("linuxDesktopId","");
       if(options.contains("allowedNetworkOrigins")) native.allowed_network_origins=options.at("allowedNetworkOrigins").get<std::vector<std::string>>();
       desktop::Status status;
       auto driver=desktop::DeviceApis::create(native,[command=std::move(command)](const std::string &operation,const desktop::Value::Object &payload,desktop::Value *output) {

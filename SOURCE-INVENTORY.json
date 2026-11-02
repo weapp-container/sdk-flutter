@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "2f50d624e75f1607e099ead3eea707c18289e3b3",
-  "review": "Use shared native device composite, preserve cleanup barriers and explicit network/media/audio/NFC host policies",
+  "sourceBaseCommit": "3a2f113dc9aac0c27ed217d74f69b76972c7a711",
+  "review": "Retain desktop native owners across pending cleanup, retry account retirement from the native owner tick, block premature owner reconstruction until exact cleanup acknowledgement, mirror the desktop options ABI and forward trusted GeoClue desktop identity; fault-injected registry compilation/run only, no device acceptance.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -113,8 +113,8 @@
     },
     {
       "path": "native_desktop/include/native_device_apis.hpp",
-      "sha256": "43d0fa210f0d6245d6632753b6b3812e9e87a8f178a231658b792bcd16878f2f",
-      "size": 4804,
+      "sha256": "b92fe4b01f1c68e1eb0f4f26698376a87b1730815fdc14c483479285350d3135",
+      "size": 4870,
       "mode": "100644"
     },
     {
@@ -125,8 +125,8 @@
     },
     {
       "path": "native_desktop/include/registry.hpp",
-      "sha256": "bc5cd913c8fa34b18ab9dd2e47d3728b38518e627ae59992b8fe08b235adb5ab",
-      "size": 8679,
+      "sha256": "cebfd95b11fa8a800afe78a222f93fb59dff8c980f1de0bc71cf81d12715f9e4",
+      "size": 8712,
       "mode": "100644"
     },
     {
@@ -137,8 +137,8 @@
     },
     {
       "path": "native_desktop/include/weapp/device_apis.hpp",
-      "sha256": "4b2a2c4df19b5529e757b2a35a9be35fe1ec48e9d3c522ca9985d36fcd3d0a23",
-      "size": 1278,
+      "sha256": "a4248f346a1626928ddd3d6f028fe326c3d6de4ce68856266b98ced174ef8ada",
+      "size": 1619,
       "mode": "100644"
     },
     {
@@ -167,8 +167,8 @@
     },
     {
       "path": "native_desktop/src/registry.cpp",
-      "sha256": "9c2900e6cb6cdf92be13b66e301e4b160c89e94e07e3596fd4a860aee2d01b60",
-      "size": 61672,
+      "sha256": "96bf7649fbecab1452edc5929b0880ba8857158d2dc83a77fee434d76c636e09",
+      "size": 62263,
       "mode": "100644"
     },
     {
@@ -233,8 +233,8 @@
     },
     {
       "path": "native_desktop/tests/registry_failures.cpp",
-      "sha256": "5750ed547a78084424e17a3f063b7776c3fd678ae2806eb3054b8eb327562302",
-      "size": 57275,
+      "sha256": "5a932857a30b69d4de0d1ad728e5853115ba9729ed9f7a288cad7793d328b609",
+      "size": 58051,
       "mode": "100644"
     },
     {

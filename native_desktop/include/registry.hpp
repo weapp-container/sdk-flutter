@@ -195,7 +195,7 @@ private:
          occluded = false, host_layout_observed = false;
     Json host_chrome, native_chrome, host_surface;
     std::string account_cleanup;
-    bool account_native_cleanup = false;
+    bool account_native_cleanup = false, account_cleanup_waiting = false;
     Json device_options = nullptr;
     std::unique_ptr<NativeDeviceApis> devices;
     std::set<std::string> device_snapshot_names;

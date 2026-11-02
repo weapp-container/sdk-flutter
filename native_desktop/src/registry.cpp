@@ -397,7 +397,10 @@ Status Registry::prepare_devices(Entry &e,bool register_live) {
   }catch(const std::exception &error){return Status::error("ERR_NATIVE_DEVICES",error.what());}
 }
 Status Registry::refresh_device_owner(Entry &e,const Json &state) {
-  if(e.device_options.is_null())return {};
+  // Preserve the retired identity boundary until native and Dart cleanup have
+  // both completed and the exact operation is acknowledged. A ready-looking
+  // observation cannot authorize owner reconstruction during that handshake.
+  if(!e.account_cleanup.empty() || e.device_options.is_null())return {};
   const auto switch_state=state.value("accountSwitch",Json());
   const bool awaiting=state.value("status","")=="identitySwitching" && switch_state.is_object() && switch_state.value("phase","")=="awaitingPresentation";
   if(state.value("status","")!="ready" && !awaiting)return {};
@@ -671,7 +674,8 @@ void Registry::settle_epoch() {
 Status Registry::prepare_account_cleanup(const std::shared_ptr<Entry> &e) {
   if (e->account_cleanup.empty()) return Status::error("ERR_ACCOUNT_CLEANUP","No account cleanup is pending");
   if (!e->account_native_cleanup) {
-    if(auto status=retire_devices(*e);!status)return status;
+    if(auto status=retire_devices(*e);!status){e->account_cleanup_waiting=status.code=="ERR_RESOURCE_CLEANUP_PENDING";return status;}
+    e->account_cleanup_waiting=false;
     if (e->texture) {
       e->texture->invalidate_presentation();
       auto status=e->texture->suspend(e->native);
@@ -703,7 +707,7 @@ void Registry::drain(const std::shared_ptr<Entry> &e) {
       if (phase == "revoking") {
         e->account_cleanup=event.at("receipt").at("operationId").get<std::string>();
         e->account_native_cleanup=false;
-        report(e->id,prepare_account_cleanup(e));
+        auto cleanup=prepare_account_cleanup(e);if(cleanup.code!="ERR_RESOURCE_CLEANUP_PENDING")report(e->id,cleanup);
       } else if (phase == "awaitingPresentation") {
         Json owner_state;auto status=command(e->native,"state",Json::object(),&owner_state);
         if(status)status=refresh_device_owner(*e,owner_state);
@@ -756,6 +760,7 @@ void Registry::tick() {
   for (auto &e : entries) {
     if (!e->native)
       continue;
+    if(e->account_cleanup_waiting){auto cleanup=prepare_account_cleanup(e);if(cleanup.code!="ERR_RESOURCE_CLEANUP_PENDING")report(e->id,cleanup);}
     if (e->texture && !e->retiring && e->foreground && !e->occluded) {
       auto consumed = e->texture->take_presented();
       if (consumed) {

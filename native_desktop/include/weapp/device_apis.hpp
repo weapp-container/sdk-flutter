@@ -11,10 +11,13 @@ struct DeviceApiOptions {
   Value::Object application, account;
   std::vector<std::string> allowed_network_origins;
   void* native_parent = nullptr;
+  // Installed host desktop-file ID used by GeoClue authorization. Empty keeps
+  // Linux location routes disabled; guest request parameters cannot set it.
+  std::string linux_desktop_id;
 };
 
 // Reusable with an owned Session or an external/Flutter native session. Commands
-// run only from pump() on the creating thread. OS callbacks only enqueue data.
+// require the creating thread. OS callbacks only enqueue data for pump().
 class DeviceApis {
  public:
   using Command = std::function<Status(const std::string&, const Value::Object&, Value*)>;
@@ -23,6 +26,8 @@ class DeviceApis {
   virtual Value::Object configuration() const = 0;
   virtual bool dispatch(const Event&) = 0;
   virtual Status pump() = 0;
+  // Pending native drain returns ERR_RESOURCE_CLEANUP_PENDING without blocking
+  // the owner loop. Retain this owner and retry; destroy only after success.
   virtual Status retire() = 0;
   virtual Status set_native_parent(void*) = 0;
   virtual Status set_foreground(bool) = 0;
