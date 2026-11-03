@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "f38905c371a6c76b15837a58657f419491abb8f2",
-  "review": "Preserve typed host command error details through the existing Flutter JSON codec; historical runtime pins unchanged",
+  "sourceBaseCommit": "79bd0f8e2e2952f09f31302fab1027aee5a982c4",
+  "review": "Review trusted system TabBar presenter configuration, dynamic indicators and styles; preserve historical ORIGIN identity",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "00f15560e2a0a90223f9b307357e5ec182d6a703ee504fc5a6c8d72968f8741c",
-      "size": 19979,
+      "sha256": "8a887d90edd4d372b06494f07c9af1ffa7d8125d828f6dc13a09c526178917ef",
+      "size": 20732,
       "mode": "100644"
     },
     {
@@ -107,8 +107,8 @@
     },
     {
       "path": "native_desktop/include/native_chrome_overlay.hpp",
-      "sha256": "05bf629b7fab8b5cf93d17e1b18355ae27ebd274ec317dee1d59189395d8ffdf",
-      "size": 34769,
+      "sha256": "315510744993eefc797917c41db7adcf5040018e447df56646665e84f15a8fde",
+      "size": 39177,
       "mode": "100644"
     },
     {
@@ -167,14 +167,14 @@
     },
     {
       "path": "native_desktop/src/registry.cpp",
-      "sha256": "07cceae3c0fdd2170fa9149ebbfb90fcde5e45bb9bdd455066049a20a441651b",
-      "size": 62733,
+      "sha256": "6513d09f48e7ccc5257ddbe90bfd4fd53a00f28763681fd3be05b33e0f5e925b",
+      "size": 63036,
       "mode": "100644"
     },
     {
       "path": "native_desktop/tests/chrome_palette.cpp",
-      "sha256": "77804c46c8847a84254863bb57508ea2955998e8758aa14369d814cc43f84f5b",
-      "size": 2431,
+      "sha256": "c2db2f09be5f98b2c20eb3ee8b6126bec9fbf43aff5680000302ea5a1a1d72a1",
+      "size": 3374,
       "mode": "100644"
     },
     {
@@ -233,8 +233,8 @@
     },
     {
       "path": "native_desktop/tests/registry_failures.cpp",
-      "sha256": "5a932857a30b69d4de0d1ad728e5853115ba9729ed9f7a288cad7793d328b609",
-      "size": 58051,
+      "sha256": "23036da3c0428a7502d75778107c79637d6e4d684103c6477957e4162ae6fa86",
+      "size": 59245,
       "mode": "100644"
     },
     {
@@ -413,8 +413,8 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "92833ee3829aceb03fb758d001a75c1e5a8daf4ceb6442a48c6b286a7b49e921",
-      "size": 30861,
+      "sha256": "d304432ff468986e153b71f36dcc8b6daa92dc975c165c1c4c62b32d46358545",
+      "size": 30940,
       "mode": "100644"
     },
     {
@@ -449,8 +449,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "5727fd9175995ce49466ade5c21eba7886cebde1ed9d1d586f398a82c85e573d",
-      "size": 88976,
+      "sha256": "584544f564925d30ebf6df9b9ec0acc5265f6cd0340c33a9fcc5271262dbba5d",
+      "size": 89764,
       "mode": "100644"
     },
     {
@@ -563,8 +563,8 @@
     },
     {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "6294daa9013a132533f72bbd71d9f52f7bf78462d11e050d9623f0e23e2ddb34",
-      "size": 36355,
+      "sha256": "97f66c4e571011e76650678cf48ccb3b96be8c4b465ac1f9adc6be21447c38de",
+      "size": 36548,
       "mode": "100644"
     },
     {
@@ -623,8 +623,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "51dfdbfc075ad1c75115b4ba2ef52eab4833dd5bb9e088db5b6589cee9c274cb",
-      "size": 59490,
+      "sha256": "3aa5b0645b00d8bbbb25d9cc1556f2ba6f8594a3f43307a8970e39b2d91ffaf7",
+      "size": 59712,
       "mode": "100644"
     },
     {
