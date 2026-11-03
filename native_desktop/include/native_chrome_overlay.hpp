@@ -74,6 +74,29 @@ inline Rect rect(const Json &value) {
     throw std::invalid_argument("empty native chrome rectangle");
   return r;
 }
+struct TabIndicator {
+  std::string badge;
+  bool dot = false;
+  bool visible() const { return dot || !badge.empty(); }
+};
+inline TabIndicator tab_indicator(const Json &item) {
+  TabIndicator result;
+  if (item.contains("badgeText")) {
+    if (!item["badgeText"].is_string()) throw std::invalid_argument("tab badge must be text");
+    result.badge = item["badgeText"].get<std::string>();
+    if (result.badge.size() > 16 || result.badge.find('\0') != std::string::npos)
+      throw std::invalid_argument("tab badge exceeds projected display limit");
+  }
+  if (item.contains("redDot")) {
+    if (!item["redDot"].is_boolean()) throw std::invalid_argument("tab dot must be boolean");
+    result.dot = item["redDot"].get<bool>();
+  }
+  if (result.dot && item.contains("badgeText")) throw std::invalid_argument("conflicting tab indicators");
+  return result;
+}
+inline unsigned tab_border(const Json &bar) {
+  return bar.value("borderStyle", "black") == "white" ? 0xffffff : 0x000000;
+}
 inline unsigned color(const Json &chrome, const char *key, unsigned fallback) {
   auto text = chrome.value(key, std::string());
   if (text.size() != 7 || text[0] != '#' ||
@@ -319,6 +342,35 @@ class WindowsChromeOverlay final : public NativeChromeOverlay {
     }
     DrawTextW(item.hDC, text.c_str(), -1, &bounds,
               DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    if (tabs) {
+      const auto &tab = colors.at("list").at(item.CtlID - 200);
+      const auto indicator = chrome_detail::tab_indicator(tab);
+      if (indicator.visible()) {
+        const auto height = static_cast<LONG>((indicator.dot ? 7 : 16) * scale_);
+        const auto width = indicator.dot ? height : std::max<LONG>(height, static_cast<LONG>((8 + wide(indicator.badge).size() * 8) * scale_));
+        const auto right = std::min<LONG>(item.rcItem.right - static_cast<LONG>(4 * scale_),
+                                         (item.rcItem.left + item.rcItem.right) / 2 + static_cast<LONG>(26 * scale_));
+        RECT badge{right - width, static_cast<LONG>(3 * scale_), right, static_cast<LONG>(3 * scale_) + height};
+        auto red = CreateSolidBrush(RGB(255, 0, 0));
+        auto old_brush = SelectObject(item.hDC, red);
+        auto old_pen = SelectObject(item.hDC, GetStockObject(NULL_PEN));
+        RoundRect(item.hDC, badge.left, badge.top, badge.right, badge.bottom, height, height);
+        SelectObject(item.hDC, old_pen); SelectObject(item.hDC, old_brush); DeleteObject(red);
+        if (!indicator.dot) {
+          auto font = CreateFontW(-static_cast<int>(11 * scale_), 0, 0, 0, FW_NORMAL,
+                                 FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                                 CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+          auto old_font = SelectObject(item.hDC, font);
+          SetTextColor(item.hDC, RGB(255, 255, 255));
+          const auto label = wide(indicator.badge);
+          DrawTextW(item.hDC, label.c_str(), -1, &badge, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+          SelectObject(item.hDC, old_font); DeleteObject(font);
+        }
+      }
+      RECT border{item.rcItem.left, 0, item.rcItem.right, std::max<LONG>(1, static_cast<LONG>(scale_ / 2))};
+      auto line = CreateSolidBrush(rgb(chrome_detail::tab_border(colors)));
+      FillRect(item.hDC, &border, line); DeleteObject(line);
+    }
     if (item.itemState & ODS_FOCUS) {
       InflateRect(&bounds, -2, -2);
       DrawFocusRect(item.hDC, &bounds);
@@ -746,8 +798,9 @@ public:
         auto *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
         atk_object_set_name(gtk_widget_get_accessible(row),
                             labels_.tabs.c_str());
-        style(row, "* {background-color:" +
-                       bar.value("backgroundColor", "#ffffff") + ";}");
+        style(row, "* {background-color:" + bar.value("backgroundColor", "#ffffff") + ";}" +
+                   std::string("box {border-top:1px solid ") +
+                   (chrome_detail::tab_border(bar) == 0xffffff ? "#ffffff" : "#000000") + ";}");
         int index = 0;
         for (const auto &item : bar.at("list")) {
           auto text = item.value("text", "");
@@ -772,6 +825,27 @@ public:
                                  FALSE, FALSE, 0);
               gtk_container_add(GTK_CONTAINER(tab), column);
             }
+          }
+          const auto indicator = chrome_detail::tab_indicator(item);
+          if (indicator.visible()) {
+            auto *content = gtk_bin_get_child(GTK_BIN(tab));
+            g_object_ref(content);
+            gtk_container_remove(GTK_CONTAINER(tab), content);
+            auto *overlay = gtk_overlay_new();
+            gtk_container_add(GTK_CONTAINER(overlay), content);
+            g_object_unref(content);
+            auto *badge = gtk_label_new(indicator.dot ? "" : indicator.badge.c_str());
+            gtk_widget_set_halign(badge, GTK_ALIGN_END);
+            gtk_widget_set_valign(badge, GTK_ALIGN_START);
+            gtk_widget_set_margin_top(badge, 3);
+            gtk_widget_set_margin_end(badge, 8);
+            gtk_widget_set_size_request(badge, indicator.dot ? 7 : 16, indicator.dot ? 7 : 16);
+            style(badge, indicator.dot
+                ? "* {background-color:#ff0000; border-radius:4px; min-width:7px; min-height:7px;}"
+                : "* {background-color:#ff0000; color:#ffffff; border-radius:8px; padding:0 4px; font-size:11px;}");
+            gtk_overlay_add_overlay(GTK_OVERLAY(overlay), badge);
+            gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(overlay), badge, TRUE);
+            gtk_container_add(GTK_CONTAINER(tab), overlay);
           }
           style(tab,
                 "* {color:" +

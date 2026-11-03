@@ -1107,6 +1107,27 @@ int main() {
     devices->pending=false;call(*r,"close",{{"id",id}});r.reset();assert(devices->live==0&&live_sessions==0);
     std::cout<<"PASS pending native drain retention/recovery, injected native devices, exact epoch, owner replacement, accepted scope, native cleanup handshake and isolated teardown\n";
   }
+  // Exercise the raw desktop create entry point through actual native config
+  // materialization. Older strict runtimes must never see an explicit false.
+  {
+    r = make();
+    call(*r, "initialize", {{"clientEpoch", "tabbar-config-forwarding"}});
+    for (const auto &argument : {Json(), Json(false), Json(true)}) {
+      Json options = {{"storageKey", nullptr}};
+      if (!argument.is_null()) options["systemTabBar"] = argument;
+      const auto tabbar_id = call(*r, "create", options).at("id").get<int64_t>();
+      call(*r, "attach", metrics(tabbar_id));
+      call(*r, "load", {{"id", tabbar_id}, {"packPath", "/tabbar-config"}});
+      const bool enabled = argument.is_boolean() && argument.get<bool>();
+      assert(native_config.contains("systemTabBar") == enabled);
+      if (enabled) assert(native_config.at("systemTabBar") == true);
+      call(*r, "close", {{"id", tabbar_id}});
+    }
+    assert(call_status(*r, "create", {{"storageKey", nullptr}, {"systemTabBar", "false"}}).code == "ERR_INVALID_ARGUMENT");
+    r.reset();
+    assert(live_sessions == 0);
+    std::cout << "PASS raw desktop systemTabBar missing/false omission, true forwarding and invalid-type rejection\n";
+  }
   PresentationFeedback bounded;
   auto older = bounded.submitted({1, 1}), newer = bounded.submitted({1, 2});
   bounded.consumed(newer);

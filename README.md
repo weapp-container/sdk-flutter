@@ -265,3 +265,17 @@ a host sharing audio with other features should install the native SDK with its
 own `WeappRecordingAudioSession` broker. Native permissions and per-application
 consent still apply independently of whether an API exists. Identity and payment
 handlers remain the embedding host's responsibility.
+
+### System tab bar presenter admission
+
+`systemTabBar` is a trusted host configuration option. It defaults to `false`, and
+`false` is omitted from the wire configuration for compatibility. Set it to `true`
+with a paired runtime/SDK and an installed system tab chrome consumer, such as the
+dev Player Flutter tabs or its Windows/Gtk overlays.
+
+The runtime supports bounded `setTabBarBadge`, `removeTabBarBadge`,
+`showTabBarRedDot`, `hideTabBarRedDot`, and `setTabBarStyle` transactions with a
+Partial capability ceiling. Custom tab bars remain Unsupported. `showTabBar`,
+`hideTabBar`, and `setTabBarItem` are not implemented by this option. The flag
+admits the host consumer; it does not establish WeChat visual/parameter parity
+or platform acceptance.

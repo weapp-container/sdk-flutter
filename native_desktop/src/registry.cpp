@@ -906,6 +906,13 @@ void Registry::invoke(const std::string &method, const Json &args,
         }
         e->config["devDiagnostics"] = args["devDiagnostics"];
       }
+      if (args.contains("systemTabBar")) {
+        if (!args["systemTabBar"].is_boolean()) {
+          reply(Status::error("ERR_INVALID_ARGUMENT", "systemTabBar must be a boolean"), {});
+          return;
+        }
+        if (args["systemTabBar"].get<bool>()) e->config["systemTabBar"] = true;
+      }
       if (args.contains("hostLayout")) e->config["hostLayout"] = args.at("hostLayout");
       sessions_[e->id] = e;
       reply({}, {{"id", e->id}});

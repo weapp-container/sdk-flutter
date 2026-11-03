@@ -679,6 +679,27 @@ void main() {
   tearDown(() async {
     await platform.source.close();
   });
+  test('system tab presenter opt-in reaches native creation only when enabled',
+      () async {
+    final defaults = await WeappContainerController.create(storageKey: null);
+    expect(platform.requests.last.$1, 'create');
+    expect(platform.requests.last.$2.containsKey('systemTabBar'), isFalse);
+    await defaults.close();
+    for (final enabled in [false, true]) {
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+        systemTabBar: enabled,
+      );
+      final request = platform.requests.last;
+      expect(request.$1, 'create');
+      if (enabled) {
+        expect(request.$2['systemTabBar'], isTrue);
+      } else {
+        expect(request.$2.containsKey('systemTabBar'), isFalse);
+      }
+      await controller.close();
+    }
+  });
   test(
       'native device install requires explicit Wi-Fi options and forwards Linux identity',
       () async {

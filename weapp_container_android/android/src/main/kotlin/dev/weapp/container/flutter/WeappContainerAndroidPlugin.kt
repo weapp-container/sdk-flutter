@@ -137,9 +137,10 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 val id = nextId++
                 val gpuRequired = args["gpuRequired"]?.let { value -> require(value is Boolean) { "gpuRequired must be a boolean" }; value as Boolean }
                 val devDiagnostics = args["devDiagnostics"]?.let { value -> require(value is Boolean) { "devDiagnostics must be a boolean" }; value as Boolean } ?: false
+                val systemTabBar = args["systemTabBar"]?.let { value -> require(value is Boolean) { "systemTabBar must be a boolean" }; value as Boolean } ?: false
                 val layout = args["hostLayout"] as? Map<*, *>
                 if (layout != null) require(layout["protocolVersion"] == "1.0" && layout["atomic"] == true) { "hostLayout requires atomic protocol 1.0" }
-                val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics, atomicHostLayout = layout != null), devDiagnostics)
+                val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics, atomicHostLayout = layout != null, systemTabBar = systemTabBar), devDiagnostics)
                 sessions[id] = entry
                 entry.session.accountCleanupHandler = { operationId ->
                     val pending=CompletableFuture<Unit>()

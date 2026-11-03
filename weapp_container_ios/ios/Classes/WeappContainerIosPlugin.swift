@@ -451,6 +451,10 @@ import UIKit
                 guard let enabled = value as? Bool else { throw fail("devDiagnostics must be a boolean") }
                 configuration.devDiagnostics = enabled
             }
+            if let value = args["systemTabBar"] {
+                guard let enabled = value as? Bool else { throw fail("systemTabBar must be a boolean") }
+                configuration.systemTabBar = enabled
+            }
             if let layout = args["hostLayout"] as? [String: Any] {
                 guard layout["protocolVersion"] as? String == "1.0", layout["atomic"] as? Bool == true else { throw fail("hostLayout requires atomic protocol 1.0") }
                 configuration.atomicHostLayout = true

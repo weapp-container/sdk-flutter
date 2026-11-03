@@ -49,4 +49,19 @@ int main() {
   assert(rejected(Json{{"close", ""}}));
   assert(rejected(Json{{"back", std::string(1025, 'x')}}));
   assert(rejected(Json{{"navigation", std::string("hidden\0suffix", 13)}}));
+  const auto no_indicator = chrome_detail::tab_indicator(Json::object());
+  assert(!no_indicator.visible());
+  const auto badge = chrome_detail::tab_indicator(Json{{"badgeText", "..."}});
+  assert(badge.visible() && !badge.dot && badge.badge == "...");
+  const auto dot = chrome_detail::tab_indicator(Json{{"redDot", true}});
+  assert(dot.visible() && dot.dot && dot.badge.empty());
+  assert(!chrome_detail::tab_indicator(Json{{"badgeText", ""}}).visible());
+  assert(chrome_detail::tab_border(Json::object()) == 0x000000);
+  assert(chrome_detail::tab_border(Json{{"borderStyle", "white"}}) == 0xffffff);
+  for (const auto &invalid : {Json{{"badgeText", 1}}, Json{{"redDot", "yes"}},
+      Json{{"badgeText", "1"}, {"redDot", true}}, Json{{"badgeText", std::string(17, 'x')}}}) {
+    bool rejected = false;
+    try { chrome_detail::tab_indicator(invalid); } catch (const std::invalid_argument &) { rejected = true; }
+    assert(rejected);
+  }
 }

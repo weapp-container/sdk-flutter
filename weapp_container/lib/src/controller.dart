@@ -183,7 +183,8 @@ class WeappContainerController {
       {required String? storageKey,
       bool? gpuRequired,
       bool? devDiagnostics,
-      bool atomicHostLayout = false}) async {
+      bool atomicHostLayout = false,
+      bool systemTabBar = false}) async {
     if (storageKey != null && storageKey.trim().isEmpty)
       throw ArgumentError.value(
           storageKey, 'storageKey', 'Must be nonblank, or null for memory');
@@ -193,6 +194,7 @@ class WeappContainerController {
       'storageKey': storageKey,
       if (gpuRequired != null) 'gpuRequired': gpuRequired,
       if (devDiagnostics != null) 'devDiagnostics': devDiagnostics,
+      if (systemTabBar) 'systemTabBar': true,
       if (atomicHostLayout)
         'hostLayout': {'protocolVersion': '1.0', 'atomic': true},
     });
