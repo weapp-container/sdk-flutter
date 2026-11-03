@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "94786bae0633ac215f23683a463150755101f7e6",
-  "review": "Make the packaged desktop preparation helper self-contained.",
+  "sourceBaseCommit": "f38905c371a6c76b15837a58657f419491abb8f2",
+  "review": "Preserve typed host command error details through the existing Flutter JSON codec; historical runtime pins unchanged",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -623,8 +623,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "7de644598b90de240470b2f1ebcebb9e9e3c394ed3928edf62e53ff8cbad0117",
-      "size": 59464,
+      "sha256": "51dfdbfc075ad1c75115b4ba2ef52eab4833dd5bb9e088db5b6589cee9c274cb",
+      "size": 59490,
       "mode": "100644"
     },
     {

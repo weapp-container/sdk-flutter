@@ -416,7 +416,7 @@ import UIKit
         Task { @MainActor in
             do { result(try await perform(call)) }
             catch let error as WeappContainerError { result(FlutterError(code: error.code, message: error.message, details: nil)) }
-            catch let error as WeappHostError { result(FlutterError(code: error.code.rawValue, message: error.message, details: nil)) }
+            catch let error as WeappHostError { result(FlutterError(code: error.code.rawValue, message: error.message, details: codec(.object(error.details)))) }
             catch let error as IOSLayoutMeasurementError {
                 let failure = error.wireFailure
                 result(FlutterError(code: failure.code, message: failure.message, details: failure.details))
