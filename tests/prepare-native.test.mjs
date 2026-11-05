@@ -11,7 +11,7 @@ import { downloadRuntimeArtifact, SDK_VERSION } from '../tools/runtime-artifacts
 import { writeSourceInventory } from '../tools/source-inventory.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-const toolNames = ['prepare-native.mjs', 'runtime-artifacts.mjs', 'native-artifact-paths.mjs', 'verify-native.mjs', 'package.mjs', 'source-inventory.mjs', 'unpack-runtime.py'];
+const toolNames = ['distribution-identity.mjs', 'prepare-native.mjs', 'runtime-artifacts.mjs', 'native-artifact-paths.mjs', 'verify-native.mjs', 'package.mjs', 'source-inventory.mjs', 'unpack-runtime.py'];
 const root = new URL('../', import.meta.url);
 async function fixture(t) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), 'weapp-flutter-native-cache-')));

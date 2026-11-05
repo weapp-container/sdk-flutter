@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { assertDistributionIdentity, distributionOptions, verifyDistributionArtifact } from './distribution-identity.mjs';
 // Keep this standalone packaging helper self-contained: package.mjs exports
 // native_desktop without the source checkout's tools/ directory.
 const SDK_VERSION = process.env.WEAPP_CONTAINER_SDK_VERSION ?? '0.1.0-preview.6.0';
@@ -8,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
+const expectedDistribution = distributionOptions(argv);
 const option = name => { const i = argv.indexOf(name); return i < 0 ? undefined : argv[i + 1]; };
 const target = option('--target');
 const source = option('--from');
@@ -16,6 +18,8 @@ const native = path.resolve(source);
 const archive = target === 'windows' ? 'weapp_container_sdk.lib' : 'libweapp_container_sdk.a';
 const sdkVersion = SDK_VERSION;
 const receipt = JSON.parse(await readFile(path.join(native, 'package.json'), 'utf8'));
+assertDistributionIdentity(receipt, expectedDistribution);
+for (const slice of receipt.native ?? []) assertDistributionIdentity(slice, expectedDistribution);
 const cleanSource = value => value.sourceDirty === false && /^[a-f0-9]{40}$/.test(value.sourceCommit ?? '');
 if (receipt.schemaVersion !== 1 || receipt.status !== 'verified' || receipt.sdkVersion !== sdkVersion || !cleanSource(receipt)) {
   throw new Error(`Native desktop package must have a verified, clean ${sdkVersion} package.json receipt`);
@@ -30,6 +34,7 @@ const archiveFile = `lib/${archive}`;
 const artifact = receipt.artifacts?.find(value => value.file === archiveFile);
 const archiveBytes = await readFile(path.join(native, archiveFile));
 const archiveSha256 = createHash('sha256').update(archiveBytes).digest('hex');
+if (expectedDistribution.distributionProfile === 'restricted-showcase') verifyDistributionArtifact(archiveBytes, expectedDistribution);
 if (!artifact || artifact.sha256 !== archiveSha256) throw new Error('Native archive SHA256 does not match the installed package receipt');
 const headerBytes = await readFile(path.join(native, 'include/weapp_container_sdk.h'));
 const expectedHeader = await readFile(path.join(here, 'include/weapp_container_sdk.h'));
@@ -79,7 +84,7 @@ for (const directory of ['share', 'licenses']) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 await writeFile(path.join(plugin, 'vendor/prepared.json'), `${JSON.stringify({
-  schemaVersion: 1, target, archive, abi: 1, sdkVersion,
+  schemaVersion: 1, target, archive, abi: 1, sdkVersion, ...expectedDistribution,
   sourceCommit: receipt.sourceCommit, sourceDirty: false,
   nativeSourceCommits: [...new Set(receipt.native.map(value => value.sourceCommit))],
   archiveSha256, headerSha256, packageReceipt: receipt,

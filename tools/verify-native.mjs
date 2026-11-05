@@ -1,3 +1,4 @@
+import { assertDistributionIdentity, installationDistribution } from './distribution-identity.mjs';
 import { closeSync, existsSync, lstatSync, openSync, readFileSync, readSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -14,17 +15,19 @@ function digest(file) {
   return hash.digest('hex');
 }
 /** Recheck every installed byte against the exact release pin before packaging. */
-export function verifyNativeInstallation(directory, platform, manifestPath = join(root, 'runtime-artifacts.lock.json'), archiveDirectory) {
+export function verifyNativeInstallation(directory, platform, manifestPath = join(root, 'runtime-artifacts.lock.json'), archiveDirectory, expectedDistribution) {
   const install = resolve(directory), status = lstatSync(install);
   if (!status.isDirectory() || status.isSymbolicLink()) throw new Error('Native SDK installation must be a regular directory');
   const receiptPath = join(install, '.runtime-install.json');
   if (!lstatSync(receiptPath).isFile() || lstatSync(receiptPath).isSymbolicLink()) throw new Error('Native installation receipt must be a regular file');
   const saved = JSON.parse(readFileSync(receiptPath, 'utf8'));
   const component = ['android', 'ios'].includes(platform) ? `${platform}-sdk` : 'desktop-sdk';
-  const identity = { runtimeVersion: SDK_VERSION, abiVersion: 1, component, platform, arch: saved.identity?.arch };
+  const identity = { ...installationDistribution(expectedDistribution), runtimeVersion: SDK_VERSION, abiVersion: 1, component, platform, arch: saved.identity?.arch };
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  const paths = nativeArtifactPaths(join(root, '.runtime'), manifest, { version: SDK_VERSION, abiVersion: 1, platform, arch: identity.arch });
+  const paths = nativeArtifactPaths(join(root, '.runtime'), manifest, { ...installationDistribution(expectedDistribution), version: SDK_VERSION, abiVersion: 1, platform, arch: identity.arch });
   const pin = paths.pin;
+  assertDistributionIdentity(saved.identity, expectedDistribution);
+  assertDistributionIdentity(pin, expectedDistribution);
   if (saved.schemaVersion !== 1 || saved.archiveSha256 !== pin.sha256 || !isDeepStrictEqual(saved.identity, identity)) throw new Error('Native SDK receipt differs from the exact release pin');
   const files = []; let bytes = 0;
   function walk(parent, prefix = '') {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { assertDistributionIdentity, distributionOptions } from './distribution-identity.mjs';
 import { verifySourceInventory } from './source-inventory.mjs';
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, renameSync, writeFileSync } from 'node:fs';
@@ -12,6 +13,7 @@ import { makeFixture } from '../example/shared/make-fixture.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const reviewedSource = verifySourceInventory(root);
 const args = process.argv.slice(2);
+const expectedDistribution = distributionOptions(args);
 const option = (name, fallback) => { const at = args.indexOf(name); return at < 0 ? fallback : args[at + 1]; };
 const out = resolve(option('--out', join(root, '.build/distribution')));
 const finalPackages = join(out, 'packages'), consumer = join(out, 'consumer');
@@ -32,9 +34,9 @@ function nativeInstallation(platform) {
   const candidates = manifest.artifacts?.filter(entry => entry.component === nativeSdkComponent(platform) && entry.platform === platform) ?? [];
   if (candidates.length !== 1) throw new Error(`Select an exact installed ${platform} SDK when its release pin is absent or ambiguous`);
   return nativeArtifactPaths(join(root, '.runtime'), manifest,
-    { version: SDK_VERSION, abiVersion: 1, platform, arch: candidates[0].arch }).installDirectory;
+    { ...expectedDistribution, version: SDK_VERSION, abiVersion: 1, platform, arch: candidates[0].arch }).installDirectory;
 }
-if (selected) verifyNativeInstallation(nativeInstallation(selected), selected, manifestPath);
+if (selected) verifyNativeInstallation(nativeInstallation(selected), selected, manifestPath, undefined, expectedDistribution);
 if (selected && args.includes('--portable-consumer')) throw new Error('--portable-consumer prepares sources only; omit --platform');
 function run(command, argv, cwd = root) {
   console.log(`Running ${command} ${argv.join(' ')}`);
@@ -58,6 +60,8 @@ function provenance() {
 }
 function receipt(path, status, producerVersion = SDK_VERSION) {
   const value = JSON.parse(readFileSync(path, 'utf8'));
+  assertDistributionIdentity(value, expectedDistribution);
+  for (const native of value.native ?? []) assertDistributionIdentity(native, expectedDistribution);
   if (value.status !== status || value.sdkVersion !== producerVersion) throw new Error(`Invalid SDK receipt ${path}`);
   if (value.native) {
     if (!value.native.length || value.native.some(r => r.status !== 'built' || r.sourceDirty !== false || !/^[a-f0-9]{40}$/.test(r.sourceCommit))) throw new Error(`Native SDK lacks clean committed provenance: ${path}`);
@@ -89,7 +93,7 @@ if (!args.includes('--skip-packages')) {
   const status = {};
   prepare(status, 'android', () => {
     const maven = join(nativeInstallation('android'), 'maven');
-    verifyNativeInstallation(dirname(maven), 'android', manifestPath);
+    verifyNativeInstallation(dirname(maven), 'android', manifestPath, undefined, expectedDistribution);
     const source = resolve(option('--android-receipt', join(dirname(maven), 'distribution.json')));
     const value = receipt(source, 'passed'); verifyFiles(maven, value.mavenArtifacts);
     cpSync(maven, join(packages, 'weapp_container_android/native/maven'), { recursive: true });
@@ -97,7 +101,7 @@ if (!args.includes('--skip-packages')) {
   });
   prepare(status, 'ios', () => {
     const ios = nativeInstallation('ios');
-    verifyNativeInstallation(ios, 'ios', manifestPath);
+    verifyNativeInstallation(ios, 'ios', manifestPath, undefined, expectedDistribution);
     const source = join(ios, 'build.json'); const value = receipt(source, 'built'); verifyFiles(ios, value.artifacts);
     cpSync(ios, join(packages, 'weapp_container_ios/ios/vendor/WeappContainer'), { recursive: true });
     return { source, receiptSha256: hash(source), sourceCommit: value.sourceCommit, artifactCount: value.artifacts.length };
@@ -105,9 +109,9 @@ if (!args.includes('--skip-packages')) {
   for (const target of ['macos', 'windows', 'linux']) {
     prepare(status, target, () => {
       const native = nativeInstallation(target);
-      verifyNativeInstallation(native, target, manifestPath);
+      verifyNativeInstallation(native, target, manifestPath, undefined, expectedDistribution);
       const source = join(native, 'package.json'); const value = receipt(source, 'verified', SDK_VERSION); verifyFiles(native, value.artifacts);
-      run(process.execPath, [join(packages, 'native_desktop/prepare.mjs'), '--target', target, '--from', native]);
+      run(process.execPath, [join(packages, 'native_desktop/prepare.mjs'), '--target', target, '--from', native, '--distribution-profile', expectedDistribution.distributionProfile, ...(expectedDistribution.policySha256 ? ['--showcase-policy-sha256', expectedDistribution.policySha256] : [])]);
       return { source, receiptSha256: hash(source), nativeSourceCommits: value.native.map(r => r.sourceCommit), artifactCount: value.artifacts.length };
     });
   }
@@ -117,7 +121,7 @@ if (!args.includes('--skip-packages')) {
   if (existsSync(finalPackages)) renameSync(finalPackages, previous);
   renameSync(packages, finalPackages); packages = finalPackages;
   rmSync(previous, { recursive: true, force: true });
-  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: SDK_VERSION, ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
+  writeFileSync(join(out, 'distribution.json'), JSON.stringify({ schemaVersion: 1, version: SDK_VERSION, ...expectedDistribution, ...provenance(), flutterToolchain: flutterVersion, packages, targets: status }, null, 2) + '\n');
 }
 if (!existsSync(join(consumer, 'pubspec.yaml'))) {
   run(flutter, ['create', '--no-pub', '--platforms=android,ios,macos,windows,linux', '--org', 'dev.weapp', '--project-name', 'weapp_sdk_consumer', consumer]);
@@ -173,12 +177,13 @@ run(flutter, ['analyze', '--no-pub'], consumer);
 writeFileSync(join(out, 'consumer.json'), JSON.stringify({ schemaVersion: 1, consumer, ...provenance(), fixtureIntegrity: integrity, bundleIdentifier: 'dev.weapp.weappSdkConsumer', reportFile: 'Application Support/sdk-flutter-report.json', targets: selected ? [selected] : [] }, null, 2) + '\n');
 if (selected) {
   const distribution = JSON.parse(readFileSync(join(out, 'distribution.json'), 'utf8'));
+  assertDistributionIdentity(distribution, expectedDistribution);
   if (distribution.targets[selected]?.status !== 'packaged') throw new Error(`Build blocked: ${distribution.targets[selected]?.reason}`);
   const argv = selected === 'android' ? ['build', 'apk', '--debug', '--target-platform', 'android-arm64,android-x64'] : selected === 'ios' ? ['build', 'ios', '--simulator', '--no-codesign', '--debug'] : ['build', selected, '--debug'];
   if (args.includes('--verbose')) argv.push('--verbose');
   const buildReceipt = join(out, `build-${selected}.json`);
   const validation = { schemaVersion: 1, status: 'building', platform: selected, startedAt: new Date().toISOString(),
-    distributionSha256: hash(join(out, 'distribution.json')), consumerSource: provenance(), fixtureIntegrity: integrity, flutterToolchain: flutterVersion };
+    ...expectedDistribution, distributionSha256: hash(join(out, 'distribution.json')), consumerSource: provenance(), fixtureIntegrity: integrity, flutterToolchain: flutterVersion };
   // Keep the exact input manifest when another platform is staged later.
   mkdirSync(join(out, 'manifests'), { recursive: true });
   validation.distributionSnapshot = join(out, 'manifests', `${validation.distributionSha256}.json`);

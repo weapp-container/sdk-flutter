@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "79bd0f8e2e2952f09f31302fab1027aee5a982c4",
-  "review": "Review trusted system TabBar presenter configuration, dynamic indicators and styles; preserve historical ORIGIN identity",
+  "sourceBaseCommit": "23eb9af9a123d3f99e1fe10ef33fcc17b9234ccd",
+  "review": "Review explicit full versus restricted showcase policy identity through native packaging, pinned archives, installers and wrapper receipts",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -106,6 +106,12 @@
       "mode": "100644"
     },
     {
+      "path": "native_desktop/distribution-identity.mjs",
+      "sha256": "2c4ee0d63bc96c2dace3184833f107b3c35dc87647886b6997896ebf1841386d",
+      "size": 2127,
+      "mode": "100644"
+    },
+    {
       "path": "native_desktop/include/native_chrome_overlay.hpp",
       "sha256": "315510744993eefc797917c41db7adcf5040018e447df56646665e84f15a8fde",
       "size": 39177,
@@ -161,8 +167,8 @@
     },
     {
       "path": "native_desktop/prepare.mjs",
-      "sha256": "366935f448afec3dbb811e355635b403d8b559edf078efa26fa841209b1f3b28",
-      "size": 6170,
+      "sha256": "53dc0d06f922a042edaa744a5a0f92ff90881ef6b662626593b1cfc43d488aa3",
+      "size": 6668,
       "mode": "100644"
     },
     {
@@ -292,6 +298,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/distribution-identity.test.mjs",
+      "sha256": "10f4780c4e76d93dd98b33ab7a87b2796d188d2eadda8ee90795e4ef379023ab",
+      "size": 4579,
+      "mode": "100644"
+    },
+    {
       "path": "tests/evidence/native-nfc-options-development.json",
       "sha256": "6f73074aab7f0c482f6f7063ff36cd0e97f14ec8bacb38cdf9abebfc0706f63a",
       "size": 12700,
@@ -305,8 +317,8 @@
     },
     {
       "path": "tests/prepare-native.test.mjs",
-      "sha256": "60f2f132191ccfa31052c4433cea88f5d0df7b645f942b7126c931f029135bb1",
-      "size": 10816,
+      "sha256": "ebf570f5eed506738f3b1c54d42870c176c1d5ae1405880329c8b619c402727c",
+      "size": 10845,
       "mode": "100644"
     },
     {
@@ -334,6 +346,12 @@
       "mode": "100644"
     },
     {
+      "path": "tools/distribution-identity.mjs",
+      "sha256": "2c4ee0d63bc96c2dace3184833f107b3c35dc87647886b6997896ebf1841386d",
+      "size": 2127,
+      "mode": "100644"
+    },
+    {
       "path": "tools/ios-smoke.mjs",
       "sha256": "d1ef991608d086b23914c62d9d66a49c14f8c33aabd11d7de897dc0842f24fab",
       "size": 16087,
@@ -353,20 +371,20 @@
     },
     {
       "path": "tools/package.mjs",
-      "sha256": "386e28e300c52dcfbe01a27cdc6c4a55b612f9b1b8def1d155246a5fa55bd816",
-      "size": 17566,
+      "sha256": "c8cb036579ba6a80cd99d3a40f501a6bdf2954a7f5e135acdb01a14c8edb6e42",
+      "size": 18329,
       "mode": "100644"
     },
     {
       "path": "tools/prepare-native.mjs",
-      "sha256": "d38374f2e8206d9517b7fd75ba8f531e1b6f767eccafe7b7a08379ce51d752cb",
-      "size": 3805,
+      "sha256": "36ed66e386a4b12e00509bd92127f89102bbf49aa6a5657340e067081727cffb",
+      "size": 4182,
       "mode": "100644"
     },
     {
       "path": "tools/runtime-artifacts.mjs",
-      "sha256": "0c38d445b7846eca5c9f3804c01f947c40faaddba351eec3db3d0cb3adf9d958",
-      "size": 19339,
+      "sha256": "20df717b0fb21432de8014f7838e22ec25cfffda05c448deb8df562498a6d4aa",
+      "size": 19944,
       "mode": "100644"
     },
     {
@@ -383,8 +401,8 @@
     },
     {
       "path": "tools/verify-native.mjs",
-      "sha256": "afdc0d2e54843dbae5e3e1513740c4aa985044f78ae9642853440abc7926f4fe",
-      "size": 3762,
+      "sha256": "8477cc328a64fc5aa07ac6e49c3d207e9af46f96fd3026e1d01fe9e4cb75d6fe",
+      "size": 4111,
       "mode": "100644"
     },
     {
