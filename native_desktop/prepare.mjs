@@ -3,7 +3,7 @@ import { assertDistributionIdentity, distributionOptions, verifyDistributionArti
 // Keep this standalone packaging helper self-contained: package.mjs exports
 // native_desktop without the source checkout's tools/ directory.
 const SDK_VERSION = process.env.WEAPP_CONTAINER_SDK_VERSION ?? '0.1.0-preview.6.0';
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -17,7 +17,8 @@ if (!['macos', 'windows', 'linux'].includes(target) || !source) throw new Error(
 const native = path.resolve(source);
 const archive = target === 'windows' ? 'weapp_container_sdk.dll.lib' : 'libweapp_container_sdk.a';
 const sdkVersion = SDK_VERSION;
-const receipt = JSON.parse(await readFile(path.join(native, 'package.json'), 'utf8'));
+const receiptBytes = await readFile(path.join(native, 'package.json'));
+const receipt = JSON.parse(receiptBytes);
 assertDistributionIdentity(receipt, expectedDistribution);
 for (const slice of receipt.native ?? []) assertDistributionIdentity(slice, expectedDistribution);
 const cleanSource = value => value.sourceDirty === false && /^[a-f0-9]{40}$/.test(value.sourceCommit ?? '');
@@ -68,6 +69,52 @@ const wrapperHeaders = new Map();
   }
 }
 
+// Windows links the desktop export so its platform dependencies have one
+// owner. CMake metadata is executable input: only copy the complete metadata
+// from an installation restored from the pinned runtime archive by
+// tools/prepare-native.mjs or revalidated by tools/package.mjs.
+const cmakeFiles = new Map();
+let nativeInstallationArchiveSha256;
+if (target === 'windows') {
+  const installation = JSON.parse(await readFile(path.join(native, '.runtime-install.json'), 'utf8'));
+  assertDistributionIdentity(installation.identity, expectedDistribution);
+  if (installation.schemaVersion !== 1 || !/^[a-f0-9]{64}$/.test(installation.archiveSha256 ?? '') ||
+      installation.identity?.runtimeVersion !== sdkVersion || installation.identity?.abiVersion !== 1 ||
+      installation.identity?.component !== 'desktop-sdk' || installation.identity?.platform !== target ||
+      !Array.isArray(installation.files)) throw new Error('Windows CMake metadata requires a pinned desktop SDK installation');
+  const verifiedBytes = (file, bytes) => {
+    const entries = installation.files.filter(value => value.path === file);
+    if (entries.length !== 1 || entries[0].directory || entries[0].size !== bytes.length ||
+        entries[0].sha256 !== createHash('sha256').update(bytes).digest('hex')) {
+      throw new Error(`Installed Windows desktop metadata SHA256 does not match its pinned installation: ${file}`);
+    }
+  };
+  verifiedBytes('package.json', receiptBytes);
+  const relative = 'lib/cmake/WeappContainerDesktop';
+  for (const directory of ['lib', 'lib/cmake', relative]) {
+    const info = await lstat(path.join(native, directory));
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Windows CMake metadata must use regular installation directories');
+  }
+  const entries = await readdir(path.join(native, relative), { withFileTypes: true });
+  if (!entries.length || entries.length > 16) throw new Error('Windows CMake metadata has an invalid file count');
+  for (const entry of entries) {
+    if (!entry.isFile() || !/^WeappContainerDesktop(?:Config(?:Version)?|Targets(?:-[a-zA-Z0-9_]+)?)\.cmake$/.test(entry.name)) {
+      throw new Error('Windows CMake metadata contains an unexpected file or link');
+    }
+    const file = `${relative}/${entry.name}`, bytes = await readFile(path.join(native, file));
+    if (bytes.length > 1024 ** 2) throw new Error('Windows CMake metadata exceeded its size limit');
+    verifiedBytes(file, bytes);
+    cmakeFiles.set(file, bytes);
+  }
+  const recorded = installation.files.filter(value => value.path.startsWith(`${relative}/`));
+  if (recorded.length !== cmakeFiles.size || !recorded.every(value => cmakeFiles.has(value.path)) ||
+      !['Config', 'ConfigVersion', 'Targets'].every(name => cmakeFiles.has(`${relative}/WeappContainerDesktop${name}.cmake`)) ||
+      ![...cmakeFiles.keys()].some(file => /Targets-[a-zA-Z0-9_]+\.cmake$/.test(file))) {
+    throw new Error('Windows CMake metadata does not match its complete pinned installation inventory');
+  }
+  nativeInstallationArchiveSha256 = installation.archiveSha256;
+}
+
 const plugin = path.join(here, '..', `weapp_container_${target}`, target);
 // Copy into each package so CocoaPods and CMake consumers are relocatable and
 // never resolve a source checkout, Cargo cache, or another worktree's outputs.
@@ -89,6 +136,10 @@ if (wrapperBytes) {
     await writeFile(path.join(plugin, 'vendor/include', file), bytes);
   }
 }
+for (const [file, bytes] of cmakeFiles) {
+  await mkdir(path.dirname(path.join(plugin, 'vendor', file)), { recursive: true });
+  await writeFile(path.join(plugin, 'vendor', file), bytes);
+}
 
 // Native installation layouts carry the verified notices in share/ or licenses/.
 for (const directory of ['share', 'licenses']) {
@@ -101,6 +152,9 @@ await writeFile(path.join(plugin, 'vendor/prepared.json'), `${JSON.stringify({
   nativeSourceCommits: [...new Set(receipt.native.map(value => value.sourceCommit))],
   archiveSha256, headerSha256, packageReceipt: receipt,
   ...(runtimeBytes ? { runtimeLibrary, runtimeSha256 } : {}),
+  ...(cmakeFiles.size ? { nativeInstallationArchiveSha256,
+    cmakeFileHashes: Object.fromEntries([...cmakeFiles].map(([file, bytes]) =>
+      [file, createHash('sha256').update(bytes).digest('hex')])) } : {}),
   ...(wrapperBytes ? { wrapperArchive, wrapperSha256,
     wrapperHeaders: Object.fromEntries([...wrapperHeaders].map(([file, bytes]) =>
       [file, createHash('sha256').update(bytes).digest('hex')])) } : {}),

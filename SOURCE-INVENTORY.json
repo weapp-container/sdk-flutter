@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "c891ea13f8bce80aec1a3e895beed1858d3a8190",
-  "review": "Propagate Common Controls v6 activation dependency through the Windows Flutter plugin to the final runner executable",
+  "sourceBaseCommit": "2050d70ab75dea9e4eb45d292a81e3dac471cb80",
+  "review": "Bind Flutter Windows to verified desktop CMake export metadata and preserve transitive runtime dependencies",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -167,8 +167,8 @@
     },
     {
       "path": "native_desktop/prepare.mjs",
-      "sha256": "da332c08a6457bd4afef39ef1a5a6bb8a221ba3c485d8354c08aac2f3eb08ae5",
-      "size": 7455,
+      "sha256": "6db77562e89486202f3cb8382b0f8354b0d8b49a3ca9d2ca715a24163e2a7b4b",
+      "size": 10995,
       "mode": "100644"
     },
     {
@@ -227,8 +227,8 @@
     },
     {
       "path": "native_desktop/tests/prepare_receipts.mjs",
-      "sha256": "9261780780be993c524fd48d41e3ca2205e6b003098505905f93eb5058ee3895",
-      "size": 11525,
+      "sha256": "91c0a327edd14c7680bcb3c6fce6dff740182194b8139f46ca187422bdb24fdd",
+      "size": 18784,
       "mode": "100644"
     },
     {
@@ -821,8 +821,8 @@
     },
     {
       "path": "weapp_container_windows/windows/CMakeLists.txt",
-      "sha256": "31019f7553c605e639a7571814b1a7c1569e51812ece96792baec3879908638c",
-      "size": 2593,
+      "sha256": "aea3167de8569936dc8136fe0303f515b9df36dc919a8e61f882dec3af982db0",
+      "size": 2503,
       "mode": "100644"
     },
     {
