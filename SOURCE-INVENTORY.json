@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "23eb9af9a123d3f99e1fe10ef33fcc17b9234ccd",
-  "review": "Review explicit full versus restricted showcase policy identity through native packaging, pinned archives, installers and wrapper receipts",
+  "sourceBaseCommit": "f12ec3a556b3a629d48674cde0e060b14d5ff4e3",
+  "review": "Review Windows shared runtime import interface and bundled DLL integrity boundary",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -101,8 +101,8 @@
     },
     {
       "path": "native_desktop/README.md",
-      "sha256": "0fd1aac773b65ee628d2a155d75fe0b8f7bd80098d67aac708867ae48da579c4",
-      "size": 6063,
+      "sha256": "a3f2d716255912d18b1dff80db74e54642b70ed890d5d78499d7054a3d69ab6e",
+      "size": 6330,
       "mode": "100644"
     },
     {
@@ -167,8 +167,8 @@
     },
     {
       "path": "native_desktop/prepare.mjs",
-      "sha256": "53dc0d06f922a042edaa744a5a0f92ff90881ef6b662626593b1cfc43d488aa3",
-      "size": 6668,
+      "sha256": "da332c08a6457bd4afef39ef1a5a6bb8a221ba3c485d8354c08aac2f3eb08ae5",
+      "size": 7455,
       "mode": "100644"
     },
     {
@@ -227,8 +227,8 @@
     },
     {
       "path": "native_desktop/tests/prepare_receipts.mjs",
-      "sha256": "14a0e1f6d4ca71595ed71f78fe708e0cdfc399bd930d1da428511a77929af162",
-      "size": 7713,
+      "sha256": "9261780780be993c524fd48d41e3ca2205e6b003098505905f93eb5058ee3895",
+      "size": 11525,
       "mode": "100644"
     },
     {
@@ -821,8 +821,8 @@
     },
     {
       "path": "weapp_container_windows/windows/CMakeLists.txt",
-      "sha256": "297d6be7af660eb7f06ba912c5bfd34c65ecfecb8dccb0446a5cbb9a87601fb0",
-      "size": 1694,
+      "sha256": "6a493e97fac024f9ca976fb005942715419d0f116bcaced8b8d1cbb06c9032e8",
+      "size": 2130,
       "mode": "100644"
     },
     {

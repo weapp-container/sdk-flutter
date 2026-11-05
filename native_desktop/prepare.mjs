@@ -15,7 +15,7 @@ const target = option('--target');
 const source = option('--from');
 if (!['macos', 'windows', 'linux'].includes(target) || !source) throw new Error('Usage: node prepare.mjs --target macos|windows|linux --from <installed-desktop-sdk>');
 const native = path.resolve(source);
-const archive = target === 'windows' ? 'weapp_container_sdk.lib' : 'libweapp_container_sdk.a';
+const archive = target === 'windows' ? 'weapp_container_sdk.dll.lib' : 'libweapp_container_sdk.a';
 const sdkVersion = SDK_VERSION;
 const receipt = JSON.parse(await readFile(path.join(native, 'package.json'), 'utf8'));
 assertDistributionIdentity(receipt, expectedDistribution);
@@ -34,8 +34,16 @@ const archiveFile = `lib/${archive}`;
 const artifact = receipt.artifacts?.find(value => value.file === archiveFile);
 const archiveBytes = await readFile(path.join(native, archiveFile));
 const archiveSha256 = createHash('sha256').update(archiveBytes).digest('hex');
-if (expectedDistribution.distributionProfile === 'restricted-showcase') verifyDistributionArtifact(archiveBytes, expectedDistribution);
 if (!artifact || artifact.sha256 !== archiveSha256) throw new Error('Native archive SHA256 does not match the installed package receipt');
+let runtimeLibrary, runtimeBytes, runtimeSha256;
+if (target === 'windows') {
+  runtimeLibrary = 'weapp_container_sdk.dll';
+  const file = `bin/${runtimeLibrary}`, runtimeArtifact = receipt.artifacts?.find(value => value.file === file);
+  runtimeBytes = await readFile(path.join(native, file));
+  runtimeSha256 = createHash('sha256').update(runtimeBytes).digest('hex');
+  if (!runtimeArtifact || runtimeArtifact.sha256 !== runtimeSha256) throw new Error('Native runtime DLL SHA256 does not match the installed package receipt');
+}
+if (expectedDistribution.distributionProfile === 'restricted-showcase') verifyDistributionArtifact(runtimeBytes ?? archiveBytes, expectedDistribution);
 const headerBytes = await readFile(path.join(native, 'include/weapp_container_sdk.h'));
 const expectedHeader = await readFile(path.join(here, 'include/weapp_container_sdk.h'));
 if (!headerBytes.equals(expectedHeader)) throw new Error('Installed native SDK header differs from the reviewed ABI contract');
@@ -70,6 +78,10 @@ await mkdir(path.join(plugin, 'vendor/lib'), { recursive: true });
 await mkdir(path.join(plugin, 'vendor/include'), { recursive: true });
 await writeFile(path.join(plugin, 'vendor/include/weapp_container_sdk.h'), headerBytes);
 await writeFile(path.join(plugin, `vendor/lib/${archive}`), archiveBytes);
+if (runtimeBytes) {
+  await mkdir(path.join(plugin, 'vendor/bin'), { recursive: true });
+  await writeFile(path.join(plugin, `vendor/bin/${runtimeLibrary}`), runtimeBytes);
+}
 if (wrapperBytes) {
   await writeFile(path.join(plugin, `vendor/lib/${wrapperArchive}`), wrapperBytes);
   for (const [file, bytes] of wrapperHeaders) {
@@ -88,6 +100,7 @@ await writeFile(path.join(plugin, 'vendor/prepared.json'), `${JSON.stringify({
   sourceCommit: receipt.sourceCommit, sourceDirty: false,
   nativeSourceCommits: [...new Set(receipt.native.map(value => value.sourceCommit))],
   archiveSha256, headerSha256, packageReceipt: receipt,
+  ...(runtimeBytes ? { runtimeLibrary, runtimeSha256 } : {}),
   ...(wrapperBytes ? { wrapperArchive, wrapperSha256,
     wrapperHeaders: Object.fromEntries([...wrapperHeaders].map(([file, bytes]) =>
       [file, createHash('sha256').update(bytes).digest('hex')])) } : {}),

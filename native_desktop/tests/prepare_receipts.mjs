@@ -19,6 +19,7 @@ try {
   await mkdir(path.join(native, 'include'), { recursive: true });
   await mkdir(path.join(native, 'lib'), { recursive: true });
   await cp(path.join(here, '../prepare.mjs'), path.join(helper, 'prepare.mjs'));
+  await cp(path.join(here, '../distribution-identity.mjs'), path.join(helper, 'distribution-identity.mjs'));
   await mkdir(path.join(root, 'flutter/tools'), { recursive: true });
   await cp(path.join(here, '../../tools/runtime-artifacts.mjs'), path.join(root, 'flutter/tools/runtime-artifacts.mjs'));
   const headerBytes = await readFile(path.join(here, '../include/weapp_container_sdk.h'));
@@ -103,7 +104,48 @@ try {
   await writeFile(path.join(native, 'include/weapp/native_preview.hpp'), 'unreviewed native adapter');
   await runLinux(linux, false);
   assert.equal(JSON.parse(await readFile(path.join(linuxPlugin, 'prepared.json'), 'utf8')).wrapperSha256, wrapperSha);
+  await writeFile(path.join(native, 'include/weapp/native_preview.hpp'), await readFile(path.join(helper, 'include/weapp/native_preview.hpp')));
+  // Windows core is consumed through its import interface and bundled DLL.
+  // An import library cannot carry the runtime policy marker; validate the DLL.
+  const importBytes = Buffer.from('isolated DLL import interface'), dllBytes = Buffer.from('isolated runtime DLL body');
+  const importSha = createHash('sha256').update(importBytes).digest('hex'), dllSha = createHash('sha256').update(dllBytes).digest('hex');
+  await mkdir(path.join(native, 'bin'));
+  await writeFile(path.join(native, 'lib/weapp_container_sdk.dll.lib'), importBytes);
+  await writeFile(path.join(native, 'bin/weapp_container_sdk.dll'), dllBytes);
+  await writeFile(path.join(native, 'lib/weapp_container_desktop.lib'), wrapper);
+  const windows = { ...receipt, platform: 'windows-x64',
+    native: [{ ...receipt.native[0], platform: 'windows', target: 'x86_64-pc-windows-msvc' }],
+    artifacts: [{ file: 'lib/weapp_container_sdk.dll.lib', sha256: importSha }, { file: 'bin/weapp_container_sdk.dll', sha256: dllSha }, { file: 'lib/weapp_container_desktop.lib', sha256: wrapperSha }] };
+  const runWindows = async (value, success, restricted = false) => {
+    await writeFile(path.join(native, 'package.json'), JSON.stringify(value));
+    const args = [path.join(helper, 'prepare.mjs'), '--target', 'windows', '--from', native,
+      ...(restricted ? ['--distribution-profile', 'restricted-showcase', '--showcase-policy-sha256', 'a'.repeat(64)] : [])];
+    const result = spawnSync(process.execPath, args, { encoding: 'utf8' });
+    assert.equal(result.status === 0, success, result.stderr);
+  };
+  await runWindows(windows, true);
+  const windowsPlugin = path.join(root, 'flutter/weapp_container_windows/windows/vendor');
+  const preparedWindows = JSON.parse(await readFile(path.join(windowsPlugin, 'prepared.json'), 'utf8'));
+  assert.equal(preparedWindows.archive, 'weapp_container_sdk.dll.lib');
+  assert.equal(preparedWindows.archiveSha256, importSha);
+  assert.equal(preparedWindows.runtimeLibrary, 'weapp_container_sdk.dll');
+  assert.equal(preparedWindows.runtimeSha256, dllSha);
+  assert.deepEqual(await readFile(path.join(windowsPlugin, 'bin/weapp_container_sdk.dll')), dllBytes);
+  await assert.rejects(readFile(path.join(windowsPlugin, 'lib/weapp_container_sdk.lib')), { code: 'ENOENT' });
+  await runWindows({ ...windows, artifacts: windows.artifacts.filter(item => !item.file.endsWith('.dll')) }, false);
+  await writeFile(path.join(native, 'bin/weapp_container_sdk.dll'), 'tampered runtime DLL');
+  await runWindows(windows, false);
+  assert.deepEqual(await readFile(path.join(windowsPlugin, 'bin/weapp_container_sdk.dll')), dllBytes);
+  const marker = Buffer.from(`weapp-container-distribution:restricted-showcase:${'a'.repeat(64)}\0`);
+  const restrictedDll = Buffer.concat([dllBytes, marker]);
+  await writeFile(path.join(native, 'bin/weapp_container_sdk.dll'), restrictedDll);
+  const restrictedWindows = { ...windows, distributionProfile: 'restricted-showcase', policySha256: 'a'.repeat(64),
+    native: windows.native.map(item => ({ ...item, distributionProfile: 'restricted-showcase', policySha256: 'a'.repeat(64) })),
+    artifacts: windows.artifacts.map(item => item.file.endsWith('.dll') ? { ...item, sha256: createHash('sha256').update(restrictedDll).digest('hex') } : item) };
+  await runWindows(restrictedWindows, true, true);
+  assert.deepEqual(await readFile(path.join(windowsPlugin, 'lib/weapp_container_sdk.dll.lib')), importBytes);
   console.log('PASS native preview wrapper/archive/header binding and rejected-input installation preservation');
+  console.log('PASS Windows import-library and runtime DLL hash binding, restricted marker scope and bundle closure');
   console.log('PASS native v1 receipt/ABI provenance, optional exit status, integrity rejection, and clean restaging');
 } finally {
   await rm(root, { recursive: true, force: true });

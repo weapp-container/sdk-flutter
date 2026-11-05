@@ -14,14 +14,17 @@ node native_desktop/prepare.mjs --target windows --from C:/path/to/windows-x64
 node native_desktop/prepare.mjs --target linux --from /path/to/linux-x64
 ```
 
-The command copies the core and desktop device/preview wrapper archives, reviewed C/C++ headers, notices and common source into
+The command copies the core and desktop device/preview wrapper libraries, reviewed C/C++ headers, notices and common source into
 that plugin package. Distribute the prepared directory tree, including generated
 `vendor` and `native_shared` directories. A consuming project needs no repository
 checkout or Rust toolchain. Public registry publication is outside this preview.
 Preparation requires a verified native package receipt matching `SDK_VERSION` with
 clean source commits for the package and every native slice. It checks the core
 and wrapper archive SHA256 plus every reviewed header, clears old generated files, and preserves the complete receipt
-and archive hash in `vendor/prepared.json`.
+and archive hash in `vendor/prepared.json`. Windows links the core through its
+verified `weapp_container_sdk.dll.lib` import interface and bundles the separately
+verified `weapp_container_sdk.dll`; both hashes are retained in the preparation
+receipt. macOS and Linux retain their static core archive boundary.
 
 macOS uses Metal directly into CVPixelBuffer IOSurfaces, fences the same GPU
 queue before publishing, and completes retirement only when Flutter releases its
