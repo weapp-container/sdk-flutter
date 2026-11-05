@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceBaseCommit": "f12ec3a556b3a629d48674cde0e060b14d5ff4e3",
-  "review": "Review Windows shared runtime import interface and bundled DLL integrity boundary",
+  "sourceBaseCommit": "c891ea13f8bce80aec1a3e895beed1858d3a8190",
+  "review": "Propagate Common Controls v6 activation dependency through the Windows Flutter plugin to the final runner executable",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -821,8 +821,8 @@
     },
     {
       "path": "weapp_container_windows/windows/CMakeLists.txt",
-      "sha256": "6a493e97fac024f9ca976fb005942715419d0f116bcaced8b8d1cbb06c9032e8",
-      "size": 2130,
+      "sha256": "31019f7553c605e639a7571814b1a7c1569e51812ece96792baec3879908638c",
+      "size": 2593,
       "mode": "100644"
     },
     {
