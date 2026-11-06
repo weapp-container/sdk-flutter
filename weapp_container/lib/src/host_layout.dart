@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Read-only proof shared by the native view queue and development startup /
 /// navigation coordinators. This never acknowledges a layout or substitutes a
 /// newer observation for the submitted immutable request.
@@ -36,7 +38,8 @@ bool supersededHostLayout(Map<String, Object?> observation, String revision,
     if (value is! Map ||
         value['schemaVersion'] != 1 ||
         value['ownerId'] != owner ||
-        value['surfaceGeneration'] != currentSurface['surfaceGeneration']) {
+        value['surfaceGeneration'] != currentSurface['surfaceGeneration'] ||
+        !validHostLayoutExtension(value['windowMetrics'])) {
       return false;
     }
     final next = _layoutSequence(value['observationId']);
@@ -104,6 +107,79 @@ bool _validEmptyLayoutMetrics(Object? metrics) {
     if (name == 'pixelRatio' && value <= 0 ||
         name == 'statusBarHeight' && value < 0) return false;
   }
-  return metrics['deviceOrientation'] == 'portrait' ||
-      metrics['deviceOrientation'] == 'landscape';
+  return (metrics['deviceOrientation'] == 'portrait' ||
+          metrics['deviceOrientation'] == 'landscape') &&
+      validHostLayoutExtension(metrics);
+}
+
+/// Checks the optional versioned surface-local extension without changing the
+/// legacy fixed-screen safeArea. Layout identity still comes from the owner.
+bool validHostLayoutExtension(Object? metrics) {
+  if (metrics is! Map) return false;
+  final layout = metrics['hostLayout'];
+  if (layout == null) return true;
+  bool keys(Map value, List<String> expected) =>
+      value.length == expected.length && expected.every(value.containsKey);
+  num? number(Object? value) => value is num && value.isFinite ? value : null;
+  final width = number(metrics['windowWidth']);
+  final height = number(metrics['windowHeight']);
+  if (width == null ||
+      height == null ||
+      width <= 0 ||
+      height <= 0 ||
+      layout is! Map ||
+      !keys(layout, [
+        'version',
+        'safeInsets',
+        'verticalBarEdge',
+        'reservedRegions',
+      ]) ||
+      layout['version'] != 1 ||
+      !const ['left', 'right', 'none'].contains(layout['verticalBarEdge'])) {
+    return false;
+  }
+  final insets = layout['safeInsets'];
+  final regions = layout['reservedRegions'];
+  if (insets is! Map ||
+      !keys(insets, ['top', 'right', 'bottom', 'left']) ||
+      regions is! List ||
+      regions.length > 64)
+    return false;
+  final top = number(insets['top']), right = number(insets['right']);
+  final bottom = number(insets['bottom']), left = number(insets['left']);
+  if (top == null ||
+      right == null ||
+      bottom == null ||
+      left == null ||
+      [top, right, bottom, left].any((value) => value < 0) ||
+      left + right >= width + 0.5 ||
+      top + bottom >= height + 0.5)
+    return false;
+  final identifiers = <String>{};
+  for (final region in regions) {
+    if (region is! Map ||
+        !keys(region, ['id', 'kind', 'x', 'y', 'width', 'height']))
+      return false;
+    final id = region['id'];
+    if (id is! String ||
+        id.isEmpty ||
+        utf8.encode(id).length > 256 ||
+        !identifiers.add(id) ||
+        !const ['occlusion', 'division'].contains(region['kind']))
+      return false;
+    final x = number(region['x']), y = number(region['y']);
+    final w = number(region['width']), h = number(region['height']);
+    if (x == null ||
+        y == null ||
+        w == null ||
+        h == null ||
+        x < 0 ||
+        y < 0 ||
+        w <= 0 ||
+        h <= 0 ||
+        x + w > width + 0.5 ||
+        y + h > height + 0.5)
+      return false;
+  }
+  return true;
 }

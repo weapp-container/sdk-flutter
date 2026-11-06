@@ -262,6 +262,58 @@ import Foundation
             var next = metrics; next["safeArea"] = ["left": 1, "top": 0, "right": 375, "bottom": 600, "width": 374, "height": 600]
             try expect(decision(try gate(), native: .init(windowMetrics: next, left: 0, top: 88)) == .wait)
         }
+        try check("same-size-host-layout-matches-exactly-and-missing-clears") {
+            let layout: [String: Any] = [
+                "version": 1, "safeInsets": ["top": 0, "right": 84, "bottom": 34, "left": 0],
+                "verticalBarEdge": "right", "reservedRegions": [
+                    ["id": "occlusion:0", "kind": "occlusion", "x": 300, "y": 0, "width": 75, "height": 100]
+                ]
+            ]
+            var observed = metrics; observed["hostLayout"] = layout
+            var old = observation; old["windowMetrics"] = observed
+            var current = state; current["pendingHostLayout"] = old
+            let frozen = try gate(old)
+            try expect(decision(frozen, current, native: .init(windowMetrics: observed, left: 0, top: 88)) == .ready)
+            for key in ["safeInsets", "verticalBarEdge", "reservedRegions"] {
+                var changed = layout
+                switch key {
+                case "safeInsets": changed[key] = ["top": 0, "right": 83.75, "bottom": 34, "left": 0]
+                case "verticalBarEdge": changed[key] = "left"
+                default: changed[key] = [["id": "division:0", "kind": "division", "x": 180, "y": 0, "width": 10, "height": 600]]
+                }
+                var next = observed; next["hostLayout"] = changed
+                try expect(decision(frozen, current, native: .init(windowMetrics: next, left: 0, top: 88)) == .wait)
+            }
+            try expect(decision(frozen, current, native: native) == .wait)
+            try expect(decision(try gate(), native: .init(windowMetrics: observed, left: 0, top: 88)) == .wait)
+            var next = old; next["observationId"] = "11"
+            current["pendingHostLayout"] = next
+            try expect(decision(frozen, current, native: .init(windowMetrics: observed, left: 0, top: 88)) == .cancelled(.observationSuperseded))
+        }
+        try check("malformed-host-layout-cannot-seed-or-prove-supersession") {
+            let base: [String: Any] = ["version": 1, "safeInsets": ["top": 0, "right": 84, "bottom": 34, "left": 0],
+                                       "verticalBarEdge": "right", "reservedRegions": []]
+            var invalids: [[String: Any]] = []
+            for key in ["version", "safeInsets", "verticalBarEdge", "reservedRegions"] {
+                var value = base; value.removeValue(forKey: key); invalids.append(value)
+            }
+            for (key, value) in [("version", 2 as Any), ("version", true), ("verticalBarEdge", "leading"),
+                                 ("safeInsets", ["top": 0, "right": 400, "bottom": 0, "left": 0]),
+                                 ("reservedRegions", [["id": "x", "kind": "division", "x": -1, "y": 0, "width": 2, "height": 10]]),
+                                 ("reservedRegions", [["id": "x", "kind": "division", "x": 0, "y": 0, "width": 2, "height": 10],
+                                                      ["id": "x", "kind": "division", "x": 10, "y": 0, "width": 2, "height": 10]])] {
+                var item = base; item[key] = value; invalids.append(item)
+            }
+            for layout in invalids {
+                var invalid = metrics; invalid["hostLayout"] = layout
+                var next = observation; next["windowMetrics"] = invalid
+                do { _ = try gate(next); throw Failure(message: "Malformed layout seeded a measurement") }
+                catch IOSLayoutMeasurementError.invalidSnapshot {}
+                next["observationId"] = "11"
+                var current = state; current["pendingHostLayout"] = next
+                try expect(decision(try gate(), current) == .wait)
+            }
+        }
         try check("newer-exact-native-pending-is-supersession-proof") {
             var next = observation; next["observationId"] = "11"
             var current = state; current["pendingHostLayout"] = next

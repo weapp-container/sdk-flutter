@@ -220,7 +220,7 @@ struct IOSLayoutMeasurement {
     private static func validMetrics(_ metrics: [String: Any]) -> Bool {
         let required: Set<String> = ["windowWidth", "windowHeight", "screenWidth", "screenHeight", "pixelRatio",
                                      "statusBarHeight", "screenTop", "deviceOrientation"]
-        guard required.isSubset(of: Set(metrics.keys)), Set(metrics.keys).isSubset(of: required.union(["safeArea"])) else { return false }
+        guard required.isSubset(of: Set(metrics.keys)), Set(metrics.keys).isSubset(of: required.union(["safeArea", "hostLayout"])) else { return false }
         for key in ["windowWidth", "windowHeight", "screenWidth", "screenHeight"] {
             guard let value = number(metrics[key]), value > 0, value <= Double(UInt32.max), value.rounded() == value else { return false }
         }
@@ -242,6 +242,34 @@ struct IOSLayoutMeasurement {
                 let size = number(safe[extent])!, leading = number(safe[start])!, trailing = number(safe[end])!
                 guard size > 0, size <= limit, abs(size - (trailing - leading)) <= 0.000001 else { return false }
             }
+        }
+        if !absent(metrics["hostLayout"]) {
+            guard let layout = metrics["hostLayout"] as? [String: Any],
+                  let width = number(metrics["windowWidth"]), let height = number(metrics["windowHeight"]),
+                  validHostLayout(layout, width: width, height: height) else { return false }
+        }
+        return true
+    }
+    private static func validHostLayout(_ layout: [String: Any], width: Double, height: Double) -> Bool {
+        guard Set(layout.keys) == Set(["version", "safeInsets", "verticalBarEdge", "reservedRegions"]),
+              schemaOne(layout["version"]),
+              let edge = layout["verticalBarEdge"] as? String, ["left", "right", "none"].contains(edge),
+              let insets = layout["safeInsets"] as? [String: Any],
+              Set(insets.keys) == Set(["top", "right", "bottom", "left"]),
+              let top = number(insets["top"]), let right = number(insets["right"]),
+              let bottom = number(insets["bottom"]), let left = number(insets["left"]),
+              [top, right, bottom, left].allSatisfy({ $0 >= 0 }),
+              left + right < width + 0.5, top + bottom < height + 0.5,
+              let regions = layout["reservedRegions"] as? [[String: Any]], regions.count <= 64 else { return false }
+        var identifiers = Set<String>()
+        for region in regions {
+            guard Set(region.keys) == Set(["id", "kind", "x", "y", "width", "height"]),
+                  let id = region["id"] as? String, !id.isEmpty, id.utf8.count <= 256,
+                  identifiers.insert(id).inserted,
+                  let kind = region["kind"] as? String, ["occlusion", "division"].contains(kind),
+                  let x = number(region["x"]), let y = number(region["y"]),
+                  let w = number(region["width"]), let h = number(region["height"]),
+                  x >= 0, y >= 0, w > 0, h > 0, x + w <= width + 0.5, y + h <= height + 0.5 else { return false }
         }
         return true
     }
@@ -334,6 +362,9 @@ struct IOSLayoutMeasurement {
                 guard let x = Self.number(a[key]), let y = Self.number(b[key]), abs(x - y) <= 0.5 else { return false }
             }
         } else if !Self.absent(expected["safeArea"]) || !Self.absent(native.windowMetrics["safeArea"]) { return false }
+        // Layout-only changes cannot satisfy an earlier measurement merely
+        // because its viewport dimensions still match. Missing clears layout.
+        guard Self.equal(expected["hostLayout"], native.windowMetrics["hostLayout"]) else { return false }
         for (field, target) in [("width", expected["windowWidth"]), ("height", expected["windowHeight"])] {
             guard let actual = Self.number(content[field]), let expected = Self.number(target), actual > 0, abs(actual - expected) <= 0.5 else { return false }
         }

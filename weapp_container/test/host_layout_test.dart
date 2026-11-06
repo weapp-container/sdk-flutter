@@ -163,4 +163,76 @@ void main() {
       expect(supersededHostLayout(submitted, '17', current), isFalse);
     }
   });
+
+  test(
+    'versioned local layout survives identity proof and validates geometry',
+    () {
+      Map<String, Object?> metrics() => {
+        'windowWidth': 390,
+        'windowHeight': 700,
+        'hostLayout': {
+          'version': 1,
+          'safeInsets': <String, Object?>{'top': 0, 'right': 84, 'bottom': 34, 'left': 0},
+          'verticalBarEdge': 'right',
+          'reservedRegions': [
+            {
+              'id': 'occlusion:0',
+              'kind': 'occlusion',
+              'x': 306,
+              'y': 0,
+              'width': 84,
+              'height': 174,
+            },
+          ],
+        },
+      };
+      expect(validHostLayoutExtension(metrics()), isTrue);
+      expect(
+        validHostLayoutExtension({'windowWidth': 390, 'windowHeight': 700}),
+        isTrue,
+      );
+      final submitted = observation('10');
+      (submitted['windowMetrics'] as Map)['hostLayout'] =
+          metrics()['hostLayout'];
+      final current = state();
+      final pendingMetrics =
+          (current['pendingHostLayout'] as Map)['windowMetrics'] as Map;
+      pendingMetrics['hostLayout'] = metrics()['hostLayout'];
+      expect(supersededHostLayout(submitted, '17', current), isTrue);
+      // A newer owner identity may omit the optional extension: omission clears
+      // it, rather than making the queue retain the previous surface layout.
+      pendingMetrics.remove('hostLayout');
+      expect(supersededHostLayout(submitted, '17', current), isTrue);
+      for (final field in [
+        'version',
+        'safeInsets',
+        'verticalBarEdge',
+        'reservedRegions',
+      ]) {
+        final invalid = metrics();
+        (invalid['hostLayout'] as Map).remove(field);
+        expect(validHostLayoutExtension(invalid), isFalse, reason: field);
+        pendingMetrics['hostLayout'] = invalid['hostLayout'];
+        expect(supersededHostLayout(submitted, '17', current), isFalse);
+      }
+      for (final value in [-1, double.nan, double.infinity, 391]) {
+        final invalid = metrics();
+        ((invalid['hostLayout'] as Map)['safeInsets'] as Map)['right'] = value;
+        expect(validHostLayoutExtension(invalid), isFalse);
+      }
+      for (final field in ['id', 'kind', 'x', 'width']) {
+        final invalid = metrics();
+        final region =
+            ((invalid['hostLayout'] as Map)['reservedRegions'] as List).first
+                as Map;
+        region[field] = {
+          'id': '',
+          'kind': 'unknown',
+          'x': -1,
+          'width': 500,
+        }[field];
+        expect(validHostLayoutExtension(invalid), isFalse);
+      }
+    },
+  );
 }

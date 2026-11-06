@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "1ee4909d09f65212fa6c590270e68dcc0c6298facfe77251ba260a54395a0c57",
-  "review": "默认 full iOS wrapper 精确切换到 c17 clean 生命周期修复三 slice；受限演示始终使用独立私有 manifest。",
+  "sourceFilesSha256": "00cabc3adbf27c3ffc9da67fed7d81b43cb6a150a32fe9711294fe60a72074eb",
+  "review": "Review exact native capture of versioned surface-local layout, complete geometry comparison and cancellation proof validation for Flutter iOS, with bilingual usage docs.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,14 +41,14 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "16709ece1c7c7599b99f62cee675fcd1ac577fe4bfa5862cd54f8d461c26fc55",
-      "size": 8147,
+      "sha256": "9e7e3ea66754542ee7c396d111661dbdd52eefe8fb06741eddb4d9d7a24364b6",
+      "size": 9174,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "536874e93cecea4c2d4b430043e13c98a7652ab53c243b816cf11fa9e09aefe0",
-      "size": 7686,
+      "sha256": "068ebd6ed9a4312d2a38eaa4bd980e87c1923ca0fa157f2ea8a3a6702320e74f",
+      "size": 8611,
       "mode": "100644"
     },
     {
@@ -443,8 +443,8 @@
     },
     {
       "path": "weapp_container/lib/src/host_layout.dart",
-      "sha256": "5c8aa69d57511a6f1ac97882a3a6d547affd34c72a2851b5c68d8edc8c7068f5",
-      "size": 4378,
+      "sha256": "8490aaa4db1668e2bbb3b80a109db7ac1836c2c4a9685a4f2f987aeb22c9174b",
+      "size": 6933,
       "mode": "100644"
     },
     {
@@ -485,8 +485,8 @@
     },
     {
       "path": "weapp_container/test/host_layout_test.dart",
-      "sha256": "00af01b7b26b195acc7df08badb7c47f239371b4593b0b1efc4e615fd30f5b90",
-      "size": 6003,
+      "sha256": "42c5b38f9a32d908494f7d1c2c5f6be8d7eeebf00446f82834eacfed37bdb9a0",
+      "size": 8613,
       "mode": "100644"
     },
     {
@@ -647,8 +647,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "8d276e3492089e175b87d5c5dd58bc4dcf6ac46f828b1b360761340fc7157a6c",
-      "size": 58591,
+      "sha256": "c383198c8a7e9f16b0ab16874410ec24dc73155871cbb325af5f38b198d17a2d",
+      "size": 60829,
       "mode": "100644"
     },
     {
@@ -671,8 +671,8 @@
     },
     {
       "path": "weapp_container_ios/tests/LayoutCoherenceChecks.swift",
-      "sha256": "50f2e8639d8ad5af34ed0416e44e2e4a49ea647df751319b2f7cdd21bf905b93",
-      "size": 39276,
+      "sha256": "b96ff060c735785fc1d65a56d0df073cc671d30ebb77b9b595a283cb471dfd90",
+      "size": 42934,
       "mode": "100644"
     },
     {
