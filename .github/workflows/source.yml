@@ -1,0 +1,23 @@
+name: Source contract
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: node --test tests/source-inventory.test.mjs tests/source-contract.test.mjs
+      - run: node native_desktop/tests/prepare_receipts.mjs
+      - run: node --test tests/prepare-native.test.mjs
+      - run: g++ -std=c++17 -Wall -Wextra -Werror -pthread -I native_desktop/include -I native_desktop/third_party native_desktop/tests/registry_failures.cpp native_desktop/src/registry.cpp -o "$RUNNER_TEMP/registry-receipts"
+      - run: '"$RUNNER_TEMP/registry-receipts"'

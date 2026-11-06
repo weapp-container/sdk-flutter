@@ -1,0 +1,4 @@
+macos/native_shared/
+macos/vendor/
+.dart_tool/
+pubspec.lock

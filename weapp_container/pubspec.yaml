@@ -1,0 +1,39 @@
+name: weapp_container
+publish_to: none
+description: Embeddable Weapp Container SDK for Flutter.
+version: 0.1.0-preview.6.0
+homepage: https://github.com/weapp-container/sdk-flutter
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.22.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  weapp_container_platform_interface:
+    path: ../weapp_container_platform_interface
+  weapp_container_android:
+    path: ../weapp_container_android
+  weapp_container_ios:
+    path: ../weapp_container_ios
+  weapp_container_macos:
+    path: ../weapp_container_macos
+  weapp_container_windows:
+    path: ../weapp_container_windows
+  weapp_container_linux:
+    path: ../weapp_container_linux
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      android:
+        default_package: weapp_container_android
+      ios:
+        default_package: weapp_container_ios
+      macos:
+        default_package: weapp_container_macos
+      windows:
+        default_package: weapp_container_windows
+      linux:
+        default_package: weapp_container_linux

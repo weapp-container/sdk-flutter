@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "contracts": [
+    {
+      "reason": "layout-measurement-task-cancelled",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-task-cancelled"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-engine-detached",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-engine-detached"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-engine-initializing",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-engine-initializing"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-entry-closing",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-entry-closing"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-view-retiring",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-view-retiring"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-lifetime-changed",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-lifetime-changed"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-entry-removed",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-entry-removed"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-restart-receipt-mismatch",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-restart-receipt-mismatch"
+        }
+      }
+    },
+    {
+      "reason": "layout-measurement-observation-superseded",
+      "error": {
+        "code": "ERR_CANCELLED",
+        "message": "Native layout measurement was superseded or its owner retired",
+        "details": {
+          "schemaVersion": 1,
+          "reason": "layout-measurement-observation-superseded"
+        }
+      }
+    }
+  ]
+}
