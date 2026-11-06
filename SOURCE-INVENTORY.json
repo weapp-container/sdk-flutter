@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "00cabc3adbf27c3ffc9da67fed7d81b43cb6a150a32fe9711294fe60a72074eb",
-  "review": "Review exact native capture of versioned surface-local layout, complete geometry comparison and cancellation proof validation for Flutter iOS, with bilingual usage docs.",
+  "sourceFilesSha256": "62d5cb021001825cf880213c2b1a1740b4bb311be1cd4ddfa1a08e58347e4130",
+  "review": "Pin the exact hostLayout-aware full iOS SDK archive from clean core e2a091b and SDK d3c5a7d; preserve other platform release identities.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -293,8 +293,8 @@
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "75806f43431dbcc9aff498e2816c15e46d94b1008520ccc4e0984c07b9161e9a",
-      "size": 3817,
+      "sha256": "84601fc74ccf0e73b05bac6159f3de611140e1c3308813b9c25384417ee3589d",
+      "size": 3824,
       "mode": "100644"
     },
     {

@@ -48,9 +48,9 @@
         "arm64-simulator",
         "x86_64-simulator"
       ],
-      "fileName": "ios-sdk-0.1.0-preview.6.0-ios-universal-lifetime-c17f0af5-96f552f3b826.tar.gz",
-      "size": 71479702,
-      "sha256": "68e31e37c8daf2c3e02e5c8f877f838aadc91a92cd589543662bee8a5f555e22"
+      "fileName": "ios-sdk-0.1.0-preview.6.0-ios-universal-duo-layout-full-e2a091b1-28c258ec73f3.tar.gz",
+      "size": 71499834,
+      "sha256": "10ca9d78f3b750c7e80a5ead2463c9fe7424a97f966b14410dc94bdae0c281da"
     },
     {
       "component": "runtime",
