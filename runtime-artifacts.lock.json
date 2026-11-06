@@ -48,9 +48,9 @@
         "arm64-simulator",
         "x86_64-simulator"
       ],
-      "fileName": "ios-sdk-0.1.0-preview.6.0-ios-universal.tar.gz",
-      "size": 67689258,
-      "sha256": "6107247568da5881df220a3ba17ba2a0187490d422fb6c6ce87d0377ec76dede"
+      "fileName": "ios-sdk-0.1.0-preview.6.0-ios-universal-window-metrics-4cfd7fb70837.tar.gz",
+      "size": 67720594,
+      "sha256": "510807010e196bb4b3bf7cb056cf2c15f3a2dc1512736dd5fde932d7515c4a47"
     },
     {
       "component": "runtime",

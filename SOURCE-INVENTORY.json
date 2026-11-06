@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "33ac823fa57c96c6ad98ff4ded295b14e8aed999ff1b3f9521278c4a90fab2b6",
-  "review": "Review bilingual usage guides and standalone source publication",
+  "sourceFilesSha256": "2649cdec6e111d0741b67762a58044306defacd0a0fd85759d0494b2c457a5c4",
+  "review": "统一 iOS UIKit 窗口指标读取，并精确锁定包含 captureWindowMetrics 的 full Swift SDK；演示限制配置仅由独立私有 manifest 消费。",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -41,14 +41,14 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "b3ba2d3a3d534dee688595e1edbf5b24a437fa4c441d9d89708a47c7259a1aba",
-      "size": 7814,
+      "sha256": "16709ece1c7c7599b99f62cee675fcd1ac577fe4bfa5862cd54f8d461c26fc55",
+      "size": 8147,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "fb694d70944b5ca3d9bbc16e7a6fea2f35f7b9f05ab12b0746f4031b5ffdad54",
-      "size": 7393,
+      "sha256": "536874e93cecea4c2d4b430043e13c98a7652ab53c243b816cf11fa9e09aefe0",
+      "size": 7686,
       "mode": "100644"
     },
     {
@@ -293,8 +293,8 @@
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "1f066a5d333147faff726fcc36778cbe2d705142f4f15cc7a902b85d1600d13f",
-      "size": 3786,
+      "sha256": "f95ad9d613ae9f0dfaf19b9dd50de343e6d8fe8564df3f4bc3108b98e1322230",
+      "size": 3814,
       "mode": "100644"
     },
     {
@@ -329,7 +329,7 @@
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "29ed103da54a6aea09398af54017df08df2f44a9ca32715058e0a54e7f5f0ba8",
+      "sha256": "8a872fe5b7a5f0a24b96fd0ef27f5edf1f00613bc5a5ae950d0da2eb8fbf1f22",
       "size": 8069,
       "mode": "100644"
     },
@@ -647,8 +647,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "3aa5b0645b00d8bbbb25d9cc1556f2ba6f8594a3f43307a8970e39b2d91ffaf7",
-      "size": 59712,
+      "sha256": "8d276e3492089e175b87d5c5dd58bc4dcf6ac46f828b1b360761340fc7157a6c",
+      "size": 58591,
       "mode": "100644"
     },
     {

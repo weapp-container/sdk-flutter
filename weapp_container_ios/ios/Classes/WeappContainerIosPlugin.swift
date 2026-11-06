@@ -691,25 +691,13 @@ import UIKit
     private func requireMeasurement(_ decision: IOSLayoutMeasurement.Decision) throws {
         try decision.requireReadyOrWaiting()
     }
-    private func nativeMeasurement(_ view: WeappContainerView, _ window: UIWindow) -> IOSLayoutMeasurement.Native {
-        // Match the SDK view's quantization, without requesting a new native
-        // observation or extending its navigation/measurement lease.
-        let width = max(1, view.bounds.width.rounded()), height = max(1, view.bounds.height.rounded())
-        let intersection = view.bounds.inset(by: view.safeAreaInsets).intersection(view.bounds)
-        let safe = intersection.isNull ? CGRect.zero : intersection
-        let sx = width / view.bounds.width, sy = height / view.bounds.height
-        let inScreen = view.convert(view.bounds, to: window.screen.coordinateSpace)
-        let screen = window.screen.bounds
-        let metrics: [String: Any] = [
-            "windowWidth": Double(width), "windowHeight": Double(height), "pixelRatio": Double(window.screen.scale),
-            "screenWidth": Double(screen.width), "screenHeight": Double(screen.height),
-            "statusBarHeight": Double(window.windowScene?.statusBarManager?.statusBarFrame.height ?? 0),
-            "screenTop": Double(inScreen.minY),
-            "safeArea": ["left": Double(safe.minX * sx), "right": Double(safe.maxX * sx),
-                         "top": Double(safe.minY * sy), "bottom": Double(safe.maxY * sy),
-                         "width": Double(safe.width * sx), "height": Double(safe.height * sy)],
-            "deviceOrientation": screen.width > screen.height ? "landscape" : "portrait",
-        ]
+    private func nativeMeasurement(_ view: WeappContainerView) -> IOSLayoutMeasurement.Native? {
+        // Capture through the SDK's one UIKit geometry contract. This passive
+        // read neither advances its observation nor extends this attempt's lease.
+        guard let window = view.window, let scene = window.windowScene,
+              let captured = view.captureWindowMetrics(),
+              let metrics = codec(captured) as? [String: Any] else { return nil }
+        let inScreen = view.convert(view.bounds, to: scene.screen.coordinateSpace)
         return IOSLayoutMeasurement.Native(windowMetrics: metrics, left: Double(inScreen.minX), top: Double(inScreen.minY))
     }
     private func restartMeasurementSnapshot(_ entry: Entry, _ measurement: IOSLayoutMeasurement) throws -> (receipt: [String: Any], state: [String: Any])? {
@@ -747,9 +735,7 @@ import UIKit
             try requireMeasurement(measurement.decision(nowNanoseconds: DispatchTime.now().uptimeNanoseconds,
                                                        ownerCancellation: measurementOwnerCancellation(entry, lifetime), state: state,
                                                        restartReceipt: restartSnapshot?.receipt))
-            if let view = entry.view, let window = view.window,
-               view.bounds.width.isFinite, view.bounds.height.isFinite, view.bounds.width > 0, view.bounds.height > 0 {
-                let native = nativeMeasurement(view, window)
+            if let view = entry.view, let native = nativeMeasurement(view) {
                 var measured = payload
                 if coordinates == "flutterClient" {
                     guard let content = anchor["contentRect"] as? [String: Any],

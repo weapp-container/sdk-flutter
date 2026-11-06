@@ -114,6 +114,8 @@ await controller.back();
 
 `load()` 会等待有效的原生布局，不要在挂载 View 前等待它完成。路径应指向运行库支持的 pack，不能直接传入普通小程序源码目录。
 
+iOS 的尺寸、DPR、safe area 和方向统一由原生 SDK 的 `captureWindowMetrics()` 读取，配套的 iOS SDK 归档必须包含此 Swift API。折叠、旋转和窗口变化不依赖机型白名单；布局提交仍校验原有 owner、surface、observation 和超时/取消边界。
+
 ## 会话、存储和宿主能力
 
 - 用稳定的应用/账号标识作为 `storageKey`；传 `null` 显式选择纯内存存储。

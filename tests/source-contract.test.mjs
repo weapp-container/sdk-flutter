@@ -18,7 +18,7 @@ async function sourceFiles() {
   return inventory;
 }
 test('preview.6.0 artifact lock is exact and source-bound', async () => {
-  assert.equal(createHash('sha256').update(await readFile(join(root, 'runtime-artifacts.lock.json'))).digest('hex'), '1f066a5d333147faff726fcc36778cbe2d705142f4f15cc7a902b85d1600d13f');
+  assert.equal(createHash('sha256').update(await readFile(join(root, 'runtime-artifacts.lock.json'))).digest('hex'), 'f95ad9d613ae9f0dfaf19b9dd50de343e6d8fe8564df3f4bc3108b98e1322230');
   const lock = await json('runtime-artifacts.lock.json');
   assert.equal(lock.runtimeVersion, SDK_VERSION);
   assert.equal(lock.artifacts.length, 12);

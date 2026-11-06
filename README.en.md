@@ -114,6 +114,8 @@ await controller.back();
 
 `load()` waits for a valid native layout. Do not await it before mounting the View. The path must identify a supported runtime pack, rather than an ordinary mini-program source directory.
 
+On iOS, extents, DPR, safe area, and orientation use the native SDK's `captureWindowMetrics()`; the paired iOS SDK archive must contain that Swift API. Folding, rotation, and window changes use real measurements without model allowlists. Layout submission retains its owner, surface, observation, deadline, and cancellation checks.
+
 ## Sessions, storage and host capabilities
 
 - Use a stable application/account identity for `storageKey`; pass `null` explicitly for memory-only storage.
