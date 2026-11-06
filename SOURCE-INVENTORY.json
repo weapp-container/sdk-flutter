@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "2649cdec6e111d0741b67762a58044306defacd0a0fd85759d0494b2c457a5c4",
-  "review": "统一 iOS UIKit 窗口指标读取，并精确锁定包含 captureWindowMetrics 的 full Swift SDK；演示限制配置仅由独立私有 manifest 消费。",
+  "sourceFilesSha256": "1ee4909d09f65212fa6c590270e68dcc0c6298facfe77251ba260a54395a0c57",
+  "review": "默认 full iOS wrapper 精确切换到 c17 clean 生命周期修复三 slice；受限演示始终使用独立私有 manifest。",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -293,8 +293,8 @@
     },
     {
       "path": "runtime-artifacts.lock.json",
-      "sha256": "f95ad9d613ae9f0dfaf19b9dd50de343e6d8fe8564df3f4bc3108b98e1322230",
-      "size": 3814,
+      "sha256": "75806f43431dbcc9aff498e2816c15e46d94b1008520ccc4e0984c07b9161e9a",
+      "size": 3817,
       "mode": "100644"
     },
     {
@@ -329,7 +329,7 @@
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "8a872fe5b7a5f0a24b96fd0ef27f5edf1f00613bc5a5ae950d0da2eb8fbf1f22",
+      "sha256": "5bdde0acbcf70da25aca3fdea813a7ccda1d47ded053a5edcd85e14e5a6e0a6d",
       "size": 8069,
       "mode": "100644"
     },
