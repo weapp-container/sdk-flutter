@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "8b059d6615cae3a9e2f99da7a5f2dad02a424f8b584f80ec8d5ef57d452e906f",
-  "review": "Prepare Apache-2.0 core source integration documentation; preserve public SDK history and historical artifact pins.",
+  "sourceFilesSha256": "43a194820424d5f807ee103887aaec77269c76192a49e78cb65a83c3e80f92ef",
+  "review": "Align the regression pin with the unchanged host-layout-aware iOS lock introduced in public commit 2d16099; no archive bytes or hashes changed.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -335,7 +335,7 @@
     },
     {
       "path": "tests/source-contract.test.mjs",
-      "sha256": "5bdde0acbcf70da25aca3fdea813a7ccda1d47ded053a5edcd85e14e5a6e0a6d",
+      "sha256": "53b4d3716edf6316c87c076ea5259c19e73fc572f26fa9fa8f26b26ac8e79cbe",
       "size": 8069,
       "mode": "100644"
     },
