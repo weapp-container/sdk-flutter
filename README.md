@@ -1,5 +1,7 @@
 # Weapp Container Flutter SDK
 
+核心运行时与 SDK 自有源码采用 Apache-2.0，可按[主仓库源码构建说明](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-repositories.md)构建当前运行库。现有预编译归档保留原许可、访问要求及精确版本和哈希锁；本次源码更新不发布替代二进制。
+
 [简体中文](README.md) | [English](README.en.md)
 
 在 Flutter 应用中嵌入小程序容器。Android、iOS 使用原生 View，桌面端使用 Flutter 外部纹理；同一个 Dart Controller 负责加载本地 pack、导航、收发消息和管理会话。

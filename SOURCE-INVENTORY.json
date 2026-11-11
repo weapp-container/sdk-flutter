@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "62d5cb021001825cf880213c2b1a1740b4bb311be1cd4ddfa1a08e58347e4130",
-  "review": "Pin the exact hostLayout-aware full iOS SDK archive from clean core e2a091b and SDK d3c5a7d; preserve other platform release identities.",
+  "sourceFilesSha256": "8b059d6615cae3a9e2f99da7a5f2dad02a424f8b584f80ec8d5ef57d452e906f",
+  "review": "Prepare Apache-2.0 core source integration documentation; preserve public SDK history and historical artifact pins.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -34,6 +34,12 @@
       "mode": "100644"
     },
     {
+      "path": "OPEN_SOURCE.md",
+      "sha256": "1dee2538d2d740dce59b041c10fbb54f42ba523c3c87e546f883e62214309195",
+      "size": 987,
+      "mode": "100644"
+    },
+    {
       "path": "ORIGIN.json",
       "sha256": "93b2feda7e582fc7101008a5695a99c222462f4562d3fa4d6dedf6c168baac67",
       "size": 65106,
@@ -41,14 +47,14 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "9e7e3ea66754542ee7c396d111661dbdd52eefe8fb06741eddb4d9d7a24364b6",
-      "size": 9174,
+      "sha256": "ccefece157b52af9bc43f9bcdc24fb32729617a69e9d620fe6eb39160710efa4",
+      "size": 9512,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "068ebd6ed9a4312d2a38eaa4bd980e87c1923ca0fa157f2ea8a3a6702320e74f",
-      "size": 8611,
+      "sha256": "d3fcdeb1902ce64efeaf7e3a8092c1f93f065d53e1ddf32e84d527dce5a64bd0",
+      "size": 8940,
       "mode": "100644"
     },
     {

@@ -1,5 +1,7 @@
 # Weapp Container Flutter SDK
 
+The core runtime and SDK source are available under Apache-2.0. Build the current runtime from the [core source guide](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-repositories.md). Existing prebuilt archives retain their original licenses, access requirements and exact version/hash pins; this source update does not publish replacement binaries.
+
 [简体中文](README.md) | [English](README.en.md)
 
 Embed a mini-program container in a Flutter application. Android and iOS use native Views; desktop platforms use Flutter external textures. One Dart Controller handles local packs, navigation, messages and session ownership.
@@ -156,4 +158,4 @@ Native text editing, full accessibility semantics and advanced gestures still ha
 - [Desktop integration](native_desktop/README.md) · [SDK protocol](CONTRACT.md)
 - [Public types and C ABI](https://github.com/weapp-container/sdk-contract)
 
-The integration source is licensed under [Apache-2.0](LICENSE). Runtime and third-party components retain the `RUNTIME-LICENSE` and notices in their archives. This repository's open-source license does not grant private runtime downloads or additional commercial rights.
+The integration source is licensed under [Apache-2.0](LICENSE). Runtime and third-party components retain the `RUNTIME-LICENSE` and notices in their archives. Historical archives retain their supplied licenses and access requirements.
