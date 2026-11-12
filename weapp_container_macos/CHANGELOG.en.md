@@ -1,3 +1,7 @@
+# 0.1.0-preview.7.0
+
+First public preview; native dependencies use public, versioned release entry points. Publication and device acceptance are recorded separately.
+
 # 0.1.0-preview.5.3
 
 [简体中文](CHANGELOG.md) · **English**

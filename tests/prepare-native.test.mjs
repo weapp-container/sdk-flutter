@@ -33,7 +33,7 @@ async function pin(f, version, content) {
   const bytes = await readFile(archive);
   const entry = { component: 'ios-sdk', platform: 'ios', arch: 'universal', architectures: ['arm64-device', 'arm64-simulator', 'x86_64-simulator'], fileName, size: bytes.length, sha256: sha(bytes) };
   const manifest = { schemaVersion: 1, runtimeVersion: version, abiVersion: 1,
-    source: { repository: 'weapp-container/runtime-artifacts', releaseTag: `runtime-v${version}` }, artifacts: [entry] };
+    source: { repository: 'weapp-container/weapp-container', releaseTag: `runtime-v${version}` }, artifacts: [entry] };
   await writeFile(f.lock, JSON.stringify(manifest));
   const original = await readFile(new URL('tools/runtime-artifacts.mjs', root), 'utf8');
   // Model upgrading the standalone SDK itself, keeping the CLI's strict version
@@ -100,7 +100,7 @@ test('real prepare preserves immutable caches across SDK upgrades and different 
 test('validated platform and architecture identities have distinct storage paths', () => {
   const version = SDK_VERSION;
   const manifest = { schemaVersion: 1, runtimeVersion: version, abiVersion: 1,
-    source: { repository: 'weapp-container/runtime-artifacts', releaseTag: `runtime-v${version}` },
+    source: { repository: 'weapp-container/weapp-container', releaseTag: `runtime-v${version}` },
     artifacts: ['arm64-device', 'arm64-simulator'].map(arch => ({ component: 'ios-sdk', platform: 'ios', arch,
       fileName: `${arch}.tar.gz`, size: 1, sha256: 'a'.repeat(64) })) };
   const device = nativeArtifactPaths('/unused/runtime', manifest, { version, platform: 'ios', arch: 'arm64-device' });

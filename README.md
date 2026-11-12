@@ -2,12 +2,49 @@
 
 **简体中文** · [English](README.en.md)
 
+<a id="public-distribution-candidate-preview7"></a>
+## 公开发行候选：preview.7
+
+下列安装示例描述 preview.7 发行候选，使用前须确认对应注册源或 Release 已提供该版本；源码公开不代表包已发布或设备验收完成。本文后续源码构建示例使用下面固定的 preview.6 checkout。当前核心构建器仍输出 preview.6，不要将该运行库与 preview.7 包装层混用。
+
+版本 / Version: `0.1.0-preview.7.0`；C ABI `1`。
+
+```yaml
+dependencies:
+  weapp_container: 0.1.0-preview.7.0
+```
+
+```sh
+flutter pub get
+```
+
+Android API 26+；iOS 16+；macOS 12+ universal；Linux / Windows x86_64。Flutter 3.22+ / Dart 3.3+。Android 使用 Maven Central；iOS 与 macOS 使用公开 CocoaPods 规格，在各 Apple Podfile 中添加两个来源：
+
+```ruby
+source 'https://github.com/weapp-container/Specs.git'
+source 'https://cdn.cocoapods.org/'
+```
+
+Linux / Windows 的 CMake 下载固定 Desktop 归档并验证 SHA-256。离线构建需预先获取精确归档，将 `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` 设为解压目录。各平台包包含桥接源码、头文件和许可，普通应用安装无需 Node 准备命令或兄弟仓库。
+
+首次公开发行正在准备；注册源发布和设备验证分别记录，历史私有锁保持原样。
+
+<a id="reviewed-source-build-checkout"></a>
+### 已复核的源码构建版本
+
+```sh
+git clone https://github.com/weapp-container/sdk-flutter.git sdk-flutter-source
+cd sdk-flutter-source
+git checkout 2a6a2f0096b894e69d7049064d87072d8e5b3901
+```
+
+
 
 [开发文档](https://container.weapp.dev/docs/) · [源码构建](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-source-build.md) · [API 与协议](https://github.com/weapp-container/sdk-contract/blob/main/README.md)
 
 在 Flutter 应用中嵌入小程序容器。Android、iOS 使用原生 View，桌面端使用 Flutter 外部纹理；同一个 Dart Controller 负责加载本地 pack、导航、收发消息和管理会话。
 
-当前版本：`0.1.0-preview.6.0`，原生 ABI：`1`。本仓库提供 Apache-2.0 许可的接入层，运行库从公开核心源码构建，或使用另行核验的配套归档。当前使用本地路径依赖，尚未发布到 pub.dev。
+已复核源码示例版本：`0.1.0-preview.6.0`，原生 ABI：`1`。本仓库提供 Apache-2.0 许可的接入层，运行库从公开核心源码构建，或使用另行核验的配套归档。当前使用本地路径依赖，尚未发布到 pub.dev。
 
 <a id="start-from-current-source"></a>
 ## 从当前源码开始

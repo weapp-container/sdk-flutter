@@ -52,8 +52,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "README.md"
       },
-      "reviewedChineseSummary": "Weapp Container Flutter SDK；从当前源码开始；环境与平台；1. 准备原生依赖；2. 生成分发包并运行示例；3. 接入你的 Flutter 应用；会话、存储和宿主能力；常见问题",
-      "reviewedChineseSha256": "d3545c979bd8e5d1645694a9da4894a6a44133bd3244a58fcd883c188c42ee5c",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "33fa09faf6ed831b84fecf62bf415caf00c5bfc1fa09b50407b08038166bbf30",
       "legacyHeadingIds": [
         "1-准备原生依赖",
         "2-生成分发包并运行示例",
@@ -136,8 +136,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "0.1.0-preview.5.3；0.1.0-preview.5.1；0.1.0-preview.5；0.1.0-preview.3；0.1.0-preview.2",
-      "reviewedChineseSha256": "41f02155b7e37377fb2c8aa2867da9cfff3c19f959322e6f7bf2987ccaacdfc3",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -170,8 +170,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_android/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "0.1.0-preview.5.3；0.1.0-preview.5.1；0.1.0-preview.5；0.1.0-preview.3；0.1.0-preview.2",
-      "reviewedChineseSha256": "41f02155b7e37377fb2c8aa2867da9cfff3c19f959322e6f7bf2987ccaacdfc3",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -204,8 +204,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_ios/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "0.1.0-preview.5.3；0.1.0-preview.5.1；0.1.0-preview.5；0.1.0-preview.3；0.1.0-preview.2",
-      "reviewedChineseSha256": "41f02155b7e37377fb2c8aa2867da9cfff3c19f959322e6f7bf2987ccaacdfc3",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -238,8 +238,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_linux/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "0.1.0-preview.5.3；0.1.0-preview.5.1；0.1.0-preview.5；0.1.0-preview.3；0.1.0-preview.2",
-      "reviewedChineseSha256": "83996ce2d7f74f0321bb0cc5699b46e99ee183146fbb2ea1c927378e78ab09b4",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -257,8 +257,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_macos/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "0.1.0-preview.5.3；0.1.0-preview.5.1；0.1.0-preview.5；0.1.0-preview.3；0.1.0-preview.2",
-      "reviewedChineseSha256": "83996ce2d7f74f0321bb0cc5699b46e99ee183146fbb2ea1c927378e78ab09b4",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -276,8 +276,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_platform_interface/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "0.1.0-preview.5.3；0.1.0-preview.5.1；0.1.0-preview.5；0.1.0-preview.3；0.1.0-preview.2",
-      "reviewedChineseSha256": "41f02155b7e37377fb2c8aa2867da9cfff3c19f959322e6f7bf2987ccaacdfc3",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -310,8 +310,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_windows/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "0.1.0-preview.5.3；0.1.0-preview.5.1；0.1.0-preview.5；0.1.0-preview.3；0.1.0-preview.2",
-      "reviewedChineseSha256": "83996ce2d7f74f0321bb0cc5699b46e99ee183146fbb2ea1c927378e78ab09b4",
+      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
+      "reviewedChineseSha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -319,6 +319,45 @@
         "010-preview51",
         "010-preview53"
       ]
+    },
+    {
+      "id": "weapp_container_linux/readme",
+      "zh": "weapp_container_linux/README.md",
+      "en": "weapp_container_linux/README.en.md",
+      "section": "sdk",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_linux/README.md"
+      },
+      "reviewedChineseSummary": "平台插件入口，安装和发行状态统一引用 SDK 主说明。",
+      "reviewedChineseSha256": "550580efa21b4fc1674259679b5e3598d9e0dd2937b73f37d18054d02390e2cb",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_macos/readme",
+      "zh": "weapp_container_macos/README.md",
+      "en": "weapp_container_macos/README.en.md",
+      "section": "sdk",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_macos/README.md"
+      },
+      "reviewedChineseSummary": "平台插件入口，安装和发行状态统一引用 SDK 主说明。",
+      "reviewedChineseSha256": "0990aa604253a18159ea4cf343c4e1829eff568d43af567d6a057c9d57d1f363",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_windows/readme",
+      "zh": "weapp_container_windows/README.md",
+      "en": "weapp_container_windows/README.en.md",
+      "section": "sdk",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_windows/README.md"
+      },
+      "reviewedChineseSummary": "平台插件入口，安装和发行状态统一引用 SDK 主说明。",
+      "reviewedChineseSha256": "9129749cccd6c4214f302bffdb602742cbf27158d544bef4719cf24fb541b36d",
+      "legacyHeadingIds": []
     }
   ],
   "excluded": [],
