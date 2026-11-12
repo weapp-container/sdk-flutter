@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "564f6ffa3aea3e60c492abd8736da5d2a8237e577f1ae6759d4547cadb33f46b",
-  "review": "Prepare validated public preview distributions",
+  "sourceFilesSha256": "c6453483a7f066010a45718f3e92d6b4d435f2f1da56c93644af2d7cf1e729b8",
+  "review": "Complete public release workflows and installation documentation",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -10,9 +10,15 @@
   },
   "files": [
     {
+      "path": ".github/workflows/package-pub.yml",
+      "sha256": "0d38a32085bf40c75828ce9f3613a52beac91aec1ca49ec994e42b855a7c11d6",
+      "size": 972,
+      "mode": "100644"
+    },
+    {
       "path": ".github/workflows/public-sdk.yml",
-      "sha256": "e39a42593732c7b91fff1236d512b33036c63e63b4d8d01e006bd2252479cb6f",
-      "size": 477,
+      "sha256": "4f143ccb446f0a92d7e7d7041d6c8e36b0d07e63235f72b744610c87141db8cf",
+      "size": 905,
       "mode": "100644"
     },
     {
@@ -29,8 +35,8 @@
     },
     {
       "path": ".gitignore",
-      "sha256": "fdb3d54ca35f78c1dd452c2f45950c265c7f8d8ab23f1105ba1861c3acf9a429",
-      "size": 254,
+      "sha256": "b66c5fefd3e0d2e1bfbe697e09dcf3d9d2e55bd10bc8f8b3d5fff52e0fad548b",
+      "size": 297,
       "mode": "100644"
     },
     {
@@ -64,15 +70,21 @@
       "mode": "100644"
     },
     {
+      "path": "PUBLIC-RELEASE.md",
+      "sha256": "6a6c3c9f759d8cc428d6a90151fb2c18a6eb4d354fc2eed0f034aaac035497ed",
+      "size": 3613,
+      "mode": "100644"
+    },
+    {
       "path": "README.en.md",
-      "sha256": "301cf2a910621acbe1f17d58bb9fba5d288d01fc264a9f315edcca0c97862872",
-      "size": 6467,
+      "sha256": "60ad6f777447cc561f80ff8b0debe686d1e23e70cead50ae023eac222b14c5ef",
+      "size": 6368,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "d0f3110ca7ca2335ae5bf07bafbecd615c040438eb2bb2957537a170964d5a5b",
-      "size": 6140,
+      "sha256": "96ef3fa5e2faf369d1d5e25ab8dac7909adc03d6b67305845886426fe09c7def",
+      "size": 6031,
       "mode": "100644"
     },
     {
@@ -376,6 +388,12 @@
       "mode": "100644"
     },
     {
+      "path": "tools/analyze-source.mjs",
+      "sha256": "2121dd97495a67a3dfb7abcfe9b96be60163bd6aa6bc36e5ed6b08149371e98a",
+      "size": 1246,
+      "mode": "100644"
+    },
+    {
       "path": "tools/android-host-smoke.mjs",
       "sha256": "4cb1cbf8a555a7a42138286822bf5562d3e8178d6a74ee05700e07df3747cf93",
       "size": 6392,
@@ -413,8 +431,8 @@
     },
     {
       "path": "tools/package-public.mjs",
-      "sha256": "64b2c2d63e29f76bd4cdf0aa45598243d3251b102b7a24287ece52e11bbd18f0",
-      "size": 3352,
+      "sha256": "e686938b8670dac642a0dc5f31925061a1afca94bc9dac502697d084e710c0d7",
+      "size": 3590,
       "mode": "100644"
     },
     {
@@ -433,6 +451,12 @@
       "path": "tools/public-release.mjs",
       "sha256": "a8691fca9be3c6def20195cbeced5b597e76be6ca6fb3329b7e1937b12f08ce3",
       "size": 7288,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/publish-public.mjs",
+      "sha256": "5dd9e2b7ebaa144c5ddd2cbf08fd22938f7ee0e011ea8075db6368ddeddbd2a7",
+      "size": 3419,
       "mode": "100644"
     },
     {
@@ -485,8 +509,8 @@
     },
     {
       "path": "weapp_container/README.md",
-      "sha256": "d46cce1d40e13945b6f8ce2afb75ba8cdee8d7ef17300eb9cb41f4153506b800",
-      "size": 5499,
+      "sha256": "96ef3fa5e2faf369d1d5e25ab8dac7909adc03d6b67305845886426fe09c7def",
+      "size": 6031,
       "mode": "100644"
     },
     {
@@ -605,8 +629,8 @@
     },
     {
       "path": "weapp_container_android/README.md",
-      "sha256": "7b426b01e11e27e2930480f6fad082f8e640ee733d9042a5914a8f5e943d8d28",
-      "size": 427,
+      "sha256": "876e186c652a66dbded9ea3e77a42e39ce1673e48fedde981250a28fb6a33c17",
+      "size": 323,
       "mode": "100644"
     },
     {
@@ -695,7 +719,7 @@
     },
     {
       "path": "weapp_container_ios/README.md",
-      "sha256": "02cd0b1ebbe045ad6f8a5eef9846070498c508aaf98f13a1ef3d33869dbb8b46",
+      "sha256": "676d3c6205f8113183fcd648e779a3eeb1ae87388084317b4fe074db5239a596",
       "size": 319,
       "mode": "100644"
     },
@@ -755,8 +779,8 @@
     },
     {
       "path": "weapp_container_linux/README.md",
-      "sha256": "37f097584b9d2f1e0e3841004075e27aa40315bcdfb7c2579dd99d63e36a5291",
-      "size": 198,
+      "sha256": "fa075300e30c9cc6805b5df7cff8cab3fbfb3f62ebd9d9ced5ea33ab7549de8b",
+      "size": 321,
       "mode": "100644"
     },
     {
@@ -803,8 +827,8 @@
     },
     {
       "path": "weapp_container_macos/README.md",
-      "sha256": "803c2acf140549006878133a71603bc4d4e7948724fd9abeb2b58d44b5c40fdc",
-      "size": 198,
+      "sha256": "d82b00773f78e240366c4e350b3e39855de7c784dbe7ee3369fb6a6a1269d4ef",
+      "size": 321,
       "mode": "100644"
     },
     {
@@ -851,8 +875,8 @@
     },
     {
       "path": "weapp_container_platform_interface/README.md",
-      "sha256": "4b5505936726818e97ddb3b75657831cea7eb553722201d746fd0256c4dc2d9e",
-      "size": 422,
+      "sha256": "c517630c93fadff2157e4030ea7fe5034a8c8e45961a396a44636f49846caa2c",
+      "size": 334,
       "mode": "100644"
     },
     {
@@ -887,8 +911,8 @@
     },
     {
       "path": "weapp_container_windows/README.md",
-      "sha256": "988251dce3cb708e3fc4140ed4ee9c5da8a71199c4ed4bdd51d96fc93a858efd",
-      "size": 200,
+      "sha256": "6388e866179b4c9c97dbce5412c1b9620ab3ee398140887638c2622a1e0624fc",
+      "size": 323,
       "mode": "100644"
     },
     {

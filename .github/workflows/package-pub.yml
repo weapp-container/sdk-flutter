@@ -1,0 +1,28 @@
+name: Stage public Flutter packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Fetch fixed public Desktop release identity anonymously
+        run: |
+          mkdir -p .build/releases
+          version=$(sed -n 's/^version: //p' weapp_container/pubspec.yaml)
+          curl --fail --location "https://github.com/weapp-container/sdk-desktop/releases/download/v${version}/release.json" -o .build/releases/desktop.json
+      - run: node tools/package-public.mjs --desktop-release .build/releases/desktop.json --out .build/public
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-flutter-staging
+          path: .build/public/
+          retention-days: 30
