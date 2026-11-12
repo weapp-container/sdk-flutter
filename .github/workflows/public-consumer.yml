@@ -40,6 +40,8 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         if: matrix.platform == 'android'
+        with:
+          packages: platform-tools
       - name: Install Linux consumer dependencies
         if: matrix.platform == 'linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build clang pkg-config libgtk-3-dev libepoxy-dev libfontconfig1-dev libcurl4-openssl-dev
