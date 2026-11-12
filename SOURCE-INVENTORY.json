@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "ff082e640194f6e9e3df5386378031d530e2d21dcfa69ffaf3157cebbcc5818f",
-  "review": "Align standalone desktop preparation with the current public package version and validate version coordination.",
+  "sourceFilesSha256": "c00594ff338271c242a9475a860e6e6e9f46828763c459d9288b08d9bf665699",
+  "review": "Retain reviewed package dotfiles in CI staging artifacts so every distribution manifest entry survives upload and download.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -11,8 +11,8 @@
   "files": [
     {
       "path": ".github/workflows/package-pub.yml",
-      "sha256": "0d38a32085bf40c75828ce9f3613a52beac91aec1ca49ec994e42b855a7c11d6",
-      "size": 972,
+      "sha256": "f7e1c2f87c106cb6680e5349499cf9c38fd1f2680df40123acf32c2aebc89018",
+      "size": 1009,
       "mode": "100644"
     },
     {

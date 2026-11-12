@@ -25,4 +25,5 @@ jobs:
         with:
           name: public-flutter-staging
           path: .build/public/
+          include-hidden-files: true
           retention-days: 30
