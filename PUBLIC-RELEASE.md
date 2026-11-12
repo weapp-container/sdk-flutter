@@ -1,5 +1,7 @@
 # Public preview release 0.1.0-preview.7.0
 
+After all seven hosted packages and the native dependencies are public, dispatch `public-consumer.yml`. It creates five fresh applications, resolves the exact hosted versions without GitHub credentials, and compiles/links Android, iOS simulator, macOS, Linux and Windows. Each job uploads dependency identities, build logs and a receipt. A successful build is recorded as compile/link validation; pack interaction and device acceptance require separate execution.
+
 Status: source configuration merged; registry publication and platform acceptance remain pending. ABI stays 1. Do not claim completion until every registry version is anonymously downloadable and its real consumer passes.
 
 Run from clean committed source. Historical tags, locks, ORIGIN and evidence are immutable. New builds use one clean core production commit. Never overwrite an existing tag, version, asset or checksum. A failed published version requires a new version.
