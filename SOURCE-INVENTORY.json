@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "5166c2649f978f03b521a021469e07742dbdc8449cf2b99b8dec99e61c98b49f",
-  "review": "Pin the verified public runtime release and review publication metadata",
+  "sourceFilesSha256": "ff082e640194f6e9e3df5386378031d530e2d21dcfa69ffaf3157cebbcc5818f",
+  "review": "Align standalone desktop preparation with the current public package version and validate version coordination.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -215,7 +215,7 @@
     },
     {
       "path": "native_desktop/prepare.mjs",
-      "sha256": "da332c08a6457bd4afef39ef1a5a6bb8a221ba3c485d8354c08aac2f3eb08ae5",
+      "sha256": "06e462e9aabaa6acda2135b5f47cf710a923720a789652f909ca487dc924a2ee",
       "size": 7455,
       "mode": "100644"
     },
@@ -353,8 +353,8 @@
     },
     {
       "path": "tests/current-runtime-lock.test.mjs",
-      "sha256": "e87030f869e7bba34f0e29103d9120bee8029adc47fbf467c710d5b54081fe13",
-      "size": 1640,
+      "sha256": "7356bd6ac8172cb745bd0afdbabc990dd7a1fb4993c96f6dff23f9be3361b37d",
+      "size": 2122,
       "mode": "100644"
     },
     {

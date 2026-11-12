@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { SDK_VERSION, selectArtifact } from '../tools/runtime-artifacts.mjs';
 
+test('standalone desktop preparation agrees with the public package version', () => {
+  const source = readFileSync(new URL('../native_desktop/prepare.mjs', import.meta.url), 'utf8');
+  const pubspec = readFileSync(new URL('../weapp_container/pubspec.yaml', import.meta.url), 'utf8');
+  assert.equal(source.match(/WEAPP_CONTAINER_SDK_VERSION \?\? '([^']+)'/)?.[1], pubspec.match(/^version: (\S+)$/m)?.[1]);
+  assert.equal(pubspec.match(/^version: (\S+)$/m)?.[1], SDK_VERSION);
+});
+
 test('current public pin supplies every native target and wrapper without historical fallback', () => {
   const pin = JSON.parse(readFileSync(new URL(`../runtime-artifacts.${SDK_VERSION}.lock.json`, import.meta.url)));
   assert.deepEqual(pin.source, { repository: 'weapp-container/weapp-container', releaseTag: `runtime-v${SDK_VERSION}` });
