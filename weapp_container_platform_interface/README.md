@@ -1,7 +1,5 @@
-# Weapp Container platform interface
+# weapp_container_platform_interface
 
-Internal injectable transport for the federated Flutter SDK. Application code
-uses `weapp_container`. The method/event channels are documented by the shared
-`FLUTTER_PROTOCOL.md`; this package owns the Dart runtime epoch and subscribes
-before initialization. All implementations share JSON payloads and native SDK
-error codes. No native pointers or raster bytes cross this interface.
+Platform integration for `weapp_container` 0.1.0-preview.7.0. Install the main package through pub.dev.
+
+See https://github.com/weapp-container/sdk-flutter for supported architectures, CocoaPods Specs sources and native platform requirements. The package includes its bridge source and licenses.

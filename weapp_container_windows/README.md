@@ -1,5 +1,5 @@
 # weapp_container_windows
 
-Platform implementation for [weapp_container](https://pub.dev/packages/weapp_container).
+Platform integration for `weapp_container` 0.1.0-preview.7.0. Install the main package through pub.dev.
 
-Installation and supported targets: https://github.com/weapp-container/sdk-flutter
+See https://github.com/weapp-container/sdk-flutter for supported architectures, CocoaPods Specs sources and native platform requirements. The package includes its bridge source and licenses.

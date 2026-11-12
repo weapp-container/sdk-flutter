@@ -1,7 +1,5 @@
-# Weapp Container Android implementation
+# weapp_container_android
 
-Federated native plugin for `weapp_container`. Uses Hybrid Composition and the
-installed `com.sonofmagic.weapp:weapp-container-android:0.1.0-preview.5.1` AAR.
-The distribution builder includes `native/maven`; source consumers may set
-`weappSdkMavenDir` to a verified SDK Maven repository. Minimum Android API is 26.
-No Cargo/JNI source build occurs in a consuming Flutter application.
+Platform integration for `weapp_container` 0.1.0-preview.7.0. Install the main package through pub.dev.
+
+See https://github.com/weapp-container/sdk-flutter for supported architectures, CocoaPods Specs sources and native platform requirements. The package includes its bridge source and licenses.
