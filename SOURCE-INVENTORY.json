@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "d934d1aae5ea9059ba0bd5724740e6e43249c29a6dec1aad5287c6fe12a0febb",
-  "review": "Keep pub.dev documentation links and install troubleshooting valid without the source repository",
+  "sourceFilesSha256": "4e609332cc5fb9848d288b4ed8bd07f3cc4c6f66736fb9a86060458a5dff7d17",
+  "review": "Use installed Desktop CMake targets with the exact transitive native dependencies",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -785,8 +785,8 @@
     },
     {
       "path": "weapp_container_linux/linux/CMakeLists.txt",
-      "sha256": "b44b5563eb1fa3ad49fc63070c26ce19835263aef289cfd533aeade71f06757e",
-      "size": 2186,
+      "sha256": "ed875e90bb1eabc2b3691e391c11527ae2eea0e5b19b110e0dda7a0caefaaaa5",
+      "size": 1317,
       "mode": "100644"
     },
     {
@@ -923,8 +923,8 @@
     },
     {
       "path": "weapp_container_windows/windows/CMakeLists.txt",
-      "sha256": "4593e7d84bee64018e9676bce0fc0c88dd9f76b987530dab7fb52d296731cdcd",
-      "size": 2957,
+      "sha256": "88bf6011c1b75b7fce3a28f0472524ab9edf99fada60c217d104fa371c55c82f",
+      "size": 1912,
       "mode": "100644"
     },
     {
