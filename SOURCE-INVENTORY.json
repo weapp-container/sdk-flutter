@@ -1,14 +1,20 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "332fc3e2a14af269a6ce4b7dea2000b32a827ef5ddbbe05e3d716bede797ab19",
-  "review": "Document pre-existing default pin drift against the preserved legacy release inventory",
+  "sourceFilesSha256": "3fefeb9969a73bba4a648382297f14a354e158708875ab5cec63904610e903bc",
+  "review": "Isolate immutable legacy downloads in private storage and enforce reviewed publication scanning",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
     "sha256": "93b2feda7e582fc7101008a5695a99c222462f4562d3fa4d6dedf6c168baac67"
   },
   "files": [
+    {
+      "path": ".github/workflows/publication-security.yml",
+      "sha256": "b6d87425d409e2d0add4aaa9b40fc7c0f33e5b6be9ff692eaecc91ed32b93c91",
+      "size": 1189,
+      "mode": "100644"
+    },
     {
       "path": ".github/workflows/source.yml",
       "sha256": "cea7c88e43826013f4cc37482a08077174bd2e7ac54a3a0462a89f7ad0f224ea",
@@ -19,6 +25,12 @@
       "path": ".gitignore",
       "sha256": "fdb3d54ca35f78c1dd452c2f45950c265c7f8d8ab23f1105ba1861c3acf9a429",
       "size": 254,
+      "mode": "100644"
+    },
+    {
+      "path": ".public-source-policy.json",
+      "sha256": "656e72ff4cd56f2863b2f16a7f23ff9e56421229e79398b9749a3adeeec95d6b",
+      "size": 76,
       "mode": "100644"
     },
     {
@@ -47,14 +59,14 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "487d9ff44572872628de14ce686b334de3fe39c1bc9f6cfc315106a24c0dd31d",
-      "size": 10531,
+      "sha256": "f51b531418f48e2df8407f5b72e0ec0b919db2e2048c9a91dcff1b41a530bee6",
+      "size": 11020,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "b9968ccc1f1d731eb4b7bc98f4d13b3d95d4e74d6812f7731acec27b5364d4ed",
-      "size": 9854,
+      "sha256": "a99266045777bc48e2d0c694e2fad687380918c4dfd1978c75ee6b16d53681b6",
+      "size": 10008,
       "mode": "100644"
     },
     {
@@ -335,8 +347,8 @@
     },
     {
       "path": "tests/runtime-repository.test.mjs",
-      "sha256": "67ab428402cbc8683a93d046a3046c72d81d6217ccd35271f7bc1d4a7a0a6a74",
-      "size": 5195,
+      "sha256": "9033e1e8890b92969386374366a70a92ed6d51573032af1efc3aca4118d1d47d",
+      "size": 5492,
       "mode": "100644"
     },
     {
@@ -401,8 +413,14 @@
     },
     {
       "path": "tools/runtime-artifacts.mjs",
-      "sha256": "eb0812227dd39dcc9228cdf3eba86f3e4a12e973f2ee6b6d7566f3390237f4ff",
-      "size": 20742,
+      "sha256": "dd132e3d23d59e2694e1f5baceee3d12f6912e4893d1d0b9354a7770b0ad9964",
+      "size": 21226,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/scan-public-source.mjs",
+      "sha256": "51c6dbef9b53291ade608e239fa94010c7177afabce05ce7a3b1450d28aff1f7",
+      "size": 8037,
       "mode": "100644"
     },
     {
