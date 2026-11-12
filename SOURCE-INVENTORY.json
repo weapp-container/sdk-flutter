@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "4e609332cc5fb9848d288b4ed8bd07f3cc4c6f66736fb9a86060458a5dff7d17",
-  "review": "Use installed Desktop CMake targets with the exact transitive native dependencies",
+  "sourceFilesSha256": "0471443f50797f2a24d04bbcc909149ca32b4cbb04267eb21b953aa50d55b7b3",
+  "review": "Add five fresh anonymous hosted-package consumer build jobs",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -13,6 +13,12 @@
       "path": ".github/workflows/package-pub.yml",
       "sha256": "0d38a32085bf40c75828ce9f3613a52beac91aec1ca49ec994e42b855a7c11d6",
       "size": 972,
+      "mode": "100644"
+    },
+    {
+      "path": ".github/workflows/public-consumer.yml",
+      "sha256": "7a564e1c98725053223e48dfcdb2968d7642207b4bec80f74a8309a137228ad9",
+      "size": 2067,
       "mode": "100644"
     },
     {
@@ -71,8 +77,8 @@
     },
     {
       "path": "PUBLIC-RELEASE.md",
-      "sha256": "6a6c3c9f759d8cc428d6a90151fb2c18a6eb4d354fc2eed0f034aaac035497ed",
-      "size": 3613,
+      "sha256": "97f61deedd567eb48ca81f4dce617067a2717239b89957117f1b4aaef74f5f0f",
+      "size": 4078,
       "mode": "100644"
     },
     {
@@ -445,6 +451,12 @@
       "path": "tools/prepare-native.mjs",
       "sha256": "150219564b2e65d4b059312143973e36cce20e0b183502c6240ca8b6eba13894",
       "size": 4187,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/public-consumer.mjs",
+      "sha256": "27e6054cacd8cd81245615355479fe86bdbaa7c76657e38458905b9c68bb1de7",
+      "size": 4996,
       "mode": "100644"
     },
     {
