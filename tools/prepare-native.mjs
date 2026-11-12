@@ -21,7 +21,7 @@ const args = process.argv.slice(2), at = name => { const index = args.indexOf(na
 const expectedDistribution = distributionOptions(args);
 const platform = at('--platform'), arch = at('--arch');
 if (!['android', 'ios', 'macos', 'windows', 'linux'].includes(platform) || !arch) throw new Error('Usage: node tools/prepare-native.mjs --platform android|ios|macos|windows|linux --arch <exact pinned arch> [--manifest <release lock>] [--artifact-dir <authorized offline archives>]');
-const manifestPath = resolve(at('--manifest') ?? join(root, 'runtime-artifacts.lock.json'));
+const manifestPath = resolve(at('--manifest') ?? join(root, 'runtime-artifacts.0.1.0-preview.7.0.lock.json'));
 if ((await lstat(manifestPath)).size > 1024 ** 2) throw Object.assign(new Error('Artifact manifest exceeded its size limit.'), { code: 'ERR_RUNTIME_MANIFEST' });
 const paths = nativeArtifactPaths(join(root, '.runtime'), JSON.parse(await readFile(manifestPath, 'utf8')),
   { ...expectedDistribution, version: SDK_VERSION, platform, arch, abiVersion: 1 });
