@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.6.0",
-  "sourceFilesSha256": "3595b2f3eb2367bd4016aacdca406885775a6cb6fe99dfd8b9fee2bb28a475c3",
-  "review": "Consolidate future runtime releases in the core repository; retain immutable historical artifact locks and ORIGIN",
+  "sourceFilesSha256": "332fc3e2a14af269a6ce4b7dea2000b32a827ef5ddbbe05e3d716bede797ab19",
+  "review": "Document pre-existing default pin drift against the preserved legacy release inventory",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -47,14 +47,14 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "3d7358f37474454f58555dac2140be3cb7c54bf8575741db10cf9900460ff602",
-      "size": 10045,
+      "sha256": "487d9ff44572872628de14ce686b334de3fe39c1bc9f6cfc315106a24c0dd31d",
+      "size": 10531,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "3582bf5a0ec7cb3a39180c256f92f22c6cb3304752b2ddd1bbb775339f5615b6",
-      "size": 9422,
+      "sha256": "b9968ccc1f1d731eb4b7bc98f4d13b3d95d4e74d6812f7731acec27b5364d4ed",
+      "size": 9854,
       "mode": "100644"
     },
     {
