@@ -1,16 +1,13 @@
-# Weapp Container for Flutter (preview)
+<a id="weapp-container-for-flutter-preview"></a>
+# Flutter 在小程序中的容器（预览版）
 
-Embed the shared QuickJS mini-program runtime and native renderer in Android,
-iOS, macOS, Windows and Linux applications. Mobile uses native platform Views;
-desktop uses Flutter external textures. JavaScript, page state, storage and host
-calls remain in the shared native SDK. No rendered images cross method channels.
+**简体中文** · [English](README.en.md)
 
-Use the generated distribution from `node tools/package.mjs` from the standalone SDK root.
-Its seven packages use relative local dependencies and carry the installed
-native SDKs. The consumer does not install Rust or resolve this source checkout.
-`distribution.json` explicitly lists packaged and blocked native targets; a
-source plugin alone is not evidence that a target is usable. This preview is a
-local distribution, not a published pub.dev package.
+
+在 Android、iOS、macOS、Windows 和 Linux 应用中嵌入共享的 QuickJS 小程序运行时和原生渲染器。移动设备使用原生平台的 View 组件；桌面端使用 Flutter 外部纹理。JavaScript、页面状态、存储和宿主调用均保留在共享的原生 SDK 中。没有渲染的图像通过方法通道传递。
+
+使用来自独立 SDK 根目录的 `node tools/package.mjs` 生成的分发包。
+其七个包使用相对本地依赖关系，并携带已安装的原生 SDK。消费者无需安装 Rust 或解析此源码检出。`distribution.json` 明确列出了已打包和被阻止的原生目标；仅凭源插件并不能证明某个目标可用。此预览是本地分发包，不是已发布的 pub.dev 包。
 
 ```yaml
 dependencies:
@@ -37,59 +34,20 @@ await controller.flushStorage();
 await controller.close();
 ```
 
-`load` waits for positive measured layout. The application extracts bundled
-assets or downloads/verifies a local pack directory; platform plugins do not
-provide another pack parser. The example shows asset extraction. Stable storage
-keys identify application/account data, never runtime IDs or pack hashes.
+`load` 等待测量到的正向布局。应用程序提取捆绑的资源或下载/验证本地包目录；平台插件不提供其他包解析器。示例展示了资源提取。稳定的存储键用于标识应用程序/账户数据，从不使用运行时 ID 或包哈希。
 
-Development clients can await `controller.prepareView()` after mounting the
-widget to inspect capabilities before the first `load`. This waits for actual
-native layout and creates only an empty runtime; it executes no guest code and
-does not acknowledge presentation. Keep the widget mounted while waiting and
-close a cancelled candidate. Initial startup uses `load`; `applyDevPack` updates
-an already loaded session. A staged replacement can remain mounted with
-`foreground: false` and input disabled until accepted.
+开发客户端可以在挂载控件后等待`controller.prepareView()`，在首次`load`之前检查能力。这会等待实际的原生布局，并仅创建一个空的运行时；它不会执行客套代码，也不会确认呈现。在等待期间保持控件挂载，并在取消候选时关闭控件。初始启动使用`load`；`applyDevPack`会更新已加载的会话。一个分阶段的替换可以在`foreground: false`且输入已禁用的情况下保持挂载，直到被接受。
 
-Keep a controller across route/widget detach to retain the JavaScript isolate.
-Only one widget may attach to a controller. Widget disposal waits for native
-surface/texture retirement before a remount can attach. `close()` is asynchronous
-and idempotent; await it to persist and release the session. Native cleanup
-failures retain ownership and allow explicit retry.
-Close intent immediately retires the mounted View's layout queue; late native
-replies cannot acknowledge geometry, update controls or resume preview input.
-`controller.closeRequested` remains true if cleanup needs a retry. A successful
-layout command or `acceptedHostLayout` event establishes layout acceptance only;
-the separate native presentation receipt still controls frame/input readiness.
+保持控制器在路由/小部件解绑时不变，以保留 JavaScript 隔离环境。
+只有一个小部件可以附加到一个控制器上。小部件销毁会等待原生绘制表面/纹理退役后，才能重新挂载。`close()` 是异步且幂等的；需等待其完成以持久化并释放会话。原生清理失败将保留所有权，并允许显式重试。
+关闭意图会立即退役已挂载视图的布局队列；延迟的原生回复无法确认几何信息、更新控件或恢复预览输入。如果清理需要重试，`controller.closeRequested` 保持为 true。一次成功的布局命令或 `acceptedHostLayout` 事件仅建立布局验收；独立的原生呈现回执仍控制帧/输入的就绪状态。
 
-The widget forwards application lifecycle and its `foreground` property. Set
-`foreground: false` when hiding a feature that remains mounted. Completion pumps
-continue host replies, cancellation, HTTP and persistence while rendering is
-hidden, subject to OS process limits. A new Dart runtime epoch retires old native
-sessions before creating new ones; hot reload retains the epoch.
+该小部件转发应用生命周期及其 `foreground` 属性。当隐藏一个保持挂载的特性时，设置 `foreground: false`。完成泵在渲染被隐藏时继续处理宿主回复、取消、HTTP 以及持久化操作，但受操作系统进程限制。新的 Dart 运行时周期在创建新会话前会终止旧的原生会话；热重载保留该周期。
 
-Host method results are JSON values, including null. Throw `WeappHostError` with
-`invalid_request`, `permission_denied`, `timeout`, `cancelled` or `unsupported`.
-Cancellation is observable through `call.cancellation`; cancelled/stale completions
-cannot revive an old generation. Events and method failures preserve SDK codes.
+宿主方法的结果是 JSON 值，包括 null。抛出 `WeappHostError`，错误类型为 `invalid_request`、`permission_denied`、`timeout`、`cancelled` 或 `unsupported`。取消操作可通过 `call.cancellation` 观察到；已取消/过时的完成操作无法恢复旧一代。事件和方法失败保持 SDK 错误码。
 
-Android requires API 26 and uses explicit Hybrid Composition with the production
-SDK AAR. This preview supports `arm64-v8a` and `x86_64`; set the host app's
-`android.defaultConfig.ndk.abiFilters` to those two values and build Flutter with
-`--target-platform android-arm64,android-x64` so unsupported 32-bit devices are
-not offered an incomplete application. The independent consumer applies both.
-iOS requires 16 and compiles the shipped Swift wrapper with its universal
-native XCFramework; macOS requires 12. The acceptance toolchain is pinned to
-Flutter 3.47.7 stable, NDK 27.1.12297006, and Gradle 9.4.1 with its official
-distribution checksum. The consumer pins that NDK for its app and native plugin
-modules, including transitive JNI dependencies. The builder accepts
-`--android-ndk-version` for a host that intentionally validates a different NDK
-release.
-Desktop plugin availability is recorded in the distribution manifest.
-Native text editing/IME, complete accessibility semantics and advanced
-gestures remain preview limitations. These are separate from Flutter host UI.
+Android 要求 API 26，并使用生产 SDK AAR 的显式混合合成。此预览版本支持 `arm64-v8a` 和 `x86_64`；将宿主应用的 `android.defaultConfig.ndk.abiFilters` 设置为这两个值，并使用 `--target-platform android-arm64,android-x64` 构建 Flutter，以确保不向不支持的 32 位设备提供不完整的应用。独立的消费者需应用此设置。
+iOS 要求版本 16，并使用其通用原生 XCFramework 编译内置的 Swift 包装器；macOS 要求版本 12。验收工具链固定在 Flutter 3.47.7 稳定版、NDK 27.1.12297006 和 Gradle 9.4.1（含官方分发校验和）。消费者会为其应用和原生插件模块（包括传递的 JNI 依赖）固定该 NDK。构建器接受 `--android-ndk-version` 以支持宿主明确验证不同 NDK 版本。
+桌面插件的可用性记录在分发清单中。原生文本编辑/输入法、完整的可访问性语义和高级手势仍属于预览限制。这些与 Flutter 宿主 UI 无关。
 
-The independent consumer in the generated distribution’s `consumer/` uses the common
-acceptance pack. Its accessible `sdk-status` JSON includes real target geometry;
-a native tap and scroll unlock async validation for timers, navigation, host
-calls, background completion, failed/successful reload, rapid detach/remount and
-persistent reopen. It writes `sdk-flutter-report.json` to application support.
+生成的分布中的独立消费者在 `consumer/` 目录中使用通用验收包。其可访问的 `sdk-status` JSON 包含实际的目标几何信息；支持原生点击和滚动解锁异步验证，用于定时器、导航、宿主调用、后台完成、重载失败/成功、快速解绑/重新挂载以及持久重开。它将 `sdk-flutter-report.json` 写入应用程序支持目录。

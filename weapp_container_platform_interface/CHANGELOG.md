@@ -1,23 +1,24 @@
 # 0.1.0-preview.5.3
 
-Requires the independently built preview.5.3 runtime: accepted Skia layout authority, resize/recovery input fencing and native selector owner validation. Exact distribution pins and device validation are separate gates; previous previews remain immutable.
+**简体中文** · [English](CHANGELOG.en.md)
+
+
+需要独立构建的预览版 5.3 运行时：支持 Skia 布局权威性、resize/recovery 输入栅栏以及原生选择器所有者验证。精确分发版本和设备验证是独立的准入门禁；之前的预览版本保持不变。
 
 # 0.1.0-preview.5.1
 
-- Prepare the P0 preview.5 patch release with separately reviewed runtime artifacts.
-- Retain the preview.5 protocol and original historical release evidence.
+- 准备 P0 预览版 5 修补版发布，运行时构件独立审核。
+- 保留预览版 5 协议和原始历史版本发布证据。
 
 # 0.1.0-preview.5
 
-- Add correlated atomic native layout observations and durable development pack attempt transport.
-- Preserve real app lifecycle during preview faults and retain exact presentation identity.
+- 增加相关联的原子原生布局观测和持久化开发包尝试传输。
+- 保留预览故障期间真实应用生命周期，并保持精确的呈现身份。
 
 # 0.1.0-preview.3
 
-Dev Player development reload and explicit native GPU requirement. Current
-source requires matching preview.3 native artifacts; preview.2 evidence remains
-bound to its original version.
+开发玩家开发重载和明确的原生 GPU 要求。当前源码需要匹配预览版 3 的原生构件；预览版 2 的证据仍绑定到其原始版本。
 
 # 0.1.0-preview.2
 
-Initial embeddable SDK preview.
+初始可嵌入 SDK 预览版。

@@ -1,9 +1,11 @@
-# Flutter SDK consumer
+<a id="flutter-sdk-consumer"></a>
+# Flutter SDK 消费者
 
-This application consumes the sibling `packages/weapp_container` distribution.
-Keep `consumer` and `packages` together when moving the distribution. No Rust
-checkout or Rust compiler is required. Use Flutter 3.47.7 stable and the normal
-native development tools for the selected target.
+**简体中文** · [English](README.en.md)
+
+
+该应用程序消耗同级 `packages/weapp_container` 分发包。
+移动分发包时需保持 `consumer` 和 `packages` 一同存在。无需进行 Rust 代码检出或 Rust 编译器。请使用 Flutter 3.47.7 稳定版本以及针对目标平台的常规原生开发工具。
 
 ```sh
 flutter pub get
@@ -11,21 +13,13 @@ flutter analyze lib
 flutter run -d <device-id>
 ```
 
-For Android, install platform SDKs 35 and 36, NDK 27.1.12297006, and CMake 3.22.1.
-The app and its native plugin modules select that NDK. The Gradle wrapper pins
-9.4.1 and verifies its distribution checksum. Build the two supported ABIs with:
+对于 Android，需安装平台 SDK 35 和 36、NDK 27.1.12297006 以及 CMake 3.22.1。应用及其原生插件模块将使用该 NDK。Gradle 包装器锁定版本为 9.4.1 并验证其分发校验和。使用以下命令构建两个支持的 ABIs：
 
 ```sh
 flutter build apk --debug --target-platform android-arm64,android-x64
 ```
 
-iOS requires iOS 16 or later; macOS requires macOS 12 or later. Check the sibling
-`distribution.json` for packaged targets. A blocked target needs its native SDK
-artifact before it can build; this preview does not include a Windows binary.
+iOS 要求 iOS 16 或更高版本；macOS 要求 macOS 12 或更高版本。请参考同级分发包 `distribution.json` 中的打包目标。若目标被阻塞，则必须先获取其原生 SDK 产物才能进行构建；本预览版本不包含 Windows 二进制文件。
 
-The app displays a bounded native mini-program view. Tap its first button and
-scroll the list to start the remaining lifecycle, navigation, Unicode, host
-method, remount, reload, and durable-storage checks. Results appear on screen
-and in `sdk-flutter-report.json` inside the app's application-support directory.
-Automation runners and fixture generation are maintained in the source
-standalone repository's `tools/*-smoke.mjs` and `native_desktop/tests`.
+应用显示一个受限的原生小程序视图。点击其第一个按钮，然后滚动列表以启动其余生命周期、导航、Unicode、宿主方法、重新挂载、重新加载以及持久存储检查。结果将显示在屏幕上，并保存在应用支持目录中的 `sdk-flutter-report.json` 文件中。
+自动化运行器和测试用例生成维护在源码独立仓库的 `tools/*-smoke.mjs` 和 `native_desktop/tests` 中。
