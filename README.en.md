@@ -1,6 +1,6 @@
 # Weapp Container Flutter SDK
 
-版本 / Version: `0.1.0-preview.7.0`；C ABI `1`。
+Version: `0.1.0-preview.7.0`; C ABI `1`.
 
 ```yaml
 dependencies:
@@ -11,7 +11,7 @@ dependencies:
 flutter pub get
 ```
 
-Android API 26+；iOS 16+；macOS 12+ universal；Linux / Windows x86_64。Flutter 3.22+ / Dart 3.3+。Android uses Maven Central. iOS and macOS use public CocoaPods specifications; add both sources to each Apple Podfile:
+Android API 26+; iOS 16+; macOS 12+ universal; Linux / Windows x86_64. Flutter 3.22+ / Dart 3.3+. Android uses Maven Central. iOS and macOS use public CocoaPods specifications; add both sources to each Apple Podfile:
 
 ```ruby
 source 'https://github.com/weapp-container/Specs.git'
@@ -93,9 +93,9 @@ Configure login, accounts, networking and device capabilities explicitly in the 
 | Symptom | Check |
 | --- | --- |
 | `load()` keeps waiting | Mount the View with positive width and height |
-| Version, digest or target mismatch | Use authorized archives and a reviewed lock matching this source |
+| Version, digest or target mismatch | Use the exact published SDK version and verify its recorded checksum |
 | Android installation or linking fails | minSdk 26, ABI filters, NDK and CMake configuration |
-| Windows preparation fails | The default lock has no Windows SDK; provide a separately reviewed same-version distribution |
+| Windows preparation fails | Confirm x86_64, CMake, the pinned archive checksum and network/cache availability |
 
 Native text editing, full accessibility semantics and advanced gestures still have preview limitations. Validate your integration on the target devices.
 

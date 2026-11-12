@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "c6453483a7f066010a45718f3e92d6b4d435f2f1da56c93644af2d7cf1e729b8",
-  "review": "Complete public release workflows and installation documentation",
+  "sourceFilesSha256": "d934d1aae5ea9059ba0bd5724740e6e43249c29a6dec1aad5287c6fe12a0febb",
+  "review": "Keep pub.dev documentation links and install troubleshooting valid without the source repository",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -77,14 +77,14 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "60ad6f777447cc561f80ff8b0debe686d1e23e70cead50ae023eac222b14c5ef",
-      "size": 6368,
+      "sha256": "04f55087ac0ad9ebce56647c0c215c08a81dee82f53aaa0071021c00ad77f4c3",
+      "size": 6344,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "96ef3fa5e2faf369d1d5e25ab8dac7909adc03d6b67305845886426fe09c7def",
-      "size": 6031,
+      "sha256": "f2287dd5e8a2007f19d7077297af1f5ee835fc7a4e79af8e555b789806ff0c5c",
+      "size": 5925,
       "mode": "100644"
     },
     {
@@ -509,8 +509,8 @@
     },
     {
       "path": "weapp_container/README.md",
-      "sha256": "96ef3fa5e2faf369d1d5e25ab8dac7909adc03d6b67305845886426fe09c7def",
-      "size": 6031,
+      "sha256": "8d86b4e1102532cc253ebd67b0f404b42c25d8247835a712adbae36d27a72c87",
+      "size": 6381,
       "mode": "100644"
     },
     {

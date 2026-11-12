@@ -11,16 +11,16 @@ dependencies:
 flutter pub get
 ```
 
-Android API 26+；iOS 16+；macOS 12+ universal；Linux / Windows x86_64。Flutter 3.22+ / Dart 3.3+。Android uses Maven Central. iOS and macOS use public CocoaPods specifications; add both sources to each Apple Podfile:
+Android API 26+；iOS 16+；macOS 12+ universal；Linux / Windows x86_64。Flutter 3.22+ / Dart 3.3+。Android 通过 Maven Central 获取依赖；iOS 和 macOS 使用公开 CocoaPods Specs，请在对应 Podfile 中添加两个源：
 
 ```ruby
 source 'https://github.com/weapp-container/Specs.git'
 source 'https://cdn.cocoapods.org/'
 ```
 
-Linux / Windows CMake downloads a fixed Desktop archive and verifies SHA-256. For offline builds, prefetch the exact archive and set `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` to its extracted directory. Each platform package includes its bridge sources, headers and licenses. Normal application installation requires no Node preparation command or sibling repository.
+Linux / Windows 通过 CMake 下载固定版本的 Desktop 归档并校验 SHA-256。离线构建时，提前下载并校验该归档，将 `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` 指向解压目录。每个平台包包含桥接源码、头文件和许可，普通安装无需 Node 准备命令或兄弟仓库。
 
-First public publication is being prepared; registry and device validation results are recorded separately. Historical private locks remain unchanged.
+首次公开发布正在准备中；注册源发布和设备验证结果分别记录，历史私有锁文件保留原样。
 
 先创建 Controller，并在首次 `load` 前注册宿主方法和事件。以下代码由页面或路由的会话管理逻辑执行，不放在 `build()` 中：
 
@@ -93,9 +93,9 @@ await controller.close();
 | 现象 | 检查项 |
 | --- | --- |
 | `load()` 一直等待 | View 是否已挂载、是否具有正数宽高 |
-| 版本、哈希或目标不匹配 | 使用与源码一致的授权归档及审核过的 lock |
+| 版本、哈希或目标不匹配 | 使用本次精确公开版本，并核对归档校验和 |
 | Android 安装或链接失败 | minSdk 26、ABI 过滤器、NDK 和 CMake 配置 |
-| Windows 无法准备 | 默认 lock 暂无对应 SDK，需要单独提供审核过的同版本分发 |
+| Windows 无法准备 | 检查 x86_64、CMake、固定归档校验和与网络／缓存 |
 
 原生文本输入、完整无障碍语义与高级手势仍有 preview 限制，接入前应在目标设备验证。
 
@@ -106,4 +106,4 @@ await controller.close();
 - [桌面接入](native_desktop/README.md) · [SDK 协议](CONTRACT.md)
 - [公共类型和 C ABI](https://github.com/weapp-container/sdk-contract)
 
-接入层源码使用 [Apache-2.0](LICENSE)。运行库和第三方组件遵循归档中的 `RUNTIME-LICENSE` 及 notices；本仓库的开源许可不授予私有运行库下载权或额外的商用权利。
+接入层源码使用 [Apache-2.0](LICENSE)。运行库和第三方组件遵循归档中的 `RUNTIME-LICENSE` 及 notices；历史归档保留各自随附的许可和访问要求。
