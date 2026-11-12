@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "9b0b2a16d424494aa043e3ce24991970c2f61667b4956b84f672d624248a1d18",
-  "review": "Select supported Android command-line packages for the anonymous hosted Flutter consumer",
+  "sourceFilesSha256": "5166c2649f978f03b521a021469e07742dbdc8449cf2b99b8dec99e61c98b49f",
+  "review": "Pin the verified public runtime release and review publication metadata",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -334,6 +334,12 @@
       "mode": "100644"
     },
     {
+      "path": "runtime-artifacts.0.1.0-preview.7.0.lock.json",
+      "sha256": "d2e84fc87b761b29f02fce75ffcc34d48f2541f455ba65f96430f8d3258fa66c",
+      "size": 3377,
+      "mode": "100644"
+    },
+    {
       "path": "runtime-artifacts.lock.json",
       "sha256": "84601fc74ccf0e73b05bac6159f3de611140e1c3308813b9c25384417ee3589d",
       "size": 3824,
@@ -343,6 +349,12 @@
       "path": "tests/api-resource-transport.test.mjs",
       "sha256": "d37afca6cc0304d8126872dbd3cf7445952260823961494c42bd80f37a459449",
       "size": 960,
+      "mode": "100644"
+    },
+    {
+      "path": "tests/current-runtime-lock.test.mjs",
+      "sha256": "e87030f869e7bba34f0e29103d9120bee8029adc47fbf467c710d5b54081fe13",
+      "size": 1640,
       "mode": "100644"
     },
     {
@@ -443,14 +455,14 @@
     },
     {
       "path": "tools/package.mjs",
-      "sha256": "c8cb036579ba6a80cd99d3a40f501a6bdf2954a7f5e135acdb01a14c8edb6e42",
-      "size": 18329,
+      "sha256": "a087e530d5c0b3be6ef56a14eb2a9f6b64c15a67c93ce154dc1757d5fe8bd641",
+      "size": 18347,
       "mode": "100644"
     },
     {
       "path": "tools/prepare-native.mjs",
-      "sha256": "150219564b2e65d4b059312143973e36cce20e0b183502c6240ca8b6eba13894",
-      "size": 4187,
+      "sha256": "444ba6fde480d2b509923dd73d4655e4a1de3711a9b8db5427b143cb171b38fd",
+      "size": 4205,
       "mode": "100644"
     },
     {
@@ -497,8 +509,8 @@
     },
     {
       "path": "tools/verify-native.mjs",
-      "sha256": "8477cc328a64fc5aa07ac6e49c3d207e9af46f96fd3026e1d01fe9e4cb75d6fe",
-      "size": 4111,
+      "sha256": "8dfb63252920c82cfbbe4a0a3136389593c31bcd9425c1980d28e0ade21dd2ea",
+      "size": 4129,
       "mode": "100644"
     },
     {

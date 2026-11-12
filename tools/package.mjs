@@ -26,7 +26,7 @@ if (!/^\d+\.\d+\.\d+$/.test(androidCmakeVersion)) throw new Error('Invalid Andro
 const targets = ['android', 'ios', 'macos', 'windows', 'linux'];
 const selected = option('--platform');
 if (selected && !targets.includes(selected)) throw new Error(`Unsupported platform ${selected}`);
-const manifestPath = resolve(option('--manifest', join(root, 'runtime-artifacts.lock.json')));
+const manifestPath = resolve(option('--manifest', join(root, 'runtime-artifacts.0.1.0-preview.7.0.lock.json')));
 function nativeInstallation(platform) {
   const explicit = option(platform === 'android' ? '--android-maven' : `--${platform}-sdk`);
   if (explicit) return platform === 'android' ? dirname(resolve(explicit)) : resolve(explicit);
