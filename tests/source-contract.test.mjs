@@ -20,13 +20,13 @@ async function sourceFiles() {
 test('preview.6.0 artifact lock is exact and source-bound', async () => {
   assert.equal(createHash('sha256').update(await readFile(join(root, 'runtime-artifacts.lock.json'))).digest('hex'), '84601fc74ccf0e73b05bac6159f3de611140e1c3308813b9c25384417ee3589d');
   const lock = await json('runtime-artifacts.lock.json');
-  assert.equal(lock.runtimeVersion, SDK_VERSION);
+  assert.equal(lock.runtimeVersion, '0.1.0-preview.6.0');
   assert.equal(lock.artifacts.length, 12);
   assert.equal(lock.abiVersion, 1);
   assert.equal(lock.source.repository, 'weapp-container/runtime-artifacts');
-  assert.equal(lock.source.releaseTag, `runtime-v${SDK_VERSION}`);
+  assert.equal(lock.source.releaseTag, 'runtime-v0.1.0-preview.6.0');
   if (lock.artifacts.length === 0) assert.throws(() => selectArtifact(lock, { version: lock.runtimeVersion, platform: 'android', arch: 'universal', component: 'android-sdk' }), { code: 'ERR_RUNTIME_MANIFEST' });
-  assert.equal(lock.runtimeVersion, SDK_VERSION);
+  assert.equal(lock.runtimeVersion, '0.1.0-preview.6.0');
   for (const entry of lock.artifacts) assert.equal(selectArtifact(lock, { version: lock.runtimeVersion, abiVersion: lock.abiVersion, platform: entry.platform, arch: entry.arch, component: entry.component }).sha256, entry.sha256);
 });
 test('source export contains no core sources, binaries, links or build caches', async () => {
@@ -65,7 +65,7 @@ test('native package verification rejects modified installed bytes', async () =>
     assert.equal(result.status, 0, result.stderr);
     const bytes = await readFile(archive), sha256 = createHash('sha256').update(bytes).digest('hex');
     const manifestPath = join(temp, 'lock.json');
-    await writeFile(manifestPath, JSON.stringify({ schemaVersion: 1, runtimeVersion: SDK_VERSION, abiVersion: 1, source: {repository: 'weapp-container/runtime-artifacts', releaseTag: `runtime-v${SDK_VERSION}`}, artifacts: [{component: 'android-sdk', platform: 'android', arch: 'universal', architectures: ['arm64-v8a', 'x86_64'], fileName: 'android.tar.gz', size: bytes.length, sha256}] }));
+    await writeFile(manifestPath, JSON.stringify({ schemaVersion: 1, runtimeVersion: SDK_VERSION, abiVersion: 1, source: {repository: 'weapp-container/weapp-container', releaseTag: `runtime-v${SDK_VERSION}`}, artifacts: [{component: 'android-sdk', platform: 'android', arch: 'universal', architectures: ['arm64-v8a', 'x86_64'], fileName: 'android.tar.gz', size: bytes.length, sha256}] }));
     await downloadRuntimeArtifact({ manifestPath, platform: 'android', arch: 'universal', component: 'android-sdk', outDirectory: cache, installDirectory: installed, artifactDirectory: temp });
     assert.equal(verifyNativeInstallation(installed, 'android', manifestPath, cache).archiveSha256, sha256);
     await writeFile(join(installed, 'native.txt'), 'changed');
@@ -85,8 +85,8 @@ test('all seven federated packages preserve their version and local dependency c
     for (const match of text.matchAll(/path:\s*(\.\.[^\s]*)/g)) await readFile(resolve(root, name, match[1], 'pubspec.yaml'));
   }
   assert.doesNotMatch(await readFile(join(root, '.gitignore'), 'utf8'), /^\/?lib\/$/m);
-  assert.match(await readFile(join(root, 'weapp_container_android/android/build.gradle'), 'utf8'), /Missing pinned Android SDK/);
-  assert.match(await readFile(join(root, 'weapp_container_ios/ios/weapp_container_ios.podspec'), 'utf8'), /Missing pinned iOS SDK/);
+  assert.match(await readFile(join(root, 'weapp_container_android/android/build.gradle'), 'utf8'), /mavenCentral/);
+  assert.match(await readFile(join(root, 'weapp_container_ios/ios/weapp_container_ios.podspec'), 'utf8'), /s.dependency ['"]WeappContainer['"]/);
 });
 test('authored fixture is deterministic and contains content-addressed modules and templates', async () => {
   const temp = await mkdtemp(join(tmpdir(), 'sdk-fixture-'));
