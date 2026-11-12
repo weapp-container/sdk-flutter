@@ -1,5 +1,5 @@
 group = 'dev.weapp.container.flutter'
-version = '0.1.0-preview.6.0'
+version = '0.1.0-preview.7.0'
 buildscript {
     ext.kotlin_version = '2.0.21'
     repositories { google(); mavenCentral() }
@@ -14,19 +14,16 @@ android {
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = '17' }
 }
-// The host app resolves the plugin's transitive AAR as well. Register the
-// packaged repository for every consumer project, restricted to this SDK group.
-def sdkMaven = file(project.findProperty('weappSdkMavenDir') ?: "$projectDir/../native/maven")
-def requiredAar = new File(sdkMaven, 'com/sonofmagic/weapp/weapp-container-android/0.1.0-preview.6.0/weapp-container-android-0.1.0-preview.6.0.aar')
-if (!requiredAar.isFile()) throw new GradleException('Missing pinned Android SDK; run node tools/prepare-native.mjs --platform android --arch universal from sdk-flutter. Core sources are never built by this plugin.')
-
+// Maven Central is the default installation source. A local repository is an explicit build-test override.
+def sdkMavenOverride = project.findProperty('weappSdkMavenDir')
 rootProject.allprojects {
     repositories {
-        maven { url = sdkMaven; content { includeGroup 'com.sonofmagic.weapp' } }
-        google(); mavenCentral()
+        if (sdkMavenOverride) { maven { url = uri(sdkMavenOverride); content { includeGroup 'io.github.weapp-container' } } }
+        google()
+        mavenCentral()
     }
 }
 dependencies {
-    implementation 'com.sonofmagic.weapp:weapp-container-android:0.1.0-preview.6.0'
     testImplementation 'junit:junit:4.13.2'
+    implementation 'io.github.weapp-container:weapp-container-android:0.1.0-preview.7.0'
 }

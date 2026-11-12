@@ -1,7 +1,9 @@
 name: weapp_container_macos
 description: macOS Metal texture implementation of WeApp Container.
-version: 0.1.0-preview.6.0
-publish_to: none
+version: 0.1.0-preview.7.0
+repository: https://github.com/weapp-container/sdk-flutter
+issue_tracker: https://github.com/weapp-container/sdk-flutter/issues
+homepage: https://github.com/weapp-container/sdk-flutter
 environment:
   sdk: '>=3.6.0 <4.0.0'
   flutter: '>=3.27.0'

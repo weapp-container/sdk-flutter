@@ -32,7 +32,7 @@ const artifact = await downloadRuntimeArtifact({ manifestPath,
   artifactDirectory: at('--artifact-dir') ?? process.env.WEAPP_CONTAINER_RUNTIME_ARTIFACT_DIR });
 const regular = async path => { if (!(await lstat(path)).isFile()) throw new Error(`Native SDK file is not regular: ${path}`); };
 if (platform === 'android') {
-  await regular(join(installed, `maven/com/sonofmagic/weapp/weapp-container-android/${SDK_VERSION}/weapp-container-android-${SDK_VERSION}.aar`));
+  await regular(join(installed, `maven/io/github/weapp-container/weapp-container-android/${SDK_VERSION}/weapp-container-android-${SDK_VERSION}.aar`));
   const parent = join(root, 'weapp_container_android'), destination = join(parent, 'native');
   const staged = join(parent, `.native-${randomUUID()}`); await cp(installed, staged, { recursive: true });
   await replaceDirectory(staged, destination);
