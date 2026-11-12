@@ -3,6 +3,8 @@
 
 [简体中文](README.md) · **English**
 
+The main branch prepares the preview.7 public release. Use public installation only after the version appears in its registry; see the [SDK home](../README.en.md) for installation, requirements, and status. The details below retain the pinned preview.6 source contract. Build that version from the exact checkout linked on the SDK home and do not mix it with preview.7 runtimes.
+
 
 This application consumes the sibling `packages/weapp_container` distribution.
 Keep `consumer` and `packages` together when moving the distribution. No Rust

@@ -208,7 +208,6 @@ await controller.close();
 
 | 现象 | 检查项 |
 | --- | --- |
-| 找不到原生 SDK / vendor 文件 | 先为当前平台执行 `prepare-native.mjs`，再生成分发包 |
 | `load()` 一直等待 | View 是否已挂载、是否具有正数宽高 |
 | 版本、哈希或目标不匹配 | 使用与源码一致的授权归档及审核过的 lock |
 | Android 安装或链接失败 | minSdk 26、ABI 过滤器、NDK 和 CMake 配置 |

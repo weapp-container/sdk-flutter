@@ -3,6 +3,8 @@
 
 **简体中文** · [English](README.en.md)
 
+当前主分支准备 preview.7 公开发行；只有对应版本在注册源发布后才使用公开安装入口。安装、平台要求与状态见 [SDK 首页](../README.md)。下方保留固定 preview.6 源码的详细说明；该版本须从 SDK 首页给出的精确提交 checkout 构建，不与 preview.7 运行库混用。
+
 
 三个桌面实现共享此引擎管理的注册表。平台线程独占运行时句柄；光栅回调接收不可变的帧租用（Windows/Linux）或完成的 IOSurface 像素缓冲区（macOS Metal）。像素永远不会通过 Flutter 方法通道传输。
 

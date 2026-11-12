@@ -20,3 +20,20 @@ jobs:
           node-version: '24'
       - run: node tools/source-inventory.mjs
       - run: node --test tests/*.test.mjs
+
+  flutter-analysis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - run: node tools/analyze-source.mjs

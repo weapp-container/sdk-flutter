@@ -9,6 +9,7 @@ const version = versionOf(root), sourceCommit = cleanSource(root);
 const reviewed = verifySourceInventory(root);
 if (!option('--desktop-release')) throw Error('--desktop-release must select the verified three-platform Desktop manifest');
 const desktop = readRelease(resolve(option('--desktop-release')), 'weapp-container/sdk-desktop', version);
+if (['macos-universal', 'linux-x86_64', 'windows-x86_64'].some(platform => !desktop.assets.some(asset => asset.platform === platform && asset.component === 'desktop-sdk'))) throw Error('Complete public Desktop distribution is required');
 const out = resolve(option('--out') ?? join(root, '.build/public'));
 if (existsSync(out)) throw Error('Use a fresh public package output directory');
 mkdirSync(out, { recursive: true });

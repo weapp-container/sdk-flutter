@@ -3,6 +3,8 @@
 
 **简体中文** · [English](README.en.md)
 
+当前主分支准备 preview.7 公开发行；只有对应版本在注册源发布后才使用公开安装入口。安装、平台要求与状态见 [SDK 首页](../README.md)。下方保留固定 preview.6 源码的详细说明；该版本须从 SDK 首页给出的精确提交 checkout 构建，不与 preview.7 运行库混用。
+
 
 在 Android、iOS、macOS、Windows 和 Linux 应用中嵌入共享的 QuickJS 小程序运行时和原生渲染器。移动设备使用原生平台的 View 组件；桌面端使用 Flutter 外部纹理。JavaScript、页面状态、存储和宿主调用均保留在共享的原生 SDK 中。没有渲染的图像通过方法通道传递。
 

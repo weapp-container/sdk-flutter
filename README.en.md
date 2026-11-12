@@ -208,7 +208,6 @@ Configure login, accounts, networking and device capabilities explicitly in the 
 
 | Symptom | Check |
 | --- | --- |
-| Missing native SDK / vendor files | Run `prepare-native.mjs` for the platform before packaging |
 | `load()` keeps waiting | Mount the View with positive width and height |
 | Version, digest or target mismatch | Use authorized archives and a reviewed lock matching this source |
 | Android installation or linking fails | minSdk 26, ABI filters, NDK and CMake configuration |
