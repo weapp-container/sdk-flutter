@@ -65,7 +65,7 @@ jobs:
           name: public-flutter-staging
           run-id: ${{ steps.producer.outputs.run_id }}
           github-token: ${{ github.token }}
-          path: .build/verified-public
+          path: ${{ runner.temp }}/verified-public
       - name: Enforce interface, platform, then main-package publication order
         env:
           PACKAGE: ${{ steps.package.outputs.name }}
@@ -93,13 +93,13 @@ jobs:
           }
           NODE
       - name: Validate and publish the frozen archive using OIDC
-        run: node tools/publish-public.mjs --distribution .build/verified-public --package "${{ steps.package.outputs.name }}" --execute
+        run: node tools/publish-public.mjs --distribution "$RUNNER_TEMP/verified-public" --package "${{ steps.package.outputs.name }}" --execute
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: platform-interface-publication-receipts
           path: |
-            .build/verified-public/*-archive.json
-            .build/verified-public/*-publication.json
+            ${{ runner.temp }}/verified-public/*-archive.json
+            ${{ runner.temp }}/verified-public/*-publication.json
           if-no-files-found: ignore
           retention-days: 30

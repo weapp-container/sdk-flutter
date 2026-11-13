@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { publicationPackages } from '../tools/pub-publication.mjs';
+
+const packageWorkflow = readFileSync(new URL('../.github/workflows/package-pub.yml', import.meta.url), 'utf8');
+const publishWorkflow = readFileSync(new URL('../.github/workflows/publish-pub-interface.yml', import.meta.url), 'utf8');
 
 const manifest = {
   sdkVersion: '0.1.0-preview.7.1',
@@ -21,4 +25,12 @@ test('OIDC publishing requires a package-specific tag with the staged version', 
     assert.throws(() => publicationPackages(manifest, 'weapp_container_platform_interface', tag), /exact version tag/);
   }
   assert.throws(() => publicationPackages(manifest, undefined, 'weapp_container-v0.1.0-preview.7.1'), /selected package/);
+});
+
+test('pub packages are staged and published outside checkout gitignored paths', () => {
+  assert.match(packageWorkflow, /--out "\$RUNNER_TEMP\/public-flutter-staging"/);
+  assert.match(packageWorkflow, /path: \$\{\{ runner\.temp \}\}\/public-flutter-staging\//);
+  assert.match(publishWorkflow, /path: \$\{\{ runner\.temp \}\}\/verified-public/);
+  assert.match(publishWorkflow, /--distribution "\$RUNNER_TEMP\/verified-public"/);
+  assert.doesNotMatch(packageWorkflow + publishWorkflow, /\.build\/(?:public|verified-public)(?:\/|\b)/);
 });
