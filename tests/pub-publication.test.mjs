@@ -34,3 +34,14 @@ test('pub packages are staged and published outside checkout gitignored paths', 
   assert.match(publishWorkflow, /--distribution "\$RUNNER_TEMP\/verified-public"/);
   assert.doesNotMatch(packageWorkflow + publishWorkflow, /\.build\/(?:public|verified-public)(?:\/|\b)/);
 });
+
+test('every public Flutter package changelog names the candidate version', () => {
+  for (const name of [
+    'weapp_container_platform_interface', 'weapp_container_android',
+    'weapp_container_ios', 'weapp_container_macos', 'weapp_container_linux',
+    'weapp_container_windows', 'weapp_container',
+  ]) {
+    const changelog = readFileSync(new URL(`../${name}/CHANGELOG.md`, import.meta.url), 'utf8');
+    assert.match(changelog, /^# 0\.1\.0-preview\.7\.1\s/m, name);
+  }
+});
