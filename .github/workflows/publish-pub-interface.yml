@@ -1,8 +1,14 @@
-name: Publish verified platform interface
+name: Publish verified Flutter package
 on:
   push:
     tags:
       - 'weapp_container_platform_interface-v*'
+      - 'weapp_container_android-v*'
+      - 'weapp_container_ios-v*'
+      - 'weapp_container_macos-v*'
+      - 'weapp_container_linux-v*'
+      - 'weapp_container_windows-v*'
+      - 'weapp_container-v*'
 permissions:
   contents: read
   actions: read
@@ -26,6 +32,20 @@ jobs:
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: '3.13.5'
+      - name: Resolve the package from the exact publication tag
+        id: package
+        run: |
+          case "$GITHUB_REF_NAME" in
+            weapp_container_platform_interface-v*) package=weapp_container_platform_interface ;;
+            weapp_container_android-v*) package=weapp_container_android ;;
+            weapp_container_ios-v*) package=weapp_container_ios ;;
+            weapp_container_macos-v*) package=weapp_container_macos ;;
+            weapp_container_linux-v*) package=weapp_container_linux ;;
+            weapp_container_windows-v*) package=weapp_container_windows ;;
+            weapp_container-v*) package=weapp_container ;;
+            *) echo "Unsupported Flutter publication tag: $GITHUB_REF_NAME" >&2; exit 1 ;;
+          esac
+          echo "name=$package" >> "$GITHUB_OUTPUT"
       - name: Select a successful staging run at this exact source
         id: producer
         env:
@@ -46,8 +66,34 @@ jobs:
           run-id: ${{ steps.producer.outputs.run_id }}
           github-token: ${{ github.token }}
           path: .build/verified-public
+      - name: Enforce interface, platform, then main-package publication order
+        env:
+          PACKAGE: ${{ steps.package.outputs.name }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          const packageName = process.env.PACKAGE;
+          const version = process.env.VERSION.slice(process.env.VERSION.indexOf('-v') + 2);
+          const dependencies = {
+            weapp_container_android: ['weapp_container_platform_interface'],
+            weapp_container_ios: ['weapp_container_platform_interface'],
+            weapp_container_macos: ['weapp_container_platform_interface'],
+            weapp_container_linux: ['weapp_container_platform_interface'],
+            weapp_container_windows: ['weapp_container_platform_interface'],
+            weapp_container: [
+              'weapp_container_platform_interface', 'weapp_container_android',
+              'weapp_container_ios', 'weapp_container_macos',
+              'weapp_container_linux', 'weapp_container_windows',
+            ],
+          };
+          for (const dependency of dependencies[packageName] ?? []) {
+            const url = `https://pub.dev/api/packages/${dependency}/versions/${version}`;
+            const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+            if (!response.ok) throw new Error(`Publish ${dependency}@${version} before ${packageName}: ${response.status}`);
+          }
+          NODE
       - name: Validate and publish the frozen archive using OIDC
-        run: node tools/publish-public.mjs --distribution .build/verified-public --package weapp_container_platform_interface --execute
+        run: node tools/publish-public.mjs --distribution .build/verified-public --package "${{ steps.package.outputs.name }}" --execute
       - uses: actions/upload-artifact@v4
         if: always()
         with:

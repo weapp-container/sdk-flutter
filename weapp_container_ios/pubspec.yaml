@@ -1,6 +1,6 @@
 name: weapp_container_ios
 description: Embeddable Weapp Container SDK for Flutter.
-version: 0.1.0-preview.7.0
+version: 0.1.0-preview.7.1
 homepage: https://github.com/weapp-container/sdk-flutter
 repository: https://github.com/weapp-container/sdk-flutter
 issue_tracker: https://github.com/weapp-container/sdk-flutter/issues
