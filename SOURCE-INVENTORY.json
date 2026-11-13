@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.1",
-  "sourceFilesSha256": "c2d77d23beb4990a7dc99fb86a1343e56f16825ad0df4bfefdd17144dc2ba962",
-  "review": "Bind the SDK source inventory to the anonymously verified preview.7.1 runtime and current publication inputs.",
+  "sourceFilesSha256": "f7beb7646a800e9c9278a53e1d9e549dc63ca7497ef3cbf43565834a34b528c1",
+  "review": "Move pub.dev staging and publication archives outside checkout ignore rules and add a regression test.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -17,8 +17,8 @@
     },
     {
       "path": ".github/workflows/package-pub.yml",
-      "sha256": "f7e1c2f87c106cb6680e5349499cf9c38fd1f2680df40123acf32c2aebc89018",
-      "size": 1009,
+      "sha256": "9d4aab497e2cd00976e97d5d6867b2e5723b6aadfe9c5752502e95d126a4b4e6",
+      "size": 1061,
       "mode": "100644"
     },
     {
@@ -41,8 +41,8 @@
     },
     {
       "path": ".github/workflows/publish-pub-interface.yml",
-      "sha256": "c9ac12f1de4cb974cceca445727a1be94adb263151f7cfe7728b0fd07b72102d",
-      "size": 4859,
+      "sha256": "bb8b914868d327466a0d5d08ef1a586e435e4bba6ac74433927c5e7e9244c98a",
+      "size": 4903,
       "mode": "100644"
     },
     {
@@ -443,8 +443,8 @@
     },
     {
       "path": "tests/pub-publication.test.mjs",
-      "sha256": "df403c3ccda87913cb7cbdb49db8983bf9771c3312ed2f6b8621f4a51da8f0b9",
-      "size": 1445,
+      "sha256": "f446ab2a028c77f1f3662c88368094bafabef55f5181483af0b7df10897f2a4b",
+      "size": 2262,
       "mode": "100644"
     },
     {
