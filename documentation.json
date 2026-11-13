@@ -189,8 +189,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_android/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；核对当前 preview.7 公开锁与历史兼容边界",
-      "reviewedChineseSha256": "5fc4f85b83be8939838dc1b662a1c8e182c9704fb1727c264b13b5388f1e0332",
+      "reviewedChineseSummary": "Android 联邦插件使用公开 Maven Central preview.7 坐标，API 26+，普通消费无需兄弟仓库或构建准备",
+      "reviewedChineseSha256": "1c91482a8737916d0dfba692c5a74310df26b8d69440e2d1e5fe260e88b4f341",
       "legacyHeadingIds": [
         "weapp-container-android-implementation"
       ]
@@ -223,8 +223,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_ios/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；核对当前 preview.7 公开锁与历史兼容边界",
-      "reviewedChineseSha256": "379abcc9fa22a5189c1bfcbab317dc634e4f41b0183136d675d547ffbf8e9057",
+      "reviewedChineseSummary": "iOS 联邦插件依赖公开 WeappContainer Pod，声明 Specs、系统和 Xcode 要求，接入层不重复打包运行库",
+      "reviewedChineseSha256": "244b6f667eefe8bfb2ebeae064506d3d0cbaa9318da157c4fa39cc5abb54d009",
       "legacyHeadingIds": [
         "weapp-container-ios-implementation"
       ]
