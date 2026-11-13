@@ -16,7 +16,7 @@ mkdirSync(out, { recursive: true });
 const names = ['weapp_container_platform_interface', ...['android', 'ios', 'macos', 'linux', 'windows'].map(platform => `weapp_container_${platform}`), 'weapp_container'];
 for (const name of names) {
   const destination = join(out, name);
-  cpSync(join(root, name), destination, { recursive: true, filter: path => !['build', '.dart_tool', 'pubspec.lock', 'native', 'vendor', 'native_shared', '.gradle', '.cxx', 'Pods'].includes(path.split('/').at(-1)) });
+  cpSync(join(root, name), destination, { recursive: true, filter: path => !['build', '.dart_tool', 'pubspec.lock', 'native', 'vendor', 'native_shared', '.gradle', '.cxx', 'Pods', 'test', 'tests'].includes(path.split('/').at(-1)) });
   const spec = readFileSync(join(destination, 'pubspec.yaml'), 'utf8');
   if (/^publish_to:|^\s+path:/m.test(spec) || !spec.includes(`version: ${version}`)) throw Error(`Unpublishable dependency closure in ${name}`);
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "91220fd4b143b6a36398f4b1041a45d71cc4bbf64691a2204ae39685ec781f99",
-  "review": "Retain merged bilingual documentation and review exact-tag OIDC publication, package selection and public interface status without changing published archives",
+  "sourceFilesSha256": "4bfe40ba5d9d9170d943569973171cbfc0f88ddd96e757717dc9efac8c632061",
+  "review": "Exclude repository-only platform test harnesses from public Flutter package staging; preserve native bridge closures and immutable published interface",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -551,8 +551,8 @@
     },
     {
       "path": "tools/package-public.mjs",
-      "sha256": "e686938b8670dac642a0dc5f31925061a1afca94bc9dac502697d084e710c0d7",
-      "size": 3590,
+      "sha256": "7f3110a9eef12da1ae53ba90f385a31cbad438a841d693c525a353fd28c6fb99",
+      "size": 3607,
       "mode": "100644"
     },
     {
