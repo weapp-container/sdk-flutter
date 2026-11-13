@@ -1,3 +1,7 @@
+# 0.1.0-preview.7.1
+
+Align the iOS plugin with the preview.7.1 native runtime and public release entry points without changing its API.
+
 # 0.1.0-preview.7.0
 
 First public preview; native dependencies use public, versioned release entry points. Publication and device acceptance are recorded separately.
