@@ -1,5 +1,5 @@
 group = 'dev.weapp.container.flutter'
-version = '0.1.0-preview.7.0'
+version = '0.1.0-preview.7.1'
 buildscript {
     ext.kotlin_version = '2.0.21'
     repositories { google(); mavenCentral() }
@@ -25,5 +25,5 @@ rootProject.allprojects {
 }
 dependencies {
     testImplementation 'junit:junit:4.13.2'
-    implementation 'io.github.weapp-container:weapp-container-android:0.1.0-preview.7.0'
+    implementation 'io.github.weapp-container:weapp-container-android:0.1.0-preview.7.1'
 }

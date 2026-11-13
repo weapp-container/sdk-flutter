@@ -52,8 +52,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "README.md"
       },
-      "reviewedChineseSummary": "仅 interface 已公开，其他包和 Maven 依赖待完成；保留双语接入说明，增加精确标签 OIDC 与单包续发流程",
-      "reviewedChineseSha256": "e644b71cfa77dfb50f64b763a0a223ba3246ef84e0cbe2ebe80f699ee1240adb",
+      "reviewedChineseSummary": "Flutter `.7.1` candidate with seven-package OIDC publication order and pending pub.dev registration",
+      "reviewedChineseSha256": "6b54e8de59611bfa97571a30dac8d1cf21c540be2eecb013e8cd4b2851e4aca1",
       "legacyHeadingIds": [
         "1-准备原生依赖",
         "2-生成分发包并运行示例",
@@ -368,8 +368,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "PUBLIC-RELEASE.md"
       },
-      "reviewedChineseSummary": "暂存完整七包、原始归档发布和匿名哈希检查；补充单包续发及 interface 精确标签 OIDC 发布",
-      "reviewedChineseSha256": "87e029a3edb35ebc51b1065caaed34998d24f7a2f5488a74e1de8b7e6a9ed0ff",
+      "reviewedChineseSummary": "Flutter seven-package publication order, exact tags and OIDC verification",
+      "reviewedChineseSha256": "c7b792c8a0ee4f8a771985cc0b15f4b20567e241f23219846286829d2da051c7",
       "legacyHeadingIds": []
     }
   ],

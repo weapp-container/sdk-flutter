@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = 'weapp_container_macos'
-  s.version = '0.1.0-preview.7.0'
+  s.version = '0.1.0-preview.7.1'
   s.summary = 'WeApp Container macOS Flutter texture plugin'
   s.homepage = 'https://github.com/weapp-container/sdk-flutter'
   s.license = { :type => 'Apache-2.0', :file => '../LICENSE' }
@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.public_header_files = 'Classes/WeappContainerMacosPlugin.h'
   s.preserve_paths = 'native_shared/third_party/**/*'
   s.dependency 'FlutterMacOS'
-  s.dependency 'WeappContainerDesktop', '0.1.0-preview.7.0'
+  s.dependency 'WeappContainerDesktop', '0.1.0-preview.7.1'
   s.platform = :osx, '12.0'
   s.frameworks = 'FlutterMacOS', 'Metal', 'CoreVideo', 'IOSurface', 'AppKit', 'CoreGraphics', 'CoreText', 'CoreFoundation', 'Foundation', 'Security', 'SystemConfiguration', 'IOKit', 'QuartzCore', 'AVFoundation', 'CoreMedia', 'CoreLocation', 'CoreWLAN', 'CoreImage', 'CoreBluetooth', 'Contacts', 'EventKit', 'LocalAuthentication'
   s.libraries = 'c++', 'z', 'iconv', 'resolv'

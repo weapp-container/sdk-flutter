@@ -7,15 +7,15 @@
 
 当前核心构建器与本页源码示例均使用 preview.7。核心运行库、iOS、Desktop 及公开 CocoaPods Specs 已提供下载；npm、Maven Central 和 pub.dev 尚未全部发布。使用安装命令前先核对[发布状态](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.md)，不要混用不同版本的包装层与运行库。源码公开、包发布、编译通过和设备验收分别记录。
 
-版本 / Version: `0.1.0-preview.7.0`；C ABI `1`。
+版本 / Version: `0.1.0-preview.7.1`；C ABI `1`。
 
-发布状态：目前仅 [platform interface](https://pub.dev/packages/weapp_container_platform_interface/versions/0.1.0-preview.7.0) 已公开。五个平台包与主包尚未发布；Android 的 Maven Central 依赖仍待账号与签名配置。以下主包安装方式在全部依赖发布后可用。
+发布状态：`.7.0` platform interface 已公开；本页的 `.7.1` 候选尚未发布。五个平台包与主包需按 interface -> 平台插件 -> 主包顺序发布；Android 的 Maven Central 依赖仍待账号与签名配置。以下主包安装方式在全部依赖发布后可用。
 
-后续 interface 使用 GitHub OIDC，标签格式为 `weapp_container_platform_interface-v{{version}}`。推送新版本标签前，须在同一干净提交完成 `package-pub.yml`；发布工作流只读取该提交的成功 staging 产物，验证后冻结并上传同一归档。手动续发未发布包时可使用 `tools/publish-public.mjs --distribution /absolute/staging --package <包名> --execute`，已公开版本始终拒绝重发。
+每个包都使用 GitHub OIDC，标签格式为 `<package>-v<version>`。推送标签前，须在同一干净提交完成 `package-pub.yml`；发布工作流只读取该提交的成功 staging 产物，验证后冻结并上传同一归档。手动续发未发布包时可使用 `tools/publish-public.mjs --distribution /absolute/staging --package <包名> --execute`，已公开版本始终拒绝重发。
 
 ```yaml
 dependencies:
-  weapp_container: 0.1.0-preview.7.0
+  weapp_container: 0.1.0-preview.7.1
 ```
 
 ```sh
@@ -48,7 +48,7 @@ git checkout d115f7d3ea6f5d7df2e3fe4cef38607ca248dccf
 
 在 Flutter 应用中嵌入小程序容器。Android、iOS 使用原生 View，桌面端使用 Flutter 外部纹理；同一个 Dart Controller 负责加载本地 pack、导航、收发消息和管理会话。
 
-已复核源码示例版本：`0.1.0-preview.7.0`，原生 ABI：`1`。本仓库提供 Apache-2.0 许可的接入层，运行库从公开核心源码构建，或使用另行核验的配套归档。当前使用本地路径依赖，尚未发布到 pub.dev。
+已复核源码示例版本：`0.1.0-preview.7.1`，原生 ABI：`1`。本仓库提供 Apache-2.0 许可的接入层，运行库从公开核心源码构建，或使用另行核验的配套归档。`.7.1` 主包和平台包尚未发布到 pub.dev。
 
 <a id="start-from-current-source"></a>
 ## 从当前源码开始

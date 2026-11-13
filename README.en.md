@@ -7,15 +7,15 @@
 
 The current core builder and these source examples use preview.7. Core runtime, iOS, Desktop and public CocoaPods Specs downloads are available; npm, Maven Central and pub.dev publication is incomplete. Check the [release status](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.en.md) before using installation commands. Match wrapper and runtime versions. Source availability, package publication, compilation and device acceptance are recorded separately.
 
-Version: `0.1.0-preview.7.0`；C ABI `1`。
+Version: `0.1.0-preview.7.1`；C ABI `1`。
 
-Publication status: only the [platform interface](https://pub.dev/packages/weapp_container_platform_interface/versions/0.1.0-preview.7.0) is public. The five platform packages and main package remain unpublished; Android still requires Maven Central credentials and signing. The main-package installation below becomes available after its dependencies are published.
+Publication status: the `.7.0` platform interface is public; this `.7.1` candidate is not published yet. The five platform packages and main package must be published in interface -> platform plugin -> main-package order; Android still requires Maven Central credentials and signing. The main-package installation below becomes available after its dependencies are published.
 
-Future interface releases use GitHub OIDC with tags matching `weapp_container_platform_interface-v{{version}}`. Complete `package-pub.yml` at the same clean commit before pushing a new version tag. The publication workflow selects that commit's successful staging artifact, validates it, then freezes and uploads the same archive. To resume an unpublished package manually, use `tools/publish-public.mjs --distribution /absolute/staging --package <name> --execute`; existing public versions are always rejected.
+Each package uses GitHub OIDC with tags matching `<package>-v<version>`. Complete `package-pub.yml` at the same clean commit before pushing a tag. The publication workflow selects that commit's successful staging artifact, validates it, then freezes and uploads the same archive. To resume an unpublished package manually, use `tools/publish-public.mjs --distribution /absolute/staging --package <name> --execute`; existing public versions are always rejected.
 
 ```yaml
 dependencies:
-  weapp_container: 0.1.0-preview.7.0
+  weapp_container: 0.1.0-preview.7.1
 ```
 
 ```sh
@@ -48,7 +48,7 @@ git checkout d115f7d3ea6f5d7df2e3fe4cef38607ca248dccf
 
 Embed a mini-program container in a Flutter application. Android and iOS use native Views; desktop platforms use Flutter external textures. One Dart Controller handles local packs, navigation, messages and session ownership.
 
-Reviewed source example version: `0.1.0-preview.7.0`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. Packages currently use local path dependencies and are not published on pub.dev.
+Reviewed source example version: `0.1.0-preview.7.1`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. The `.7.1` main and platform packages are not published on pub.dev yet.
 
 <a id="从当前源码开始"></a>
 ## Start from current source

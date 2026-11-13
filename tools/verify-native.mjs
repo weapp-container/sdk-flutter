@@ -15,7 +15,7 @@ function digest(file) {
   return hash.digest('hex');
 }
 /** Recheck every installed byte against the exact release pin before packaging. */
-export function verifyNativeInstallation(directory, platform, manifestPath = join(root, 'runtime-artifacts.0.1.0-preview.7.0.lock.json'), archiveDirectory, expectedDistribution) {
+export function verifyNativeInstallation(directory, platform, manifestPath = join(root, 'runtime-artifacts.0.1.0-preview.7.1.lock.json'), archiveDirectory, expectedDistribution) {
   const install = resolve(directory), status = lstatSync(install);
   if (!status.isDirectory() || status.isSymbolicLink()) throw new Error('Native SDK installation must be a regular directory');
   const receiptPath = join(install, '.runtime-install.json');
