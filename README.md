@@ -2,6 +2,10 @@
 
 版本 / Version: `0.1.0-preview.7.0`；C ABI `1`。
 
+发布状态：目前仅 [platform interface](https://pub.dev/packages/weapp_container_platform_interface/versions/0.1.0-preview.7.0) 已公开。五个平台包与主包尚未发布；Android 的 Maven Central 依赖仍待账号与签名配置。以下主包安装方式在全部依赖发布后可用。
+
+后续 interface 使用 GitHub OIDC，标签格式为 `weapp_container_platform_interface-v{{version}}`。推送新版本标签前，须在同一干净提交完成 `package-pub.yml`；发布工作流只读取该提交的成功 staging 产物，验证后冻结并上传同一归档。手动续发未发布包时可使用 `tools/publish-public.mjs --distribution /absolute/staging --package <包名> --execute`，已公开版本始终拒绝重发。
+
 ```yaml
 dependencies:
   weapp_container: 0.1.0-preview.7.0

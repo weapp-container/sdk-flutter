@@ -3,17 +3,19 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cleanSource, contained, run, sha256, versionOf } from './public-release.mjs';
+import { publicationPackages } from './pub-publication.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const option = name => { const i = process.argv.indexOf(name); return i < 0 ? undefined : process.argv[i + 1]; };
 if (!option('--distribution')) throw Error('Supply the staged --distribution directory [--execute]');
 const directory = resolve(option('--distribution')), manifest = JSON.parse(readFileSync(join(directory, 'distribution.json')));
 if (manifest.sdkVersion !== versionOf(root) || manifest.sourceDirty !== false || manifest.sourceCommit !== cleanSource(root)) throw Error('Flutter publication must use the exact clean staging source');
 const execute = process.argv.includes('--execute');
+const packages = publicationPackages(manifest, option('--package'), execute && process.env.GITHUB_ACTIONS === 'true' ? process.env.GITHUB_REF_NAME ?? '' : undefined);
 function verify() {
   for (const [file, expected] of Object.entries(manifest.files)) if (sha256(readFileSync(contained(directory, file))) !== expected) throw Error(`Staged Flutter file changed: ${file}`);
 }
 verify();
-for (const name of manifest.packages) {
+for (const name of packages) {
   const cwd = join(directory, name);
   const url = `https://pub.dev/api/packages/${name}/versions/${manifest.sdkVersion}`;
   const prior = await fetch(url, { signal: AbortSignal.timeout(30000) });
@@ -31,7 +33,7 @@ for (const name of manifest.packages) {
     verify();
     if (sha256(readFileSync(archivePath)) !== frozenHash) throw Error('Frozen pub archive changed');
     // First publication remains interactive so pub.dev can authorize the human publisher.
-    run('dart', ['pub', 'publish', '--from-archive', archivePath], cwd, { stdio: 'inherit' });
+    run('dart', ['pub', 'publish', '--from-archive', archivePath, ...(process.env.GITHUB_ACTIONS === 'true' ? ['--force'] : [])], cwd, { stdio: 'inherit' });
     const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
     if (!response.ok) throw Error(`${name} publication is pending verification; do not republish`);
     const remote = await response.json();
