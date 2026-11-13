@@ -1,5 +1,9 @@
 # weapp_container_macos
 
-Platform integration for `weapp_container` 0.1.0-preview.7.0. Install the main package through pub.dev.
+**简体中文** · [English](README.en.md)
 
-See https://github.com/weapp-container/sdk-flutter for supported architectures, CocoaPods Specs sources and native platform requirements. The package includes its bridge source and licenses.
+preview.7 平台包包含桥接源码和许可。注册源发布后通过主包安装；平台、架构、Specs 与原生依赖条件见 [SDK 首页](../README.md)。
+
+[weapp_container](https://pub.dev/packages/weapp_container) 的 macos 平台实现。
+
+安装方法、支持目标与发行状态见 [SDK 说明](../README.md)。

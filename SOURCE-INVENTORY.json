@@ -1,14 +1,20 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "c00594ff338271c242a9475a860e6e6e9f46828763c459d9288b08d9bf665699",
-  "review": "Retain reviewed package dotfiles in CI staging artifacts so every distribution manifest entry survives upload and download.",
+  "sourceFilesSha256": "ea07071e66584db4304cf68ae7f82db7adf5a2d3ebfe924a3048b737cdf6b6be",
+  "review": "Merge current public release and reviewed bilingual documentation",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
     "sha256": "93b2feda7e582fc7101008a5695a99c222462f4562d3fa4d6dedf6c168baac67"
   },
   "files": [
+    {
+      "path": ".github/workflows/documentation.yml",
+      "sha256": "6be53c9ba3b356899fdc53c29097b58e2a65d65bc74196d441efa29aa27487f1",
+      "size": 446,
+      "mode": "100644"
+    },
     {
       "path": ".github/workflows/package-pub.yml",
       "sha256": "f7e1c2f87c106cb6680e5349499cf9c38fd1f2680df40123acf32c2aebc89018",
@@ -52,9 +58,15 @@
       "mode": "100644"
     },
     {
+      "path": "CONTRACT.en.md",
+      "sha256": "4a4bb10b7a802074cce5bc2ca697c5a3348f7f9d0d5763201b2af12087eac825",
+      "size": 13996,
+      "mode": "100644"
+    },
+    {
       "path": "CONTRACT.md",
-      "sha256": "02f3633d2e94ba1302c1ec1431c0971499932efac53cc6837388a511a18072ab",
-      "size": 13745,
+      "sha256": "d3d1542a903a5ce1c4d6616943adef473cbe9b7dba9ce62bd0b42112c6e7e316",
+      "size": 13236,
       "mode": "100644"
     },
     {
@@ -64,9 +76,15 @@
       "mode": "100644"
     },
     {
+      "path": "OPEN_SOURCE.en.md",
+      "sha256": "f2948c337b350a55e9cf7687542e9bdebb9b3281b4941830d1703b6adfec5e73",
+      "size": 1073,
+      "mode": "100644"
+    },
+    {
       "path": "OPEN_SOURCE.md",
-      "sha256": "1dee2538d2d740dce59b041c10fbb54f42ba523c3c87e546f883e62214309195",
-      "size": 987,
+      "sha256": "253d2545971cb8d03ebea4859913da305b00e0c902bdad63b5f643f32eaec77b",
+      "size": 1057,
       "mode": "100644"
     },
     {
@@ -76,27 +94,45 @@
       "mode": "100644"
     },
     {
+      "path": "PUBLIC-RELEASE.en.md",
+      "sha256": "65bebd9e51253bffde4911e16b910a691afa4120543be2e61a51c95b41043810",
+      "size": 4114,
+      "mode": "100644"
+    },
+    {
       "path": "PUBLIC-RELEASE.md",
-      "sha256": "97f61deedd567eb48ca81f4dce617067a2717239b89957117f1b4aaef74f5f0f",
-      "size": 4078,
+      "sha256": "c4b1e3af3077fbc85d321b5d1c0af46526b1c83b5e6bc6201a8924870d96a871",
+      "size": 3746,
       "mode": "100644"
     },
     {
       "path": "README.en.md",
-      "sha256": "04f55087ac0ad9ebce56647c0c215c08a81dee82f53aaa0071021c00ad77f4c3",
-      "size": 6344,
+      "sha256": "ec082c0cda275f0e02932396a2062b6bd5cb1b3a401b122b48e2605582ed72d0",
+      "size": 15140,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "f2287dd5e8a2007f19d7077297af1f5ee835fc7a4e79af8e555b789806ff0c5c",
-      "size": 5925,
+      "sha256": "68bb0d2d5f513b571da67839788628844dea82a4382bf2baf6fc5f8ded97d09f",
+      "size": 13852,
+      "mode": "100644"
+    },
+    {
+      "path": "documentation.json",
+      "sha256": "ccda4e39dc53e8cfd3c1f6b5ab42e24e13a2a988c1dc1c593422375855ee1a06",
+      "size": 15267,
+      "mode": "100644"
+    },
+    {
+      "path": "example/README.en.md",
+      "sha256": "f6841fd7c24fd61e0d36219f54e91046224d529c07eb7ab602c2c929ce0637bf",
+      "size": 1866,
       "mode": "100644"
     },
     {
       "path": "example/README.md",
-      "sha256": "12e71d4e46b504174a84bcf6aa85bbbbb276d3f7d2271196a07a7fdd5d858860",
-      "size": 1408,
+      "sha256": "1b3384fd47da0a5ea71eb957b2810e228601251b89186d255a1d51bca791df47",
+      "size": 1850,
       "mode": "100644"
     },
     {
@@ -148,9 +184,15 @@
       "mode": "100644"
     },
     {
+      "path": "native_desktop/README.en.md",
+      "sha256": "9f68a98091a63fa111fde307cf0cabb2803f30edf648e6d11d549d4f9bd10dc2",
+      "size": 6793,
+      "mode": "100644"
+    },
+    {
       "path": "native_desktop/README.md",
-      "sha256": "a3f2d716255912d18b1dff80db74e54642b70ed890d5d78499d7054a3d69ab6e",
-      "size": 6330,
+      "sha256": "d1334af5169b5dc5d2763902dd113701a86eac407e6ed85c6d95521f0e4e4ea8",
+      "size": 6392,
       "mode": "100644"
     },
     {
@@ -244,9 +286,15 @@
       "mode": "100644"
     },
     {
+      "path": "native_desktop/tests/host-lifecycle.en.md",
+      "sha256": "940293af7dcc96507d873be7c0dcdb676bc14e4eb5e8648b8e1a5f815356178e",
+      "size": 6325,
+      "mode": "100644"
+    },
+    {
       "path": "native_desktop/tests/host-lifecycle.md",
-      "sha256": "7e11e0ef67afbc69a36e1c6c2a7cb12cf5ae8a9e7bf646fb641a7a62143db279",
-      "size": 6092,
+      "sha256": "34909829b187007c943febcb21349bf6c51ff225da02c663cbc95e44493bd374",
+      "size": 6317,
       "mode": "100644"
     },
     {
@@ -430,6 +478,48 @@
       "mode": "100644"
     },
     {
+      "path": "tools/documentation/README.en.md",
+      "sha256": "0771ea3d888cddc15444f452964da24b74e517aefd1f162d1de2af965f19d7fa",
+      "size": 2742,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/documentation/README.md",
+      "sha256": "6c0d12dd12a6cd4a1076e912f2a09d959772638769da314e76d1708cc7c5a64e",
+      "size": 2435,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/documentation/check-content.mjs",
+      "sha256": "d37144b18bf7d42d181b08a476afcc1f5dea9425e6b4993f03aabad14033eb70",
+      "size": 4110,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/documentation/check-content.test.mjs",
+      "sha256": "60f2d77ab72a2413798d8750f8e538d3b3dd0424c7037298162312cab5cce245",
+      "size": 2742,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/documentation/check.mjs",
+      "sha256": "0fbf9dbed271e30d858f626f60826a32ce365e6a14c5615221044379e2b05173",
+      "size": 9624,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/documentation/check.test.mjs",
+      "sha256": "1a1ff09d21f0e73325d764637943ce9fcdcbbaf2bd1ea1a67ed5412bd7ef8cf8",
+      "size": 5475,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/documentation/review.mjs",
+      "sha256": "fe32de1c2483099eccc4ef1734b576a2a7368f873905af75482bc36ac856a9e2",
+      "size": 992,
+      "mode": "100644"
+    },
+    {
       "path": "tools/ios-smoke.mjs",
       "sha256": "d1ef991608d086b23914c62d9d66a49c14f8c33aabd11d7de897dc0842f24fab",
       "size": 16087,
@@ -520,9 +610,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container/CHANGELOG.en.md",
+      "sha256": "239dff834c1d12d4af7ed6387156634e6acc0647dd3e92a3c9af68d378984901",
+      "size": 1140,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container/CHANGELOG.md",
-      "sha256": "241c50eb5751e0cc39eb6bcff732bbbdfa94e14e0b267dfdd689297330bf5719",
-      "size": 104,
+      "sha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "size": 1038,
       "mode": "100644"
     },
     {
@@ -532,9 +628,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container/README.en.md",
+      "sha256": "779f4702e390a504605f25ee42cb7bd2dfa4d5245d4c765db1e80745726f563a",
+      "size": 10432,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container/README.md",
-      "sha256": "8d86b4e1102532cc253ebd67b0f404b42c25d8247835a712adbae36d27a72c87",
-      "size": 6381,
+      "sha256": "d733b1f724882402647863974f3e4f00f4b9b1d8053858e5e104536f4223a7a1",
+      "size": 9829,
       "mode": "100644"
     },
     {
@@ -640,9 +742,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_android/CHANGELOG.en.md",
+      "sha256": "239dff834c1d12d4af7ed6387156634e6acc0647dd3e92a3c9af68d378984901",
+      "size": 1140,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_android/CHANGELOG.md",
-      "sha256": "241c50eb5751e0cc39eb6bcff732bbbdfa94e14e0b267dfdd689297330bf5719",
-      "size": 104,
+      "sha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "size": 1038,
       "mode": "100644"
     },
     {
@@ -652,9 +760,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_android/README.en.md",
+      "sha256": "29d5532c1ba8e40fc47d74c60e99835b193cc6dd0f821cbbc5f816c16f032cd6",
+      "size": 891,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_android/README.md",
-      "sha256": "876e186c652a66dbded9ea3e77a42e39ce1673e48fedde981250a28fb6a33c17",
-      "size": 323,
+      "sha256": "0940e34875a72b01226d73ee646c8bef45aefe23f464d5d3863e23b747d0beb2",
+      "size": 831,
       "mode": "100644"
     },
     {
@@ -730,9 +844,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_ios/CHANGELOG.en.md",
+      "sha256": "239dff834c1d12d4af7ed6387156634e6acc0647dd3e92a3c9af68d378984901",
+      "size": 1140,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_ios/CHANGELOG.md",
-      "sha256": "241c50eb5751e0cc39eb6bcff732bbbdfa94e14e0b267dfdd689297330bf5719",
-      "size": 104,
+      "sha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "size": 1038,
       "mode": "100644"
     },
     {
@@ -742,9 +862,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_ios/README.en.md",
+      "sha256": "16ddc991977e39d3d8348b3a9324e0f5ba5162934e23591d4eb0b78b23609cec",
+      "size": 779,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_ios/README.md",
-      "sha256": "676d3c6205f8113183fcd648e779a3eeb1ae87388084317b4fe074db5239a596",
-      "size": 319,
+      "sha256": "be277c551d5cc971ed404778d218c5e3a64066f6b05dd618f49a4123f42ef093",
+      "size": 728,
       "mode": "100644"
     },
     {
@@ -790,9 +916,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_linux/CHANGELOG.en.md",
+      "sha256": "febf6662c9d4e905403069dbaafc952e828070de385c63e99dcd8e51948d015a",
+      "size": 1170,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_linux/CHANGELOG.md",
-      "sha256": "241c50eb5751e0cc39eb6bcff732bbbdfa94e14e0b267dfdd689297330bf5719",
-      "size": 104,
+      "sha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
+      "size": 1060,
       "mode": "100644"
     },
     {
@@ -802,9 +934,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_linux/README.en.md",
+      "sha256": "6f25bd3f278b30ddef0e03e77b270cc3b8e47c4764a052c8629ee1eba4b3d4e6",
+      "size": 500,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_linux/README.md",
-      "sha256": "fa075300e30c9cc6805b5df7cff8cab3fbfb3f62ebd9d9ced5ea33ab7549de8b",
-      "size": 321,
+      "sha256": "d37756e431e3ae27c1a441962ac488a69b2481d0b48d324950792da6aeab634f",
+      "size": 401,
       "mode": "100644"
     },
     {
@@ -838,9 +976,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_macos/CHANGELOG.en.md",
+      "sha256": "febf6662c9d4e905403069dbaafc952e828070de385c63e99dcd8e51948d015a",
+      "size": 1170,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_macos/CHANGELOG.md",
-      "sha256": "241c50eb5751e0cc39eb6bcff732bbbdfa94e14e0b267dfdd689297330bf5719",
-      "size": 104,
+      "sha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
+      "size": 1060,
       "mode": "100644"
     },
     {
@@ -850,9 +994,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_macos/README.en.md",
+      "sha256": "25ae5cecdfde6a189536a9df61eb5bfbc4887b54dc2bf092af9835dc6faff998",
+      "size": 500,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_macos/README.md",
-      "sha256": "d82b00773f78e240366c4e350b3e39855de7c784dbe7ee3369fb6a6a1269d4ef",
-      "size": 321,
+      "sha256": "7de4f72fbfc85907445e9b39615471453f43072cca068510015d2cc249a28b72",
+      "size": 401,
       "mode": "100644"
     },
     {
@@ -886,9 +1036,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_platform_interface/CHANGELOG.en.md",
+      "sha256": "239dff834c1d12d4af7ed6387156634e6acc0647dd3e92a3c9af68d378984901",
+      "size": 1140,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_platform_interface/CHANGELOG.md",
-      "sha256": "241c50eb5751e0cc39eb6bcff732bbbdfa94e14e0b267dfdd689297330bf5719",
-      "size": 104,
+      "sha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "size": 1038,
       "mode": "100644"
     },
     {
@@ -898,9 +1054,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_platform_interface/README.en.md",
+      "sha256": "997dc51ae623d61c626b8240bb45f33d09826f361732fc164854330cb2671fa9",
+      "size": 886,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_platform_interface/README.md",
-      "sha256": "c517630c93fadff2157e4030ea7fe5034a8c8e45961a396a44636f49846caa2c",
-      "size": 334,
+      "sha256": "8e75becf0339e9f947cb53ca0d003eb38ada5d7935a61df3d25dd0b5e86cbbea",
+      "size": 815,
       "mode": "100644"
     },
     {
@@ -922,9 +1084,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_windows/CHANGELOG.en.md",
+      "sha256": "febf6662c9d4e905403069dbaafc952e828070de385c63e99dcd8e51948d015a",
+      "size": 1170,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_windows/CHANGELOG.md",
-      "sha256": "241c50eb5751e0cc39eb6bcff732bbbdfa94e14e0b267dfdd689297330bf5719",
-      "size": 104,
+      "sha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
+      "size": 1060,
       "mode": "100644"
     },
     {
@@ -934,9 +1102,15 @@
       "mode": "100644"
     },
     {
+      "path": "weapp_container_windows/README.en.md",
+      "sha256": "54fc1b8a32b5c31fd0d27cd0b7cf82b882df70b0733fa69f001e7bda1da4e7ee",
+      "size": 504,
+      "mode": "100644"
+    },
+    {
       "path": "weapp_container_windows/README.md",
-      "sha256": "6388e866179b4c9c97dbce5412c1b9620ab3ee398140887638c2622a1e0624fc",
-      "size": 323,
+      "sha256": "0cbbdf38865dbcdc2bcb2e346c89cbc0d1dd3ec39032b137acb2c522d16eab05",
+      "size": 405,
       "mode": "100644"
     },
     {
