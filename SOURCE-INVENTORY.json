@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "91220fd4b143b6a36398f4b1041a45d71cc4bbf64691a2204ae39685ec781f99",
-  "review": "Retain merged bilingual documentation and review exact-tag OIDC publication, package selection and public interface status without changing published archives",
+  "sourceFilesSha256": "699c86067d7af3a3d144fe637f9a3cc9fd7dfd11fd83625c491fc5b3d5b80072",
+  "review": "Review warning-free hosted package boundaries, immutable public documentation links and current Android/iOS native dependency instructions; retain published bytes",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -125,8 +125,8 @@
     },
     {
       "path": "documentation.json",
-      "sha256": "54bea1257dec705597413d776fc26e5974e6384a1cab8b21cc5830fbc59301a6",
-      "size": 15421,
+      "sha256": "0fa939a1102c22b22c414406cb71b0b9cb2284a6441f03f1fffb8bfa98b16b6c",
+      "size": 15311,
       "mode": "100644"
     },
     {
@@ -551,8 +551,8 @@
     },
     {
       "path": "tools/package-public.mjs",
-      "sha256": "e686938b8670dac642a0dc5f31925061a1afca94bc9dac502697d084e710c0d7",
-      "size": 3590,
+      "sha256": "0f115e790bcd15589021357882ee814c3d004a86e48bc90f1556a6cd8742e847",
+      "size": 4299,
       "mode": "100644"
     },
     {
@@ -779,14 +779,14 @@
     },
     {
       "path": "weapp_container_android/README.en.md",
-      "sha256": "4727958fc420217c09b5e2c74718de445d8dee795ab359faa0ca4c718d6cac62",
-      "size": 961,
+      "sha256": "08d3a328bd59dd4dbe8b6f0126696b8037a34ebdb2660a1d192282b3cf9eae5c",
+      "size": 899,
       "mode": "100644"
     },
     {
       "path": "weapp_container_android/README.md",
-      "sha256": "5fc4f85b83be8939838dc1b662a1c8e182c9704fb1727c264b13b5388f1e0332",
-      "size": 883,
+      "sha256": "1c91482a8737916d0dfba692c5a74310df26b8d69440e2d1e5fe260e88b4f341",
+      "size": 800,
       "mode": "100644"
     },
     {
@@ -881,14 +881,14 @@
     },
     {
       "path": "weapp_container_ios/README.en.md",
-      "sha256": "5a1edf681f82c445c93fe0a5c254cfd62b388458721053e04f06a959bf3e404e",
-      "size": 849,
+      "sha256": "b84636234ef7856c272096dbb857c07fe4ad5eae6254d3894ec4a5e65bb04b35",
+      "size": 1002,
       "mode": "100644"
     },
     {
       "path": "weapp_container_ios/README.md",
-      "sha256": "379abcc9fa22a5189c1bfcbab317dc634e4f41b0183136d675d547ffbf8e9057",
-      "size": 780,
+      "sha256": "244b6f667eefe8bfb2ebeae064506d3d0cbaa9318da157c4fa39cc5abb54d009",
+      "size": 895,
       "mode": "100644"
     },
     {

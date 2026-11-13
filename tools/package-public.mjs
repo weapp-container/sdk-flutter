@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cleanSource, filesUnder, readRelease, releaseUrl, run, sha256, versionOf } from './public-release.mjs';
 import { verifySourceInventory } from './source-inventory.mjs';
@@ -16,7 +16,18 @@ mkdirSync(out, { recursive: true });
 const names = ['weapp_container_platform_interface', ...['android', 'ios', 'macos', 'linux', 'windows'].map(platform => `weapp_container_${platform}`), 'weapp_container'];
 for (const name of names) {
   const destination = join(out, name);
-  cpSync(join(root, name), destination, { recursive: true, filter: path => !['build', '.dart_tool', 'pubspec.lock', 'native', 'vendor', 'native_shared', '.gradle', '.cxx', 'Pods'].includes(path.split('/').at(-1)) });
+  cpSync(join(root, name), destination, { recursive: true, filter: path => !['build', '.dart_tool', 'pubspec.lock', 'native', 'vendor', 'native_shared', '.gradle', '.cxx', 'Pods', 'test', 'tests'].includes(path.split('/').at(-1)) });
+  // Pub expects one canonical changelog; retain its translation in source.
+  rmSync(join(destination, 'CHANGELOG.en.md'), { force: true });
+  for (const file of ['README.md', 'README.en.md', 'CHANGELOG.md']) {
+    const path = join(destination, file);
+    if (!existsSync(path)) continue;
+    const text = readFileSync(path, 'utf8').replace(/\]\(([^\s)]+\.md)(#[^\s)]*)?\)/g, (match, target, fragment = '') => {
+      if (/^[a-z][a-z\d+.-]*:/i.test(target) || target.startsWith('/')) return match;
+      return `](https://github.com/weapp-container/sdk-flutter/blob/${sourceCommit}/${posix.normalize(posix.join(name, target))}${fragment})`;
+    });
+    writeFileSync(path, text);
+  }
   const spec = readFileSync(join(destination, 'pubspec.yaml'), 'utf8');
   if (/^publish_to:|^\s+path:/m.test(spec) || !spec.includes(`version: ${version}`)) throw Error(`Unpublishable dependency closure in ${name}`);
 }
