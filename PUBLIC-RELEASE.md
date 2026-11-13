@@ -27,3 +27,6 @@
 ## Flutter 命令
 
 `node tools/package-public.mjs --desktop-release <merged-desktop-release.json> --out .build/public` 暂存七个 hosted 包、复制各桌面桥接闭包并生成精确的 CMake 下载哈希。`node tools/publish-public.mjs --distribution .build/public --execute` 按依赖顺序解析、分析及 dry-run，用 Dart 的 `--to-archive` 冻结归档，再通过 `--from-archive` 发布原始字节并验证匿名 pub.dev 哈希。Dart 必须支持两个归档参数。省略 `--execute` 只做校验；依赖必须先已发布，后续包才能解析。不要手动发布未经暂存的源码包。
+
+
+七个 hosted packages 和原生依赖全部公开后，执行 `public-consumer.yml`。它创建五个全新应用，在无 GitHub 凭据的情况下解析精确 hosted 版本，并编译链接 Android、iOS 模拟器、macOS、Linux 和 Windows。每个作业上传依赖身份、构建日志与收据。构建成功仅记录为编译链接验证；pack 交互和设备验收须另行执行。

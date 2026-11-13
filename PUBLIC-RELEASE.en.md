@@ -27,3 +27,6 @@ Verify every archive SHA-256/size, architecture, dynamic dependency and license.
 ## Flutter commands
 
 `node tools/package-public.mjs --desktop-release <merged-desktop-release.json> --out .build/public` stages seven hosted packages, copies each desktop bridge closure, and generates exact CMake download hashes. `node tools/publish-public.mjs --distribution .build/public --execute` resolves/analyzes/dry-runs in dependency order, freezes each archive with Dart's `--to-archive`, then publishes those bytes with `--from-archive` and checks the anonymous pub.dev hash. Dart must support both archive flags. Omit `--execute` to validate; hosted dependencies must exist before dependents can resolve. Do not manually publish unstaged source packages.
+
+
+After all seven hosted packages and native dependencies are public, dispatch `public-consumer.yml`. It creates five fresh applications, resolves exact hosted versions without GitHub credentials, and compiles/links Android, iOS simulator, macOS, Linux and Windows. Each job uploads dependency identities, build logs and a receipt. A successful build records compile/link validation; pack interaction and device acceptance require separate execution.

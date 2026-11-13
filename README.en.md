@@ -5,7 +5,7 @@
 <a id="公开发行候选preview7"></a>
 ## Public distribution candidate: preview.7
 
-The installation examples below describe the preview.7 distribution candidate. Check the named registry or release before using them; source publication does not establish package publication or device acceptance. The source-build examples later in this document refer to the reviewed preview.6 checkout below. The core builder currently emits preview.6, so do not combine that runtime with preview.7 wrappers.
+The current core builder and these source examples use preview.7. Core runtime, iOS, Desktop and public CocoaPods Specs downloads are available; npm, Maven Central and pub.dev publication is incomplete. Check the [release status](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.en.md) before using installation commands. Match wrapper and runtime versions. Source availability, package publication, compilation and device acceptance are recorded separately.
 
 Version: `0.1.0-preview.7.0`；C ABI `1`。
 
@@ -18,7 +18,7 @@ dependencies:
 flutter pub get
 ```
 
-Android API 26+；iOS 16+；macOS 12+ universal；Linux / Windows x86_64。Flutter 3.22+ / Dart 3.3+。Android uses Maven Central. iOS and macOS use public CocoaPods specifications; add both sources to each Apple Podfile:
+Android API 26+; iOS 16+; macOS 12+ universal; Linux / Windows x86_64. Flutter 3.22+ / Dart 3.3+. Android uses Maven Central. iOS and macOS use public CocoaPods specifications; add both sources to each Apple Podfile:
 
 ```ruby
 source 'https://github.com/weapp-container/Specs.git'
@@ -35,7 +35,7 @@ First public publication is being prepared; registry and device validation resul
 ```sh
 git clone https://github.com/weapp-container/sdk-flutter.git sdk-flutter-source
 cd sdk-flutter-source
-git checkout 2a6a2f0096b894e69d7049064d87072d8e5b3901
+git checkout d115f7d3ea6f5d7df2e3fe4cef38607ca248dccf
 ```
 
 
@@ -44,7 +44,7 @@ git checkout 2a6a2f0096b894e69d7049064d87072d8e5b3901
 
 Embed a mini-program container in a Flutter application. Android and iOS use native Views; desktop platforms use Flutter external textures. One Dart Controller handles local packs, navigation, messages and session ownership.
 
-Reviewed source example version: `0.1.0-preview.6.0`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. Packages currently use local path dependencies and are not published on pub.dev.
+Reviewed source example version: `0.1.0-preview.7.0`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. Packages currently use local path dependencies and are not published on pub.dev.
 
 <a id="从当前源码开始"></a>
 ## Start from current source
@@ -209,9 +209,9 @@ Configure login, accounts, networking and device capabilities explicitly in the 
 | Symptom | Check |
 | --- | --- |
 | `load()` keeps waiting | Mount the View with positive width and height |
-| Version, digest or target mismatch | Use authorized archives and a reviewed lock matching this source |
+| Version, digest or target mismatch | Use the exact published SDK version and verify its recorded checksum |
 | Android installation or linking fails | minSdk 26, ABI filters, NDK and CMake configuration |
-| Windows preparation fails | The default lock has no Windows SDK; provide a separately reviewed same-version distribution |
+| Windows preparation fails | Confirm x86_64, CMake, the pinned archive checksum and network/cache availability |
 
 Native text editing, full accessibility semantics and advanced gestures still have preview limitations. Validate your integration on the target devices.
 

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "bb67a17cc3dfe76080b4405404bd0e2caf60cc270906cbca111737bb47b9f5bd",
-  "review": "Review merged public publication workflows and bilingual maintainer guidance; keep original SDK behavior, ORIGIN and historical artifact locks.",
+  "sourceFilesSha256": "ea07071e66584db4304cf68ae7f82db7adf5a2d3ebfe924a3048b737cdf6b6be",
+  "review": "Merge current public release and reviewed bilingual documentation",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -17,8 +17,14 @@
     },
     {
       "path": ".github/workflows/package-pub.yml",
-      "sha256": "0d38a32085bf40c75828ce9f3613a52beac91aec1ca49ec994e42b855a7c11d6",
-      "size": 972,
+      "sha256": "f7e1c2f87c106cb6680e5349499cf9c38fd1f2680df40123acf32c2aebc89018",
+      "size": 1009,
+      "mode": "100644"
+    },
+    {
+      "path": ".github/workflows/public-consumer.yml",
+      "sha256": "0ae849e7416d0619055ffb8b316a925b77d459eda2938a9a72e50c76f59a3955",
+      "size": 2116,
       "mode": "100644"
     },
     {
@@ -89,32 +95,32 @@
     },
     {
       "path": "PUBLIC-RELEASE.en.md",
-      "sha256": "c79c9140001009499562624b677499565fc6b93a401ba8e77c9a1d738dad0c4a",
-      "size": 3663,
+      "sha256": "65bebd9e51253bffde4911e16b910a691afa4120543be2e61a51c95b41043810",
+      "size": 4114,
       "mode": "100644"
     },
     {
       "path": "PUBLIC-RELEASE.md",
-      "sha256": "6c4f066000894f797f044cf9e2169c462a76675eab786803ba471a5e52ac7d1d",
-      "size": 3349,
+      "sha256": "c4b1e3af3077fbc85d321b5d1c0af46526b1c83b5e6bc6201a8924870d96a871",
+      "size": 3746,
       "mode": "100644"
     },
     {
       "path": "README.en.md",
-      "sha256": "4d51d718c79e07533a84711c51672a24278f00f33a321dd5904d7a92f34047b0",
-      "size": 15068,
+      "sha256": "ec082c0cda275f0e02932396a2062b6bd5cb1b3a401b122b48e2605582ed72d0",
+      "size": 15140,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "dd07843d19253077f64f19fc2f1aa854cd56329a145fa160b84bb6a5777f3b71",
-      "size": 13757,
+      "sha256": "68bb0d2d5f513b571da67839788628844dea82a4382bf2baf6fc5f8ded97d09f",
+      "size": 13852,
       "mode": "100644"
     },
     {
       "path": "documentation.json",
-      "sha256": "6b564306839238bd780d12574e0deb0ba6018218b0657fcbf419324c8d9bb0a7",
-      "size": 15063,
+      "sha256": "ccda4e39dc53e8cfd3c1f6b5ab42e24e13a2a988c1dc1c593422375855ee1a06",
+      "size": 15267,
       "mode": "100644"
     },
     {
@@ -251,7 +257,7 @@
     },
     {
       "path": "native_desktop/prepare.mjs",
-      "sha256": "da332c08a6457bd4afef39ef1a5a6bb8a221ba3c485d8354c08aac2f3eb08ae5",
+      "sha256": "06e462e9aabaa6acda2135b5f47cf710a923720a789652f909ca487dc924a2ee",
       "size": 7455,
       "mode": "100644"
     },
@@ -376,6 +382,12 @@
       "mode": "100644"
     },
     {
+      "path": "runtime-artifacts.0.1.0-preview.7.0.lock.json",
+      "sha256": "d2e84fc87b761b29f02fce75ffcc34d48f2541f455ba65f96430f8d3258fa66c",
+      "size": 3377,
+      "mode": "100644"
+    },
+    {
       "path": "runtime-artifacts.lock.json",
       "sha256": "84601fc74ccf0e73b05bac6159f3de611140e1c3308813b9c25384417ee3589d",
       "size": 3824,
@@ -385,6 +397,12 @@
       "path": "tests/api-resource-transport.test.mjs",
       "sha256": "d37afca6cc0304d8126872dbd3cf7445952260823961494c42bd80f37a459449",
       "size": 960,
+      "mode": "100644"
+    },
+    {
+      "path": "tests/current-runtime-lock.test.mjs",
+      "sha256": "7356bd6ac8172cb745bd0afdbabc990dd7a1fb4993c96f6dff23f9be3361b37d",
+      "size": 2122,
       "mode": "100644"
     },
     {
@@ -527,14 +545,20 @@
     },
     {
       "path": "tools/package.mjs",
-      "sha256": "c8cb036579ba6a80cd99d3a40f501a6bdf2954a7f5e135acdb01a14c8edb6e42",
-      "size": 18329,
+      "sha256": "a087e530d5c0b3be6ef56a14eb2a9f6b64c15a67c93ce154dc1757d5fe8bd641",
+      "size": 18347,
       "mode": "100644"
     },
     {
       "path": "tools/prepare-native.mjs",
-      "sha256": "150219564b2e65d4b059312143973e36cce20e0b183502c6240ca8b6eba13894",
-      "size": 4187,
+      "sha256": "444ba6fde480d2b509923dd73d4655e4a1de3711a9b8db5427b143cb171b38fd",
+      "size": 4205,
+      "mode": "100644"
+    },
+    {
+      "path": "tools/public-consumer.mjs",
+      "sha256": "27e6054cacd8cd81245615355479fe86bdbaa7c76657e38458905b9c68bb1de7",
+      "size": 4996,
       "mode": "100644"
     },
     {
@@ -575,8 +599,8 @@
     },
     {
       "path": "tools/verify-native.mjs",
-      "sha256": "8477cc328a64fc5aa07ac6e49c3d207e9af46f96fd3026e1d01fe9e4cb75d6fe",
-      "size": 4111,
+      "sha256": "8dfb63252920c82cfbbe4a0a3136389593c31bcd9425c1980d28e0ade21dd2ea",
+      "size": 4129,
       "mode": "100644"
     },
     {
@@ -605,14 +629,14 @@
     },
     {
       "path": "weapp_container/README.en.md",
-      "sha256": "c35b75c96bde5cc4c50c4ba50dc3a5858fffa8f1084d15f8181b053485e4e10f",
-      "size": 5977,
+      "sha256": "779f4702e390a504605f25ee42cb7bd2dfa4d5245d4c765db1e80745726f563a",
+      "size": 10432,
       "mode": "100644"
     },
     {
       "path": "weapp_container/README.md",
-      "sha256": "0ac7012a7f415ad3a4cae2ed63fccb4afa606c231586d6bc73623401437831b1",
-      "size": 5723,
+      "sha256": "d733b1f724882402647863974f3e4f00f4b9b1d8053858e5e104536f4223a7a1",
+      "size": 9829,
       "mode": "100644"
     },
     {
@@ -923,8 +947,8 @@
     },
     {
       "path": "weapp_container_linux/linux/CMakeLists.txt",
-      "sha256": "b44b5563eb1fa3ad49fc63070c26ce19835263aef289cfd533aeade71f06757e",
-      "size": 2186,
+      "sha256": "ed875e90bb1eabc2b3691e391c11527ae2eea0e5b19b110e0dda7a0caefaaaa5",
+      "size": 1317,
       "mode": "100644"
     },
     {
@@ -1097,8 +1121,8 @@
     },
     {
       "path": "weapp_container_windows/windows/CMakeLists.txt",
-      "sha256": "4593e7d84bee64018e9676bce0fc0c88dd9f76b987530dab7fb52d296731cdcd",
-      "size": 2957,
+      "sha256": "88bf6011c1b75b7fce3a28f0472524ab9edf99fada60c217d104fa371c55c82f",
+      "size": 1912,
       "mode": "100644"
     },
     {
