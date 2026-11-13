@@ -74,8 +74,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "example/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。",
-      "reviewedChineseSha256": "1b3384fd47da0a5ea71eb957b2810e228601251b89186d255a1d51bca791df47",
+      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；核对当前 preview.7 公开锁与历史兼容边界",
+      "reviewedChineseSha256": "b559f5da3a8e3f29673e1e425d43321eaae3d39459ec170c4cb00954eaf77467",
       "legacyHeadingIds": [
         "flutter-sdk-consumer"
       ]
@@ -89,8 +89,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "native_desktop/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。",
-      "reviewedChineseSha256": "d1334af5169b5dc5d2763902dd113701a86eac407e6ed85c6d95521f0e4e4ea8",
+      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；核对当前 preview.7 公开锁与历史兼容边界",
+      "reviewedChineseSha256": "71d605df92d9da50596e3e8a67e52652b560a740b1089dcc9edc3f62c5d39cf0",
       "legacyHeadingIds": [
         "flutter-desktop-native-support"
       ]
@@ -189,8 +189,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_android/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。",
-      "reviewedChineseSha256": "0940e34875a72b01226d73ee646c8bef45aefe23f464d5d3863e23b747d0beb2",
+      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；核对当前 preview.7 公开锁与历史兼容边界",
+      "reviewedChineseSha256": "5fc4f85b83be8939838dc1b662a1c8e182c9704fb1727c264b13b5388f1e0332",
       "legacyHeadingIds": [
         "weapp-container-android-implementation"
       ]
@@ -223,8 +223,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_ios/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。",
-      "reviewedChineseSha256": "be277c551d5cc971ed404778d218c5e3a64066f6b05dd618f49a4123f42ef093",
+      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；核对当前 preview.7 公开锁与历史兼容边界",
+      "reviewedChineseSha256": "379abcc9fa22a5189c1bfcbab317dc634e4f41b0183136d675d547ffbf8e9057",
       "legacyHeadingIds": [
         "weapp-container-ios-implementation"
       ]
@@ -295,8 +295,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_platform_interface/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。",
-      "reviewedChineseSha256": "8e75becf0339e9f947cb53ca0d003eb38ada5d7935a61df3d25dd0b5e86cbbea",
+      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；核对当前 preview.7 公开锁与历史兼容边界",
+      "reviewedChineseSha256": "bb95d579fdfb3f1b8fb1cbcecde199ba05f85507a485428b18133486c909680d",
       "legacyHeadingIds": [
         "weapp-container-platform-interface"
       ]

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.0",
-  "sourceFilesSha256": "ea07071e66584db4304cf68ae7f82db7adf5a2d3ebfe924a3048b737cdf6b6be",
-  "review": "Merge current public release and reviewed bilingual documentation",
+  "sourceFilesSha256": "6e92a76c6379878716774b9dc83beb44d831b5e45e376bcb43da45dd2a835c45",
+  "review": "Align integration documentation with the current public runtime lock; preserve historical lock bytes.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -119,20 +119,20 @@
     },
     {
       "path": "documentation.json",
-      "sha256": "ccda4e39dc53e8cfd3c1f6b5ab42e24e13a2a988c1dc1c593422375855ee1a06",
-      "size": 15267,
+      "sha256": "ca4837f9b9a7dfbc1f6cb4b9103416a0056ebd2be2c12f956dae6879b95902a7",
+      "size": 15547,
       "mode": "100644"
     },
     {
       "path": "example/README.en.md",
-      "sha256": "f6841fd7c24fd61e0d36219f54e91046224d529c07eb7ab602c2c929ce0637bf",
-      "size": 1866,
+      "sha256": "37b3a8284b617efcbbe66fa169b7a152f94da125460a259279f02d731c6d1aaa",
+      "size": 1936,
       "mode": "100644"
     },
     {
       "path": "example/README.md",
-      "sha256": "1b3384fd47da0a5ea71eb957b2810e228601251b89186d255a1d51bca791df47",
-      "size": 1850,
+      "sha256": "b559f5da3a8e3f29673e1e425d43321eaae3d39459ec170c4cb00954eaf77467",
+      "size": 1902,
       "mode": "100644"
     },
     {
@@ -185,14 +185,14 @@
     },
     {
       "path": "native_desktop/README.en.md",
-      "sha256": "9f68a98091a63fa111fde307cf0cabb2803f30edf648e6d11d549d4f9bd10dc2",
-      "size": 6793,
+      "sha256": "90287887d3202f98a3bc0b2d8b5656e93cef180e188d4a4aba7a2f794b24753c",
+      "size": 6863,
       "mode": "100644"
     },
     {
       "path": "native_desktop/README.md",
-      "sha256": "d1334af5169b5dc5d2763902dd113701a86eac407e6ed85c6d95521f0e4e4ea8",
-      "size": 6392,
+      "sha256": "71d605df92d9da50596e3e8a67e52652b560a740b1089dcc9edc3f62c5d39cf0",
+      "size": 6444,
       "mode": "100644"
     },
     {
@@ -761,14 +761,14 @@
     },
     {
       "path": "weapp_container_android/README.en.md",
-      "sha256": "29d5532c1ba8e40fc47d74c60e99835b193cc6dd0f821cbbc5f816c16f032cd6",
-      "size": 891,
+      "sha256": "4727958fc420217c09b5e2c74718de445d8dee795ab359faa0ca4c718d6cac62",
+      "size": 961,
       "mode": "100644"
     },
     {
       "path": "weapp_container_android/README.md",
-      "sha256": "0940e34875a72b01226d73ee646c8bef45aefe23f464d5d3863e23b747d0beb2",
-      "size": 831,
+      "sha256": "5fc4f85b83be8939838dc1b662a1c8e182c9704fb1727c264b13b5388f1e0332",
+      "size": 883,
       "mode": "100644"
     },
     {
@@ -863,14 +863,14 @@
     },
     {
       "path": "weapp_container_ios/README.en.md",
-      "sha256": "16ddc991977e39d3d8348b3a9324e0f5ba5162934e23591d4eb0b78b23609cec",
-      "size": 779,
+      "sha256": "5a1edf681f82c445c93fe0a5c254cfd62b388458721053e04f06a959bf3e404e",
+      "size": 849,
       "mode": "100644"
     },
     {
       "path": "weapp_container_ios/README.md",
-      "sha256": "be277c551d5cc971ed404778d218c5e3a64066f6b05dd618f49a4123f42ef093",
-      "size": 728,
+      "sha256": "379abcc9fa22a5189c1bfcbab317dc634e4f41b0183136d675d547ffbf8e9057",
+      "size": 780,
       "mode": "100644"
     },
     {
@@ -1055,14 +1055,14 @@
     },
     {
       "path": "weapp_container_platform_interface/README.en.md",
-      "sha256": "997dc51ae623d61c626b8240bb45f33d09826f361732fc164854330cb2671fa9",
-      "size": 886,
+      "sha256": "ab31256d91b7fc22db7fa83bb3b681f09d8ce790045977395306117539ddefac",
+      "size": 956,
       "mode": "100644"
     },
     {
       "path": "weapp_container_platform_interface/README.md",
-      "sha256": "8e75becf0339e9f947cb53ca0d003eb38ada5d7935a61df3d25dd0b5e86cbbea",
-      "size": 815,
+      "sha256": "bb95d579fdfb3f1b8fb1cbcecde199ba05f85507a485428b18133486c909680d",
+      "size": 867,
       "mode": "100644"
     },
     {
