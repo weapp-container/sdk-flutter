@@ -9,7 +9,7 @@ The current core builder and these source examples use preview.7. Core runtime, 
 
 Version: `0.1.0-preview.7.1`；C ABI `1`。
 
-Publication status: the `.7.0` platform interface is public; this `.7.1` candidate is not published yet. The five platform packages and main package must be published in interface -> platform plugin -> main-package order; Android still requires Maven Central credentials and signing. The main-package installation below becomes available after its dependencies are published.
+Publication status: platform interface `.7.1` is public ([pub.dev](https://pub.dev/packages/weapp_container_platform_interface/versions/0.1.0-preview.7.1)). Staging run `43490236246` and publication run `43490337704` passed; the anonymously downloaded archive SHA-256 is `c3eabcc357977df5d440f12a6a22adf58a09263e95ceb589a77773550c0a0a36`. First-time Linux/Windows package uploads were rejected by pub.dev (`Only users are allowed to upload new packages`); Android/iOS/macOS plugins and the main package wait for their native registry dependencies and must publish in interface -> platform plugin -> main-package order. The main-package installation below becomes available after its dependencies are published.
 
 Each package uses GitHub OIDC with tags matching `<package>-v<version>`. Complete `package-pub.yml` at the same clean commit before pushing a tag. The publication workflow selects that commit's successful staging artifact, validates it, then freezes and uploads the same archive. To resume an unpublished package manually, use `tools/publish-public.mjs --distribution /absolute/staging --package <name> --execute`; existing public versions are always rejected.
 
@@ -31,7 +31,7 @@ source 'https://cdn.cocoapods.org/'
 
 Linux / Windows CMake downloads a fixed Desktop archive and verifies SHA-256. For offline builds, prefetch the exact archive and set `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` to its extracted directory. Each platform package includes its bridge sources, headers and licenses. Normal application installation requires no Node preparation command or sibling repository.
 
-First public publication is being prepared; registry and device validation results are recorded separately. Historical private locks remain unchanged.
+Remaining first-time package publication is being prepared; registry and device validation results are recorded separately. Historical private locks remain unchanged.
 
 <a id="已复核的源码构建版本"></a>
 ### Reviewed source-build checkout
@@ -48,7 +48,7 @@ git checkout d115f7d3ea6f5d7df2e3fe4cef38607ca248dccf
 
 Embed a mini-program container in a Flutter application. Android and iOS use native Views; desktop platforms use Flutter external textures. One Dart Controller handles local packs, navigation, messages and session ownership.
 
-Reviewed source example version: `0.1.0-preview.7.1`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. The `.7.1` main and platform packages are not published on pub.dev yet.
+Reviewed source example version: `0.1.0-preview.7.1`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. The platform interface is public; the `.7.1` main and remaining platform packages are not published on pub.dev yet.
 
 <a id="从当前源码开始"></a>
 ## Start from current source
