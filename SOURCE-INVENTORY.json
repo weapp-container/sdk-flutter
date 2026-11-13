@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.1",
-  "sourceFilesSha256": "279aca43c096734ce909d1a9171722ffabf31a17e30e6009d6240c0134ae33fe",
-  "review": "Add current-version release notes to all seven pub packages after pub.dev validation rejected the staged interface changelog.",
+  "sourceFilesSha256": "5febabce51216b045224a3e7c60bf98a2b5a379d26d498a3c13a53116dcf3cb5",
+  "review": "Add current-version release notes to all seven pub packages and review their English changelog counterparts.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -125,8 +125,8 @@
     },
     {
       "path": "documentation.json",
-      "sha256": "5d0e9616647c198196b6896c7ceea1fa9e1cbbb632f4056d81e1fa9d538e4ff7",
-      "size": 15229,
+      "sha256": "ceb82c0f227d4f2e509f2e244c2079a412844921f783733489ef18761976c940",
+      "size": 14853,
       "mode": "100644"
     },
     {

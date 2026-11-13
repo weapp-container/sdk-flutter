@@ -136,8 +136,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
-      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "reviewedChineseSummary": "新增 weapp_container 的 preview.7.1 发布记录，并与英文版本同步。",
+      "reviewedChineseSha256": "e38446cf0c48fa2bdace4b571f6d917491312ecfd0a295eb0ae10608ec6f9095",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -170,8 +170,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_android/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
-      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "reviewedChineseSummary": "新增 weapp_container_android 的 preview.7.1 发布记录，并与英文版本同步。",
+      "reviewedChineseSha256": "3f501eeca973ad0ae077e17dbf8e3d77a6f13f8c392985e57659e32f85e0a7fe",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -204,8 +204,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_ios/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
-      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "reviewedChineseSummary": "新增 weapp_container_ios 的 preview.7.1 发布记录，并与英文版本同步。",
+      "reviewedChineseSha256": "6157a9754bf8daada19ea0b7695e6dc105140a7f5e40ec29553d2f15c67b8e06",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -238,8 +238,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_linux/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
-      "reviewedChineseSha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
+      "reviewedChineseSummary": "新增 weapp_container_linux 的 preview.7.1 发布记录，并与英文版本同步。",
+      "reviewedChineseSha256": "67ac569b77bfe8987cab1fbb672303d9b2620be7c24df1157772b33b821be23f",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -257,8 +257,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_macos/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
-      "reviewedChineseSha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
+      "reviewedChineseSummary": "新增 weapp_container_macos 的 preview.7.1 发布记录，并与英文版本同步。",
+      "reviewedChineseSha256": "5a234a3bfb3f2000aab5d70727cc952c0b0507c1bba61a93dd50a9e6737b1845",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -276,8 +276,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_platform_interface/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
-      "reviewedChineseSha256": "85751ec15956316f3e3534ccab2f6b45420ba67d4512a1af1b599d8ece20c6ce",
+      "reviewedChineseSummary": "新增 weapp_container_platform_interface 的 preview.7.1 发布记录，并与英文版本同步。",
+      "reviewedChineseSha256": "27502c32c0010214ef228f0e05d3642cefb724fdfa1695c0b1ec3698047f056c",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
@@ -310,8 +310,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container_windows/CHANGELOG.md"
       },
-      "reviewedChineseSummary": "合入 preview.7 公开发行候选的安装入口；保留已匹配的 preview.6 源码构建版本、历史锁与独立设备验收边界。",
-      "reviewedChineseSha256": "a04bad3ac573f1d4757332b7b109b0904ae86d87b1a7068408ade96632b9c28a",
+      "reviewedChineseSummary": "新增 weapp_container_windows 的 preview.7.1 发布记录，并与英文版本同步。",
+      "reviewedChineseSha256": "f23d3ab4694a7a9d98b3c679be7db9fe1f047ebda420d5cdda11136ac61472b3",
       "legacyHeadingIds": [
         "010-preview2",
         "010-preview3",
