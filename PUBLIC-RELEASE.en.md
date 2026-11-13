@@ -30,3 +30,5 @@ Verify every archive SHA-256/size, architecture, dynamic dependency and license.
 
 
 After all seven hosted packages and native dependencies are public, dispatch `public-consumer.yml`. It creates five fresh applications, resolves exact hosted versions without GitHub credentials, and compiles/links Android, iOS simulator, macOS, Linux and Windows. Each job uploads dependency identities, build logs and a receipt. A successful build records compile/link validation; pack interaction and device acceptance require separate execution.
+
+To resume one unpublished package, add `--package <name>` to avoid replaying the already published interface. The interface GitHub OIDC workflow uses `weapp_container_platform_interface-v{{version}}` tags and selects only a successful `package-pub.yml` staging artifact at that same commit. CI checks the package name, version tag and all staged file hashes, then freezes and publishes the same archive.

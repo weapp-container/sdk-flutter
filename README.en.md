@@ -9,6 +9,10 @@ The current core builder and these source examples use preview.7. Core runtime, 
 
 Version: `0.1.0-preview.7.0`；C ABI `1`。
 
+Publication status: only the [platform interface](https://pub.dev/packages/weapp_container_platform_interface/versions/0.1.0-preview.7.0) is public. The five platform packages and main package remain unpublished; Android still requires Maven Central credentials and signing. The main-package installation below becomes available after its dependencies are published.
+
+Future interface releases use GitHub OIDC with tags matching `weapp_container_platform_interface-v{{version}}`. Complete `package-pub.yml` at the same clean commit before pushing a new version tag. The publication workflow selects that commit's successful staging artifact, validates it, then freezes and uploads the same archive. To resume an unpublished package manually, use `tools/publish-public.mjs --distribution /absolute/staging --package <name> --execute`; existing public versions are always rejected.
+
 ```yaml
 dependencies:
   weapp_container: 0.1.0-preview.7.0
