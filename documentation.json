@@ -52,8 +52,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "README.md"
       },
-      "reviewedChineseSummary": "Flutter `.7.1` candidate with seven-package OIDC publication order and pending pub.dev registration",
-      "reviewedChineseSha256": "6b54e8de59611bfa97571a30dac8d1cf21c540be2eecb013e8cd4b2851e4aca1",
+      "reviewedChineseSummary": "Flutter .7.1 platform interface 已公开并完成匿名归档校验；Linux/Windows 首次注册被 pub.dev 拒绝，其余插件和主包等待原生注册源依赖",
+      "reviewedChineseSha256": "8166600f54d83b038a2878f1dbb7b45be05d7ea07750c65faf6bbea4f0056937",
       "legacyHeadingIds": [
         "1-准备原生依赖",
         "2-生成分发包并运行示例",
