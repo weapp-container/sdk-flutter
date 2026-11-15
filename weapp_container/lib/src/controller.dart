@@ -67,6 +67,57 @@ typedef WeappHostMethod = FutureOr<Object?> Function(WeappHostCall call);
 typedef WeappAccountCleanup = FutureOr<void> Function(
     String operationId, WeappCancellationToken cancellation);
 
+class WeappWxRequestPaymentOptions {
+  const WeappWxRequestPaymentOptions({
+    required this.timeStamp,
+    required this.nonceStr,
+    required this.packageValue,
+    required this.signType,
+    required this.paySign,
+  });
+  final String timeStamp;
+  final String nonceStr;
+  final String packageValue;
+  final String signType;
+  final String paySign;
+  Map<String, Object?> toMap() => {
+        'timeStamp': timeStamp,
+        'nonceStr': nonceStr,
+        'package': packageValue,
+        'signType': signType,
+        'paySign': paySign,
+      };
+  static WeappWxRequestPaymentOptions fromPayload(Object? payload) {
+    if (payload is! Map) {
+      throw const WeappHostError(
+          'invalid_request', 'wx.requestPayment options are required');
+    }
+    String required(String name) {
+      final value = payload[name];
+      if (value is! String || value.trim().isEmpty) {
+        throw WeappHostError(
+            'invalid_request', 'wx.requestPayment requires non-empty $name');
+      }
+      return value;
+    }
+    final signType = required('signType');
+    if (!const {'MD5', 'HMAC-SHA256', 'RSA'}.contains(signType)) {
+      throw const WeappHostError('invalid_request',
+          'wx.requestPayment signType must be MD5, HMAC-SHA256, or RSA');
+    }
+    return WeappWxRequestPaymentOptions(
+      timeStamp: required('timeStamp'),
+      nonceStr: required('nonceStr'),
+      packageValue: required('package'),
+      signType: signType,
+      paySign: required('paySign'),
+    );
+  }
+}
+
+typedef WeappWxRequestPaymentHandler = FutureOr<void> Function(
+    WeappWxRequestPaymentOptions options, WeappHostCall call);
+
 /// Capture from native state before asynchronous snapshot work begins.
 /// This owner context does not require a pending API call.
 class WeappHostSnapshotContext {
@@ -297,6 +348,20 @@ class WeappContainerController {
       throw ArgumentError.value(name, 'name', 'Already registered');
     await _invoke<void>('registerApiHandler', {'name': name});
     _apiHandlers[name] = handler;
+  }
+
+  /// Install the standard mini-program JSAPI payment boundary.
+  ///
+  /// The handler must invoke the host's configured official payment SDK and
+  /// complete only after its terminal callback. Server-side order confirmation
+  /// remains the host's responsibility.
+  Future<void> installWxRequestPayment(
+      WeappWxRequestPaymentHandler handler) async {
+    await registerApiHandler('wx.requestPayment', (call) async {
+      final options = WeappWxRequestPaymentOptions.fromPayload(call.payload);
+      await handler(options, call);
+      return const {'errMsg': 'requestPayment:ok'};
+    });
   }
 
   /// Register cleanup for custom resources; failure leaves account startup blocked.

@@ -335,6 +335,42 @@ void main() {
     expect(platform.requests.last.$2.containsKey('context'), isFalse);
     await controller.close();
   });
+  test('typed wx.requestPayment helper validates fields and returns success',
+      () async {
+    final platform = FakePlatform();
+    WeappContainerPlatform.instance = platform;
+    final controller = await WeappContainerController.create(storageKey: null);
+    WeappWxRequestPaymentOptions? observed;
+    await controller.installWxRequestPayment((options, call) async {
+      observed = options;
+      expect(call.method, 'wx.requestPayment');
+      expect(call.cancellation.isCancelled, isFalse);
+    });
+    platform.emit(controller.id, {
+      'type': 'hostCall',
+      'callId': 'payment-call',
+      'method': 'wx.requestPayment',
+      'payload': {
+        'timeStamp': '1710000000',
+        'nonceStr': 'nonce',
+        'package': 'prepay_id=prepay',
+        'signType': 'MD5',
+        'paySign': 'signature',
+      }
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(observed?.toMap(), {
+      'timeStamp': '1710000000',
+      'nonceStr': 'nonce',
+      'package': 'prepay_id=prepay',
+      'signType': 'MD5',
+      'paySign': 'signature',
+    });
+    final reply = platform.requests.singleWhere(
+        (request) => request.$1 == 'completeHostCall').$2;
+    expect(reply['result'], {'errMsg': 'requestPayment:ok'});
+    await controller.close();
+  });
   test(
       'API resource transport preserves native context and revoked-owner errors',
       () async {

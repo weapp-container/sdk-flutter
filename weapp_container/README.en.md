@@ -91,6 +91,8 @@ Host methods return JSON-compatible values. Asynchronous handlers should observe
 
 Configure login, accounts, networking and device capabilities explicitly in the host: call `configureHostServices`, then optionally `installNativeDeviceApis`, before `load()`. The host controls network origin allowlists and OS permissions. Restricted Showcase runtimes also enforce their compiled policy. See [CONTRACT.md](https://github.com/weapp-container/sdk-flutter/blob/main/CONTRACT.en.md) and the [Controller API](https://github.com/weapp-container/sdk-flutter/blob/main/weapp_container/lib/src/controller.dart) for configuration and account switching.
 
+Register standard mini-program payment with `controller.installWxRequestPayment(handler)`. The SDK validates `timeStamp`, `nonceStr`, `package`, `signType`, and `paySign`. The handler must call the host's configured official payment SDK and resolve only after the terminal callback and server-side order confirmation; success is returned as `requestPayment:ok`, while cancellation or channel errors should throw `WeappHostError`. The SDK never accepts merchant secrets from the guest or treats UI completion as proof that an order is paid.
+
 ## Troubleshooting
 
 | Symptom | Check |
