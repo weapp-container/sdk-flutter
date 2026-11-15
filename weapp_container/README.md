@@ -91,6 +91,8 @@ await controller.close();
 
 登录、账号、网络和设备能力通过宿主显式配置：在 `load()` 前先调用 `configureHostServices`，再按需调用 `installNativeDeviceApis`。网络 origin 白名单和系统权限由宿主管理；受限 Showcase 运行库仍按编译时策略限制能力。配置和账号切换协议见 [CONTRACT.md](https://github.com/weapp-container/sdk-flutter/blob/main/CONTRACT.md) 与 [Controller API](https://github.com/weapp-container/sdk-flutter/blob/main/weapp_container/lib/src/controller.dart)。
 
+标准微信支付可使用 `controller.installWxRequestPayment(handler)` 注册。SDK 会校验 `timeStamp`、`nonceStr`、`package`、`signType` 和 `paySign`，handler 应调用宿主配置的官方支付 SDK，并在终结回调与服务端验单完成后返回；成功结果固定为 `requestPayment:ok`，取消或渠道错误应抛出 `WeappHostError`。SDK 不接受 guest 自带商户密钥，也不会把 UI 已完成当作订单已支付。
+
 ## 常见问题
 
 | 现象 | 检查项 |

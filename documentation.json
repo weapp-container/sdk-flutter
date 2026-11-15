@@ -155,8 +155,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "weapp_container/README.md"
       },
-      "reviewedChineseSummary": "同步最新公开发行工作流入口，保留固定 preview.6 源码用法与 preview.7 发行候选的独立边界。；已复核 preview.7 公开发行、工具链与生命周期更新",
-      "reviewedChineseSha256": "d733b1f724882402647863974f3e4f00f4b9b1d8053858e5e104536f4223a7a1",
+      "reviewedChineseSummary": "Flutter preview SDK with typed host payment helper documentation.",
+      "reviewedChineseSha256": "1aa469582b9ee30295cab0cc88e424fce168a8fe342969ca1599d0d6cb1853ee",
       "legacyHeadingIds": [
         "weapp-container-for-flutter-preview"
       ]

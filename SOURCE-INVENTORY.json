@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.1",
-  "sourceFilesSha256": "1581c7e61b991b302cf2a51901b81ed6c18bf869414182c3cd7f2e6411acea84",
-  "review": "Record the verified public platform-interface publication and remaining first-time registry blockers.",
+  "sourceFilesSha256": "2b97489a91b8bd6971aef7e8d34f9d914265f9703269236bf7ea9566bfb31c90",
+  "review": "Expose typed standard payment registration for Flutter hosts.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -125,8 +125,8 @@
     },
     {
       "path": "documentation.json",
-      "sha256": "ecb7c1eb72b27ae7c0aa149ccc164a9f52ed7dd71242b7c9648684d87e1bc933",
-      "size": 14920,
+      "sha256": "2efa5820a9766de3ca47f7417b549fcbcf48d86ec3888de72ec627b68e7d79cb",
+      "size": 14796,
       "mode": "100644"
     },
     {
@@ -653,20 +653,20 @@
     },
     {
       "path": "weapp_container/README.en.md",
-      "sha256": "779f4702e390a504605f25ee42cb7bd2dfa4d5245d4c765db1e80745726f563a",
-      "size": 10432,
+      "sha256": "1205cd35fee7f1da80769a0eaeb03b4663d0a185853e5bf4635737c88247bd1d",
+      "size": 10973,
       "mode": "100644"
     },
     {
       "path": "weapp_container/README.md",
-      "sha256": "d733b1f724882402647863974f3e4f00f4b9b1d8053858e5e104536f4223a7a1",
-      "size": 9829,
+      "sha256": "1aa469582b9ee30295cab0cc88e424fce168a8fe342969ca1599d0d6cb1853ee",
+      "size": 10283,
       "mode": "100644"
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "d304432ff468986e153b71f36dcc8b6daa92dc975c165c1c4c62b32d46358545",
-      "size": 30940,
+      "sha256": "cd34b19682e59d141d0badb76d9b93a6df7afc0c810eb3b1c95c963b55daec86",
+      "size": 33177,
       "mode": "100644"
     },
     {
@@ -701,8 +701,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "584544f564925d30ebf6df9b9ec0acc5265f6cd0340c33a9fcc5271262dbba5d",
-      "size": 89764,
+      "sha256": "1b1c929c26711789e71a11501dd38dbe18a0d072a32d9a4685940318a5d3e97a",
+      "size": 91045,
       "mode": "100644"
     },
     {
