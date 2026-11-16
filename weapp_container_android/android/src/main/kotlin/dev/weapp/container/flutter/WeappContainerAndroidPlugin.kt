@@ -134,13 +134,14 @@ class WeappContainerAndroidPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
                 require(args.containsKey("storageKey")) { "storageKey must be explicit; null selects memory" }
                 val key = args["storageKey"] as? String
                 require(args["storageKey"] == null || key != null) { "Invalid storageKey" }
+                val compatibilityVersion = args["compatibilityVersion"]?.let { value -> require(value is String && value.isNotBlank()) { "compatibilityVersion must be a nonempty string" }; value as String }
                 val id = nextId++
                 val gpuRequired = args["gpuRequired"]?.let { value -> require(value is Boolean) { "gpuRequired must be a boolean" }; value as Boolean }
                 val devDiagnostics = args["devDiagnostics"]?.let { value -> require(value is Boolean) { "devDiagnostics must be a boolean" }; value as Boolean } ?: false
                 val systemTabBar = args["systemTabBar"]?.let { value -> require(value is Boolean) { "systemTabBar must be a boolean" }; value as Boolean } ?: false
                 val layout = args["hostLayout"] as? Map<*, *>
                 if (layout != null) require(layout["protocolVersion"] == "1.0" && layout["atomic"] == true) { "hostLayout requires atomic protocol 1.0" }
-                val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics, atomicHostLayout = layout != null, systemTabBar = systemTabBar), devDiagnostics)
+                val entry = Entry(WeappContainerSession(app, key, gpuRequired = gpuRequired, devDiagnostics = devDiagnostics, atomicHostLayout = layout != null, systemTabBar = systemTabBar, compatibilityVersion = compatibilityVersion), devDiagnostics)
                 sessions[id] = entry
                 entry.session.accountCleanupHandler = { operationId ->
                     val pending=CompletableFuture<Unit>()

@@ -42,7 +42,7 @@ class FakePlatform extends WeappContainerPlatform {
         throw PlatformException(code: 'ERR_IDENTITY_SWITCHING');
       return {
         'bytes': [0, 128, 255],
-        'totalBytes': 1048579
+        'totalBytes': 1048579,
       } as T;
     }
     if (method == 'hostChrome' && cancelChrome)
@@ -292,133 +292,149 @@ Future<void> closeAtomic(
 }
 
 void main() {
-  test('snapshot transport retains the owner captured before asynchronous work',
-      () async {
-    final platform = FakePlatform();
-    WeappContainerPlatform.instance = platform;
-    final controller = await WeappContainerController.create(storageKey: null);
-    final application = <String, Object?>{
-      'hostAppId': 'host',
-      'tenantId': 'tenant',
-      'publisherId': 'publisher',
-      'appId': 'app',
-      'environment': 'release',
-      'version': 'v2',
-      'packRoot': 'verified-root'
-    };
-    final account = <String, Object?>{
-      'principalId': 'old-user',
-      'epoch': '18446744073709551614'
-    };
-    platform.currentState = {
-      'sessionId': 'old-native-owner',
-      'hostServicesState': {'application': application, 'account': account}
-    };
-    final captured =
-        WeappHostSnapshotContext.fromState(await controller.state());
-    account['principalId'] = 'new-user';
-    account['epoch'] = '18446744073709551615';
-    platform.currentState['sessionId'] = 'new-native-owner';
-    await controller.updateHostServiceSnapshots({
-      'wx.getBatteryInfo': {'level': 50}
-    }, context: captured);
-    final payload = platform.requests.last.$2;
-    expect(payload['context'], {
-      'application': application,
-      'account': {'principalId': 'old-user', 'epoch': '18446744073709551614'},
-      'sessionId': 'old-native-owner'
-    });
-    expect((payload['context'] as Map).containsKey('callId'), isFalse);
-    await controller.updateHostServiceSnapshots({
-      'wx.getBatteryInfo': {'level': 60}
-    });
-    expect(platform.requests.last.$2.containsKey('context'), isFalse);
-    await controller.close();
-  });
-  test('typed wx.requestPayment helper validates fields and returns success',
-      () async {
-    final platform = FakePlatform();
-    WeappContainerPlatform.instance = platform;
-    final controller = await WeappContainerController.create(storageKey: null);
-    WeappWxRequestPaymentOptions? observed;
-    await controller.installWxRequestPayment((options, call) async {
-      observed = options;
-      expect(call.method, 'wx.requestPayment');
-      expect(call.cancellation.isCancelled, isFalse);
-    });
-    platform.emit(controller.id, {
-      'type': 'hostCall',
-      'callId': 'payment-call',
-      'method': 'wx.requestPayment',
-      'payload': {
-        'timeStamp': '1710000000',
-        'nonceStr': 'nonce',
-        'package': 'prepay_id=prepay',
-        'signType': 'MD5',
-        'paySign': 'signature',
-      }
-    });
-    await Future<void>.delayed(Duration.zero);
-    expect(observed?.toMap(), {
-      'timeStamp': '1710000000',
-      'nonceStr': 'nonce',
-      'package': 'prepay_id=prepay',
-      'signType': 'MD5',
-      'paySign': 'signature',
-    });
-    final reply = platform.requests.singleWhere(
-        (request) => request.$1 == 'completeHostCall').$2;
-    expect(reply['result'], {'errMsg': 'requestPayment:ok'});
-    await controller.close();
-  });
   test(
-      'API resource transport preserves native context and revoked-owner errors',
-      () async {
-    final platform = FakePlatform();
-    WeappContainerPlatform.instance = platform;
-    final controller = await WeappContainerController.create(storageKey: null);
-    final context = <String, Object?>{
-      'application': {
+    'snapshot transport retains the owner captured before asynchronous work',
+    () async {
+      final platform = FakePlatform();
+      WeappContainerPlatform.instance = platform;
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      final application = <String, Object?>{
         'hostAppId': 'host',
         'tenantId': 'tenant',
         'publisherId': 'publisher',
         'appId': 'app',
         'environment': 'release',
         'version': 'v2',
-        'packRoot': 'verified-root'
-      },
-      'account': {'principalId': 'user', 'epoch': '18446744073709551615'},
-      'sessionId': 'native-incarnation',
-      'callId': 'native-call',
-      'api': 'object:InnerAudioContext.src',
-      'deadlineNs': '18446744073709551614',
-      'cancelToken': 'native-cancel',
-      'componentTarget': {
-        'pageId': '9007199254740993',
-        'nodeId': 'audio',
-        'ownerScopeId': null
-      },
-    };
-    Map<String, Object?>? observed;
-    await controller.registerApiHandler('object:InnerAudioContext.src',
-        (call) async {
-      observed = await controller.readHostApiResource(call.context!,
-          offset: 1048576, length: 3);
-      return <String, Object?>{};
-    });
-    platform.emit(controller.id, {
-      'type': 'hostCall',
-      'callId': 'transport-call',
-      'method': 'object:InnerAudioContext.src',
-      'payload': {'value': 'assets/a.bin'},
-      'context': context
-    });
-    await Future<void>.delayed(Duration.zero);
-    expect(observed, {
-      'bytes': [0, 128, 255],
-      'totalBytes': 1048579
-    });
-    expect(
+        'packRoot': 'verified-root',
+      };
+      final account = <String, Object?>{
+        'principalId': 'old-user',
+        'epoch': '18446744073709551614',
+      };
+      platform.currentState = {
+        'sessionId': 'old-native-owner',
+        'hostServicesState': {'application': application, 'account': account},
+      };
+      final captured = WeappHostSnapshotContext.fromState(
+        await controller.state(),
+      );
+      account['principalId'] = 'new-user';
+      account['epoch'] = '18446744073709551615';
+      platform.currentState['sessionId'] = 'new-native-owner';
+      await controller.updateHostServiceSnapshots({
+        'wx.getBatteryInfo': {'level': 50},
+      }, context: captured);
+      final payload = platform.requests.last.$2;
+      expect(payload['context'], {
+        'application': application,
+        'account': {'principalId': 'old-user', 'epoch': '18446744073709551614'},
+        'sessionId': 'old-native-owner',
+      });
+      expect((payload['context'] as Map).containsKey('callId'), isFalse);
+      await controller.updateHostServiceSnapshots({
+        'wx.getBatteryInfo': {'level': 60},
+      });
+      expect(platform.requests.last.$2.containsKey('context'), isFalse);
+      await controller.close();
+    },
+  );
+  test(
+    'typed wx.requestPayment helper validates fields and returns success',
+    () async {
+      final platform = FakePlatform();
+      WeappContainerPlatform.instance = platform;
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      WeappWxRequestPaymentOptions? observed;
+      await controller.installWxRequestPayment((options, call) async {
+        observed = options;
+        expect(call.method, 'wx.requestPayment');
+        expect(call.cancellation.isCancelled, isFalse);
+      });
+      platform.emit(controller.id, {
+        'type': 'hostCall',
+        'callId': 'payment-call',
+        'method': 'wx.requestPayment',
+        'payload': {
+          'timeStamp': '1710000000',
+          'nonceStr': 'nonce',
+          'package': 'prepay_id=prepay',
+          'signType': 'MD5',
+          'paySign': 'signature',
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(observed?.toMap(), {
+        'timeStamp': '1710000000',
+        'nonceStr': 'nonce',
+        'package': 'prepay_id=prepay',
+        'signType': 'MD5',
+        'paySign': 'signature',
+      });
+      final reply = platform.requests
+          .singleWhere((request) => request.$1 == 'completeHostCall')
+          .$2;
+      expect(reply['result'], {'errMsg': 'requestPayment:ok'});
+      await controller.close();
+    },
+  );
+  test(
+    'API resource transport preserves native context and revoked-owner errors',
+    () async {
+      final platform = FakePlatform();
+      WeappContainerPlatform.instance = platform;
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      final context = <String, Object?>{
+        'application': {
+          'hostAppId': 'host',
+          'tenantId': 'tenant',
+          'publisherId': 'publisher',
+          'appId': 'app',
+          'environment': 'release',
+          'version': 'v2',
+          'packRoot': 'verified-root',
+        },
+        'account': {'principalId': 'user', 'epoch': '18446744073709551615'},
+        'sessionId': 'native-incarnation',
+        'callId': 'native-call',
+        'api': 'object:InnerAudioContext.src',
+        'deadlineNs': '18446744073709551614',
+        'cancelToken': 'native-cancel',
+        'componentTarget': {
+          'pageId': '9007199254740993',
+          'nodeId': 'audio',
+          'ownerScopeId': null,
+        },
+      };
+      Map<String, Object?>? observed;
+      await controller.registerApiHandler('object:InnerAudioContext.src', (
+        call,
+      ) async {
+        observed = await controller.readHostApiResource(
+          call.context!,
+          offset: 1048576,
+          length: 3,
+        );
+        return <String, Object?>{};
+      });
+      platform.emit(controller.id, {
+        'type': 'hostCall',
+        'callId': 'transport-call',
+        'method': 'object:InnerAudioContext.src',
+        'payload': {'value': 'assets/a.bin'},
+        'context': context,
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(observed, {
+        'bytes': [0, 128, 255],
+        'totalBytes': 1048579,
+      });
+      expect(
         platform.requests
             .singleWhere((request) => request.$1 == 'hostApiResource')
             .$2,
@@ -426,71 +442,97 @@ void main() {
           'id': controller.id,
           'context': context,
           'offset': 1048576,
-          'length': 3
-        });
-    platform.emit(controller.id, {
-      'type': 'accountSwitch',
-      'receipt': {'phase': 'revoking'}
-    });
-    platform.identitySwitching = true;
-    await expectLater(
+          'length': 3,
+        },
+      );
+      platform.emit(controller.id, {
+        'type': 'accountSwitch',
+        'receipt': {'phase': 'revoking'},
+      });
+      platform.identitySwitching = true;
+      await expectLater(
         controller.readHostApiResource(context, length: 1),
-        throwsA(isA<PlatformException>()
-            .having((e) => e.code, 'code', 'ERR_IDENTITY_SWITCHING')));
-    await controller.close();
-  });
+        throwsA(
+          isA<PlatformException>().having(
+            (e) => e.code,
+            'code',
+            'ERR_IDENTITY_SWITCHING',
+          ),
+        ),
+      );
+      await controller.close();
+    },
+  );
   test(
-      'account cleanup awaits every resource and ignores superseded completion',
-      () async {
-    final platform = FakePlatform();
-    WeappContainerPlatform.instance = platform;
-    final controller = await WeappContainerController.create(storageKey: null);
-    final first = Completer<void>(), second = Completer<void>();
-    final cancelled = <String>[];
-    controller.registerAccountCleanupHandler((operation, cancellation) async {
-      unawaited(
-          cancellation.whenCancelled.then((_) => cancelled.add(operation)));
-      if (operation == 'first')
-        await first.future;
-      else
-        await second.future;
-    });
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'first'});
-    await Future<void>.delayed(Duration.zero);
-    expect(
-        platform.requests.where((entry) =>
-            entry.$1 == 'completeAccountCleanup' &&
-            entry.$2['retired'] != true),
-        isEmpty);
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'second'});
-    await Future<void>.delayed(Duration.zero);
-    first.complete();
-    await Future<void>.delayed(Duration.zero);
-    expect(cancelled, contains('first'));
-    expect(
-        platform.requests.where((entry) =>
-            entry.$1 == 'completeAccountCleanup' &&
-            entry.$2['retired'] != true),
-        isEmpty);
-    second.complete();
-    await Future<void>.delayed(Duration.zero);
-    final replies = platform.requests
-        .where((entry) =>
-            entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true)
-        .toList();
-    expect(replies, hasLength(1));
-    expect(replies.single.$2['operationId'], 'second');
-    expect(
+    'account cleanup awaits every resource and ignores superseded completion',
+    () async {
+      final platform = FakePlatform();
+      WeappContainerPlatform.instance = platform;
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      final first = Completer<void>(), second = Completer<void>();
+      final cancelled = <String>[];
+      controller.registerAccountCleanupHandler((operation, cancellation) async {
+        unawaited(
+          cancellation.whenCancelled.then((_) => cancelled.add(operation)),
+        );
+        if (operation == 'first')
+          await first.future;
+        else
+          await second.future;
+      });
+      platform.emit(controller.id, {
+        'type': 'accountCleanupRequired',
+        'operationId': 'first',
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        platform.requests.where(
+          (entry) =>
+              entry.$1 == 'completeAccountCleanup' &&
+              entry.$2['retired'] != true,
+        ),
+        isEmpty,
+      );
+      platform.emit(controller.id, {
+        'type': 'accountCleanupRequired',
+        'operationId': 'second',
+      });
+      await Future<void>.delayed(Duration.zero);
+      first.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(cancelled, contains('first'));
+      expect(
+        platform.requests.where(
+          (entry) =>
+              entry.$1 == 'completeAccountCleanup' &&
+              entry.$2['retired'] != true,
+        ),
+        isEmpty,
+      );
+      second.complete();
+      await Future<void>.delayed(Duration.zero);
+      final replies = platform.requests
+          .where(
+            (entry) =>
+                entry.$1 == 'completeAccountCleanup' &&
+                entry.$2['retired'] != true,
+          )
+          .toList();
+      expect(replies, hasLength(1));
+      expect(replies.single.$2['operationId'], 'second');
+      expect(
         platform.requests
             .where((entry) => entry.$2['retired'] == true)
             .single
             .$2['operationId'],
-        'first');
-    await controller.close();
-    await platform.source.close();
-  });
+        'first',
+      );
+      await controller.close();
+      await platform.source.close();
+    },
+  );
   test(
       'account cleanup failure reports blocked operation after other resources settle',
       () async {
@@ -499,22 +541,31 @@ void main() {
     final controller = await WeappContainerController.create(storageKey: null);
     final resource = Completer<void>();
     final unregister = controller.registerAccountCleanupHandler(
-        (_, __) => throw StateError('camera retirement failed'));
+      (_, __) => throw StateError('camera retirement failed'),
+    );
     controller.registerAccountCleanupHandler((_, __) => resource.future);
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'cleanup'});
+    platform.emit(controller.id, {
+      'type': 'accountCleanupRequired',
+      'operationId': 'cleanup',
+    });
     await Future<void>.delayed(Duration.zero);
     expect(
-        platform.requests.where((entry) =>
-            entry.$1 == 'completeAccountCleanup' &&
-            entry.$2['retired'] != true),
-        isEmpty);
+      platform.requests.where(
+        (entry) =>
+            entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true,
+      ),
+      isEmpty,
+    );
     resource.complete();
     await Future<void>.delayed(Duration.zero);
-    final reply = platform.requests.singleWhere((entry) =>
-        entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true);
-    expect((reply.$2['error'] as Map)['message'],
-        contains('camera retirement failed'));
+    final reply = platform.requests.singleWhere(
+      (entry) =>
+          entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true,
+    );
+    expect(
+      (reply.$2['error'] as Map)['message'],
+      contains('camera retirement failed'),
+    );
     unregister();
     await controller.close();
     await platform.source.close();
@@ -531,76 +582,103 @@ void main() {
       started.add(operation);
       return operation == 'old' ? old.future : latest.future;
     });
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'old'});
+    platform.emit(controller.id, {
+      'type': 'accountCleanupRequired',
+      'operationId': 'old',
+    });
     await Future<void>.delayed(Duration.zero);
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'skipped'});
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'latest'});
+    platform.emit(controller.id, {
+      'type': 'accountCleanupRequired',
+      'operationId': 'skipped',
+    });
+    platform.emit(controller.id, {
+      'type': 'accountCleanupRequired',
+      'operationId': 'latest',
+    });
     latest.complete();
     await Future<void>.delayed(Duration.zero);
     expect(started, ['old']);
     expect(
-        platform.requests.where((entry) =>
-            entry.$1 == 'completeAccountCleanup' &&
-            entry.$2['retired'] != true),
-        isEmpty);
+      platform.requests.where(
+        (entry) =>
+            entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true,
+      ),
+      isEmpty,
+    );
     old.complete();
     await Future<void>.delayed(Duration.zero);
     expect(started, ['old', 'latest']);
-    final reply = platform.requests.singleWhere((entry) =>
-        entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true);
+    final reply = platform.requests.singleWhere(
+      (entry) =>
+          entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true,
+    );
     expect(reply.$2['operationId'], 'latest');
     expect(
-        platform.requests
-            .where((entry) => entry.$2['retired'] == true)
-            .map((entry) => entry.$2['operationId']),
-        ['old', 'skipped']);
+      platform.requests
+          .where((entry) => entry.$2['retired'] == true)
+          .map((entry) => entry.$2['operationId']),
+      ['old', 'skipped'],
+    );
     await controller.close();
     await platform.source.close();
   });
-  test('a failed superseded hook must end before retry and queued close',
-      () async {
-    final platform = FakePlatform();
-    WeappContainerPlatform.instance = platform;
-    final controller = await WeappContainerController.create(storageKey: null);
-    final old = Completer<void>();
-    final started = <String>[];
-    controller.registerAccountCleanupHandler((operation, _) {
-      started.add(operation);
-      return operation == 'old' ? old.future : Future<void>.value();
-    });
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'old'});
-    await Future<void>.delayed(Duration.zero);
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'retry'});
-    await Future<void>.delayed(Duration.zero);
-    expect(started, ['old']);
-    old.completeError(StateError('old resource retirement failed'));
-    await Future<void>.delayed(Duration.zero);
-    expect(started, ['old', 'retry']);
-    final reply = platform.requests.singleWhere((entry) =>
-        entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true);
-    expect(reply.$2['operationId'], 'retry');
-    expect(reply.$2.containsKey('error'), isFalse);
-    final pending = Completer<void>();
-    controller.registerAccountCleanupHandler((operation, _) =>
-        operation == 'pending' ? pending.future : Future<void>.value());
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'pending'});
-    await Future<void>.delayed(Duration.zero);
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'queued'});
-    final closing = controller.close();
-    await Future<void>.delayed(Duration.zero);
-    expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
-    pending.complete();
-    await closing;
-    expect(started, isNot(contains('queued')));
-    await platform.source.close();
-  });
+  test(
+    'a failed superseded hook must end before retry and queued close',
+    () async {
+      final platform = FakePlatform();
+      WeappContainerPlatform.instance = platform;
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      final old = Completer<void>();
+      final started = <String>[];
+      controller.registerAccountCleanupHandler((operation, _) {
+        started.add(operation);
+        return operation == 'old' ? old.future : Future<void>.value();
+      });
+      platform.emit(controller.id, {
+        'type': 'accountCleanupRequired',
+        'operationId': 'old',
+      });
+      await Future<void>.delayed(Duration.zero);
+      platform.emit(controller.id, {
+        'type': 'accountCleanupRequired',
+        'operationId': 'retry',
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(started, ['old']);
+      old.completeError(StateError('old resource retirement failed'));
+      await Future<void>.delayed(Duration.zero);
+      expect(started, ['old', 'retry']);
+      final reply = platform.requests.singleWhere(
+        (entry) =>
+            entry.$1 == 'completeAccountCleanup' && entry.$2['retired'] != true,
+      );
+      expect(reply.$2['operationId'], 'retry');
+      expect(reply.$2.containsKey('error'), isFalse);
+      final pending = Completer<void>();
+      controller.registerAccountCleanupHandler(
+        (operation, _) =>
+            operation == 'pending' ? pending.future : Future<void>.value(),
+      );
+      platform.emit(controller.id, {
+        'type': 'accountCleanupRequired',
+        'operationId': 'pending',
+      });
+      await Future<void>.delayed(Duration.zero);
+      platform.emit(controller.id, {
+        'type': 'accountCleanupRequired',
+        'operationId': 'queued',
+      });
+      final closing = controller.close();
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
+      pending.complete();
+      await closing;
+      expect(started, isNot(contains('queued')));
+      await platform.source.close();
+    },
+  );
   test(
       'native cancellation waits real hook terminals and replies to a request received during close',
       () async {
@@ -613,99 +691,128 @@ void main() {
       token = cancellation;
       return operation == 'pending' ? native.future : Future<void>.value();
     });
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'pending'});
+    platform.emit(controller.id, {
+      'type': 'accountCleanupRequired',
+      'operationId': 'pending',
+    });
     await Future<void>.delayed(Duration.zero);
-    platform.emit(controller.id,
-        {'type': 'accountCleanupCancelled', 'operationId': 'other'});
+    platform.emit(controller.id, {
+      'type': 'accountCleanupCancelled',
+      'operationId': 'other',
+    });
     expect(token.isCancelled, isFalse);
-    platform.emit(controller.id,
-        {'type': 'accountCleanupCancelled', 'operationId': 'pending'});
+    platform.emit(controller.id, {
+      'type': 'accountCleanupCancelled',
+      'operationId': 'pending',
+    });
     expect(token.isCancelled, isTrue);
     final closing = controller.close();
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'late'});
+    platform.emit(controller.id, {
+      'type': 'accountCleanupRequired',
+      'operationId': 'late',
+    });
     await Future<void>.delayed(Duration.zero);
     expect(
-        platform.requests
-            .where((entry) => entry.$1 == 'completeAccountCleanup'),
-        isEmpty);
+      platform.requests.where((entry) => entry.$1 == 'completeAccountCleanup'),
+      isEmpty,
+    );
     native.complete();
     await closing;
     await Future<void>.delayed(Duration.zero);
     expect(
-        platform.requests
-            .where((entry) => entry.$1 == 'completeAccountCleanup')
-            .map((entry) => [entry.$2['operationId'], entry.$2['retired']]),
-        [
-          ['pending', true],
-          ['late', true]
-        ]);
+      platform.requests
+          .where((entry) => entry.$1 == 'completeAccountCleanup')
+          .map((entry) => [entry.$2['operationId'], entry.$2['retired']]),
+      [
+        ['pending', true],
+        ['late', true],
+      ],
+    );
     await platform.source.close();
   });
-  test('close waits for old cleanup then drains resources before native close',
-      () async {
-    final platform = FakePlatform();
-    WeappContainerPlatform.instance = platform;
-    final controller = await WeappContainerController.create(storageKey: null);
-    final old = Completer<void>(), retire = Completer<void>();
-    final operations = <String>[], tokens = <WeappCancellationToken>[];
-    controller.registerAccountCleanupHandler((operation, token) {
-      operations.add(operation);
-      tokens.add(token);
-      return operation == 'switch' ? old.future : retire.future;
-    });
-    platform.emit(controller.id,
-        {'type': 'accountCleanupRequired', 'operationId': 'switch'});
-    await Future<void>.delayed(Duration.zero);
-    final closing = controller.close();
-    await Future<void>.delayed(Duration.zero);
-    expect(tokens.single.isCancelled, isTrue);
-    expect(operations, ['switch']);
-    expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
-    old.complete();
-    await Future<void>.delayed(Duration.zero);
-    expect(operations, ['switch', 'close:${controller.id}']);
-    expect(
-        platform.requests.where((entry) =>
-            entry.$1 == 'completeAccountCleanup' &&
-            entry.$2['retired'] != true),
-        isEmpty);
-    retire.complete();
-    await closing;
-    expect(
-        platform.requests.where((entry) => entry.$1 == 'close'), hasLength(1));
-    await platform.source.close();
-  });
-  test('failed custom close waits for every resource and remains retryable',
-      () async {
-    final platform = FakePlatform();
-    WeappContainerPlatform.instance = platform;
-    final controller = await WeappContainerController.create(storageKey: null);
-    final pending = Completer<void>();
-    var fail = true;
-    controller.registerAccountCleanupHandler((_, __) {
-      if (fail) throw StateError('device busy');
-    });
-    controller.registerAccountCleanupHandler((_, __) => pending.future);
-    final closing = controller.close();
-    var settled = false;
-    unawaited(closing.then((_) {
-      settled = true;
-    }, onError: (Object _) {
-      settled = true;
-    }));
-    await Future<void>.delayed(Duration.zero);
-    expect(settled, isFalse);
-    pending.complete();
-    await expectLater(closing, throwsStateError);
-    expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
-    await expectLater(controller.state(), throwsStateError);
-    fail = false;
-    await controller.close();
-    expect(controller.isClosed, isTrue);
-    await platform.source.close();
-  });
+  test(
+    'close waits for old cleanup then drains resources before native close',
+    () async {
+      final platform = FakePlatform();
+      WeappContainerPlatform.instance = platform;
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      final old = Completer<void>(), retire = Completer<void>();
+      final operations = <String>[], tokens = <WeappCancellationToken>[];
+      controller.registerAccountCleanupHandler((operation, token) {
+        operations.add(operation);
+        tokens.add(token);
+        return operation == 'switch' ? old.future : retire.future;
+      });
+      platform.emit(controller.id, {
+        'type': 'accountCleanupRequired',
+        'operationId': 'switch',
+      });
+      await Future<void>.delayed(Duration.zero);
+      final closing = controller.close();
+      await Future<void>.delayed(Duration.zero);
+      expect(tokens.single.isCancelled, isTrue);
+      expect(operations, ['switch']);
+      expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
+      old.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(operations, ['switch', 'close:${controller.id}']);
+      expect(
+        platform.requests.where(
+          (entry) =>
+              entry.$1 == 'completeAccountCleanup' &&
+              entry.$2['retired'] != true,
+        ),
+        isEmpty,
+      );
+      retire.complete();
+      await closing;
+      expect(
+        platform.requests.where((entry) => entry.$1 == 'close'),
+        hasLength(1),
+      );
+      await platform.source.close();
+    },
+  );
+  test(
+    'failed custom close waits for every resource and remains retryable',
+    () async {
+      final platform = FakePlatform();
+      WeappContainerPlatform.instance = platform;
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+      );
+      final pending = Completer<void>();
+      var fail = true;
+      controller.registerAccountCleanupHandler((_, __) {
+        if (fail) throw StateError('device busy');
+      });
+      controller.registerAccountCleanupHandler((_, __) => pending.future);
+      final closing = controller.close();
+      var settled = false;
+      unawaited(
+        closing.then(
+          (_) {
+            settled = true;
+          },
+          onError: (Object _) {
+            settled = true;
+          },
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(settled, isFalse);
+      pending.complete();
+      await expectLater(closing, throwsStateError);
+      expect(platform.requests.where((entry) => entry.$1 == 'close'), isEmpty);
+      await expectLater(controller.state(), throwsStateError);
+      fail = false;
+      await controller.close();
+      expect(controller.isClosed, isTrue);
+      await platform.source.close();
+    },
+  );
 
   late FakePlatform platform;
   setUp(() {
@@ -715,26 +822,37 @@ void main() {
   tearDown(() async {
     await platform.source.close();
   });
-  test('system tab presenter opt-in reaches native creation only when enabled',
-      () async {
-    final defaults = await WeappContainerController.create(storageKey: null);
-    expect(platform.requests.last.$1, 'create');
-    expect(platform.requests.last.$2.containsKey('systemTabBar'), isFalse);
-    await defaults.close();
-    for (final enabled in [false, true]) {
-      final controller = await WeappContainerController.create(
-        storageKey: null,
-        systemTabBar: enabled,
-      );
-      final request = platform.requests.last;
-      expect(request.$1, 'create');
-      if (enabled) {
-        expect(request.$2['systemTabBar'], isTrue);
-      } else {
-        expect(request.$2.containsKey('systemTabBar'), isFalse);
+  test(
+    'system tab presenter opt-in reaches native creation only when enabled',
+    () async {
+      final defaults = await WeappContainerController.create(storageKey: null);
+      expect(platform.requests.last.$1, 'create');
+      expect(platform.requests.last.$2.containsKey('systemTabBar'), isFalse);
+      await defaults.close();
+      for (final enabled in [false, true]) {
+        final controller = await WeappContainerController.create(
+          storageKey: null,
+          systemTabBar: enabled,
+        );
+        final request = platform.requests.last;
+        expect(request.$1, 'create');
+        if (enabled) {
+          expect(request.$2['systemTabBar'], isTrue);
+        } else {
+          expect(request.$2.containsKey('systemTabBar'), isFalse);
+        }
+        await controller.close();
       }
-      await controller.close();
-    }
+    },
+  );
+  test('compatibility version is forwarded during native creation', () async {
+    final controller = await WeappContainerController.create(
+      storageKey: null,
+      compatibilityVersion: '0.0.1',
+    );
+    expect(platform.requests.last.$1, 'create');
+    expect(platform.requests.last.$2['compatibilityVersion'], '0.0.1');
+    await controller.close();
   });
   test(
       'native device install requires explicit Wi-Fi options and forwards Linux identity',
@@ -748,14 +866,17 @@ void main() {
     expect(defaults['linuxDesktopId'], '');
     expect(defaults['linuxBluetoothExclusive'], isFalse);
     await controller.installNativeDeviceApis(
-        bluetooth: false,
-        nfc: true,
-        enableWifi: true,
-        linuxDesktopId: 'dev.example.Host',
-        linuxBluetoothExclusive: true,
-        nfcConfiguration: const WeappNfcConfiguration(isoDep: true, nfcV: true),
-        wifiConfiguration: const WeappWifiConfiguration(
-            connectToNetworks: true, readCurrentNetwork: false));
+      bluetooth: false,
+      nfc: true,
+      enableWifi: true,
+      linuxDesktopId: 'dev.example.Host',
+      linuxBluetoothExclusive: true,
+      nfcConfiguration: const WeappNfcConfiguration(isoDep: true, nfcV: true),
+      wifiConfiguration: const WeappWifiConfiguration(
+        connectToNetworks: true,
+        readCurrentNetwork: false,
+      ),
+    );
     final explicit = platform.requests.last.$2;
     expect(explicit['bluetooth'], isFalse);
     expect(explicit['nfc'], isTrue);
@@ -767,85 +888,106 @@ void main() {
       'isoDep': true,
       'mifareUltralight': false,
       'nfcF': false,
-      'nfcV': true
+      'nfcV': true,
     });
-    expect(explicit['wifiConfiguration'],
-        {'connectToNetworks': true, 'readCurrentNetwork': false});
+    expect(explicit['wifiConfiguration'], {
+      'connectToNetworks': true,
+      'readCurrentNetwork': false,
+    });
     await controller.close();
   });
-  test('supersession query is read-only and freezes the submitted observation',
-      () async {
-    final controller = await WeappContainerController.create(
-      storageKey: null,
-      atomicHostLayout: true,
-    );
-    try {
-      final submitted = atomicObservation()..['observationId'] = '10';
-      final gate = Completer<void>();
-      platform.stateGate = gate;
-      platform.currentState = atomicState();
-      final baseline = platform.requests.length;
-      final checking = controller.wasHostLayoutSuperseded(
-        observation: submitted,
-        layoutRevision: '17',
+  test(
+    'supersession query is read-only and freezes the submitted observation',
+    () async {
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+        atomicHostLayout: true,
       );
-      submitted['observationId'] = '11';
-      gate.complete();
-      expect(await checking, isTrue);
-      expect(
-          platform.requests.skip(baseline).map((entry) => entry.$1), ['state']);
-      expect(platform.requests.last.$2, {'id': controller.id});
-    } finally {
-      await controller.close();
-    }
-  });
-  test('supersession query preserves unknown, faulted and unavailable states',
-      () async {
-    final controller = await WeappContainerController.create(
-      storageKey: null,
-      atomicHostLayout: true,
-    );
-    try {
-      platform.currentState = atomicState(pending: null);
-      expect(
-        await controller.wasHostLayoutSuperseded(
-            observation: atomicObservation(), layoutRevision: '17'),
-        isFalse,
-      );
-      for (final domain in [
-        'appServiceFault',
-        'viewFault',
-        'navigationFault'
-      ]) {
+      try {
+        final submitted = atomicObservation()..['observationId'] = '10';
+        final gate = Completer<void>();
+        platform.stateGate = gate;
         platform.currentState = atomicState();
-        (platform.currentState['executionHealth'] as Map)[domain] = {
-          'code': 'ERR_TIMEOUT',
-        };
+        final baseline = platform.requests.length;
+        final checking = controller.wasHostLayoutSuperseded(
+          observation: submitted,
+          layoutRevision: '17',
+        );
+        submitted['observationId'] = '11';
+        gate.complete();
+        expect(await checking, isTrue);
+        expect(platform.requests.skip(baseline).map((entry) => entry.$1), [
+          'state',
+        ]);
+        expect(platform.requests.last.$2, {'id': controller.id});
+      } finally {
+        await controller.close();
+      }
+    },
+  );
+  test(
+    'supersession query preserves unknown, faulted and unavailable states',
+    () async {
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+        atomicHostLayout: true,
+      );
+      try {
+        platform.currentState = atomicState(pending: null);
         expect(
           await controller.wasHostLayoutSuperseded(
-              observation: atomicObservation(), layoutRevision: '17'),
+            observation: atomicObservation(),
+            layoutRevision: '17',
+          ),
           isFalse,
         );
-      }
-      platform.stateFailure = PlatformException(
-        code: 'ERR_NATIVE_STATE',
-        message: 'original read-only owner query failure',
-      );
-      await expectLater(
-        controller.wasHostLayoutSuperseded(
-            observation: atomicObservation(), layoutRevision: '17'),
-        throwsA(isA<PlatformException>()
-            .having((error) => error.code, 'code', 'ERR_NATIVE_STATE')),
-      );
-      expect(
+        for (final domain in [
+          'appServiceFault',
+          'viewFault',
+          'navigationFault',
+        ]) {
+          platform.currentState = atomicState();
+          (platform.currentState['executionHealth'] as Map)[domain] = {
+            'code': 'ERR_TIMEOUT',
+          };
+          expect(
+            await controller.wasHostLayoutSuperseded(
+              observation: atomicObservation(),
+              layoutRevision: '17',
+            ),
+            isFalse,
+          );
+        }
+        platform.stateFailure = PlatformException(
+          code: 'ERR_NATIVE_STATE',
+          message: 'original read-only owner query failure',
+        );
+        await expectLater(
+          controller.wasHostLayoutSuperseded(
+            observation: atomicObservation(),
+            layoutRevision: '17',
+          ),
+          throwsA(
+            isA<PlatformException>().having(
+              (error) => error.code,
+              'code',
+              'ERR_NATIVE_STATE',
+            ),
+          ),
+        );
+        expect(
           platform.requests.where((entry) => entry.$1 == 'observeHostLayout'),
-          isEmpty);
-      expect(
-          platform.requests.where((entry) => entry.$1 == 'command'), isEmpty);
-    } finally {
-      await controller.close();
-    }
-  });
+          isEmpty,
+        );
+        expect(
+          platform.requests.where((entry) => entry.$1 == 'command'),
+          isEmpty,
+        );
+      } finally {
+        await controller.close();
+      }
+    },
+  );
   test(
     'measured-view preflight keeps host registration before guest startup',
     () async {
@@ -1224,8 +1366,10 @@ void main() {
       await measuring;
       final sentProof = platform.requests.last.$2['restartAttempt'] as Map;
       expect(sentProof['attemptId'], '18446744073709551614');
-      expect((sentProof['expectedAccepted'] as Map)['sessionId'],
-          'accepted-session');
+      expect(
+        (sentProof['expectedAccepted'] as Map)['sessionId'],
+        'accepted-session',
+      );
       await controller.updateHostLayout(
         observation: observation,
         chrome: geometry,
@@ -1524,236 +1668,335 @@ void main() {
     invalidAtomicStates.add(('wrong accepted $field', state));
   }
   for (final scenario in invalidAtomicStates) {
-    atomicTestWidgets('atomic cancellation preserves error for ${scenario.$1}',
-        (
-      tester,
-    ) async {
+    atomicTestWidgets(
+      'atomic cancellation preserves error for ${scenario.$1}',
+      (tester) async {
+        final controller = await atomicController(tester);
+        platform.cancelLayout = true;
+        platform.currentState = scenario.$2;
+        final errors = <Object>[], acknowledgements = <int>[];
+        await tester.pumpWidget(
+          atomicView(
+            controller,
+            atomicObservation(),
+            atomicGeometry(),
+            errors,
+            acknowledgements,
+          ),
+        );
+        await flushChrome(tester);
+        expect(
+          errors,
+          hasLength(1),
+          reason:
+              'ambiguous/unhealthy/stale native state cannot make ERR_CANCELLED harmless',
+        );
+        expect(
+          errors.single,
+          isA<PlatformException>().having(
+            (e) => e.code,
+            'code',
+            'ERR_CANCELLED',
+          ),
+        );
+        expect(acknowledgements, isEmpty);
+        expect(
+          platform.requests.where((r) => r.$1 == 'setPreviewOccluded'),
+          isEmpty,
+        );
+        await closeAtomic(tester, controller);
+      },
+    );
+  }
+
+  for (final field in ['ownerId', 'surfaceGeneration', 'observationId']) {
+    for (final bad in ['01', '18446744073709551616']) {
+      atomicTestWidgets(
+        'atomic cancellation rejects invalid attempted $field=$bad',
+        (tester) async {
+          final controller = await atomicController(tester);
+          final observation = atomicObservation();
+          observation[field] = bad;
+          platform.currentState = atomicState(
+            owner: field == 'ownerId' ? bad : '7',
+            surface: field == 'surfaceGeneration' ? bad : '5',
+          );
+          platform.cancelLayout = true;
+          final errors = <Object>[], acknowledgements = <int>[];
+          await tester.pumpWidget(
+            atomicView(
+              controller,
+              observation,
+              atomicGeometry(),
+              errors,
+              acknowledgements,
+            ),
+          );
+          await flushChrome(tester);
+          expect(errors, hasLength(1));
+          expect(
+            errors.single,
+            isA<PlatformException>().having(
+              (e) => e.code,
+              'code',
+              'ERR_CANCELLED',
+            ),
+          );
+          expect(acknowledgements, isEmpty);
+          await closeAtomic(tester, controller);
+        },
+      );
+    }
+  }
+
+  atomicTestWidgets(
+    'atomic successful stale revision cannot ACK or unocclude a newer observation',
+    (tester) async {
       final controller = await atomicController(tester);
-      platform.cancelLayout = true;
-      platform.currentState = scenario.$2;
       final errors = <Object>[], acknowledgements = <int>[];
+      final geometry = atomicGeometry();
       await tester.pumpWidget(
         atomicView(
           controller,
           atomicObservation(),
-          atomicGeometry(),
+          geometry,
+          errors,
+          acknowledgements,
+          occluded: true,
+          prepareOnly: true,
+        ),
+      );
+      await flushChrome(tester);
+      final first = Completer<void>(), latest = Completer<void>();
+      platform.layoutGate = first;
+      final baseline = platform.requests.length;
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          geometry,
           errors,
           acknowledgements,
         ),
       );
       await flushChrome(tester);
       expect(
-        errors,
+        platform.requests.skip(baseline).where((r) => r.$1 == 'hostLayout'),
         hasLength(1),
-        reason:
-            'ambiguous/unhealthy/stale native state cannot make ERR_CANCELLED harmless',
       );
-      expect(
-        errors.single,
-        isA<PlatformException>().having((e) => e.code, 'code', 'ERR_CANCELLED'),
+      platform.layoutGate = latest;
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(sequence: '11'),
+          geometry,
+          errors,
+          acknowledgements,
+        ),
       );
+      await flushChrome(tester);
+      first.complete();
+      await flushChrome(tester);
+      final layouts = platform.requests
+          .skip(baseline)
+          .where((r) => r.$1 == 'hostLayout')
+          .toList();
+      expect(layouts, hasLength(2));
+      expect((layouts.first.$2['observation'] as Map)['observationId'], '10');
+      expect((layouts.last.$2['observation'] as Map)['observationId'], '11');
+      expect(layouts.map((r) => r.$2['layoutRevision']), ['17', '17']);
       expect(acknowledgements, isEmpty);
       expect(
-        platform.requests.where((r) => r.$1 == 'setPreviewOccluded'),
+        platform.requests
+            .skip(baseline)
+            .where((r) => r.$1 == 'setPreviewOccluded'),
         isEmpty,
       );
+      latest.complete();
+      await flushChrome(tester);
+      expect(acknowledgements, [17]);
+      expect(
+        platform.requests
+            .skip(baseline)
+            .where((r) => r.$1 == 'setPreviewOccluded')
+            .single
+            .$2['occluded'],
+        false,
+      );
+      expect(errors, isEmpty);
       await closeAtomic(tester, controller);
-    });
-  }
-
-  for (final field in ['ownerId', 'surfaceGeneration', 'observationId']) {
-    for (final bad in ['01', '18446744073709551616']) {
-      atomicTestWidgets(
-          'atomic cancellation rejects invalid attempted $field=$bad',
-          (tester) async {
-        final controller = await atomicController(tester);
-        final observation = atomicObservation();
-        observation[field] = bad;
-        platform.currentState = atomicState(
-          owner: field == 'ownerId' ? bad : '7',
-          surface: field == 'surfaceGeneration' ? bad : '5',
-        );
-        platform.cancelLayout = true;
-        final errors = <Object>[], acknowledgements = <int>[];
-        await tester.pumpWidget(atomicView(controller, observation,
-            atomicGeometry(), errors, acknowledgements));
-        await flushChrome(tester);
-        expect(errors, hasLength(1));
-        expect(
-            errors.single,
-            isA<PlatformException>()
-                .having((e) => e.code, 'code', 'ERR_CANCELLED'));
-        expect(acknowledgements, isEmpty);
-        await closeAtomic(tester, controller);
-      });
-    }
-  }
+    },
+  );
 
   atomicTestWidgets(
-      'atomic successful stale revision cannot ACK or unocclude a newer observation',
-      (tester) async {
-    final controller = await atomicController(tester);
-    final errors = <Object>[], acknowledgements = <int>[];
-    final geometry = atomicGeometry();
-    await tester.pumpWidget(atomicView(
-        controller, atomicObservation(), geometry, errors, acknowledgements,
-        occluded: true, prepareOnly: true));
-    await flushChrome(tester);
-    final first = Completer<void>(), latest = Completer<void>();
-    platform.layoutGate = first;
-    final baseline = platform.requests.length;
-    await tester.pumpWidget(atomicView(
-        controller, atomicObservation(), geometry, errors, acknowledgements));
-    await flushChrome(tester);
-    expect(platform.requests.skip(baseline).where((r) => r.$1 == 'hostLayout'),
-        hasLength(1));
-    platform.layoutGate = latest;
-    await tester.pumpWidget(atomicView(controller,
-        atomicObservation(sequence: '11'), geometry, errors, acknowledgements));
-    await flushChrome(tester);
-    first.complete();
-    await flushChrome(tester);
-    final layouts = platform.requests
-        .skip(baseline)
-        .where((r) => r.$1 == 'hostLayout')
-        .toList();
-    expect(layouts, hasLength(2));
-    expect((layouts.first.$2['observation'] as Map)['observationId'], '10');
-    expect((layouts.last.$2['observation'] as Map)['observationId'], '11');
-    expect(layouts.map((r) => r.$2['layoutRevision']), ['17', '17']);
-    expect(acknowledgements, isEmpty);
-    expect(
+    'atomic ACK checks the full surface tuple even when revision and observation ID match',
+    (tester) async {
+      final controller = await atomicController(tester);
+      final errors = <Object>[], acknowledgements = <int>[];
+      final geometry = atomicGeometry();
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          geometry,
+          errors,
+          acknowledgements,
+          occluded: true,
+          prepareOnly: true,
+        ),
+      );
+      await flushChrome(tester);
+      final first = Completer<void>(), replacement = Completer<void>();
+      platform.layoutGate = first;
+      final baseline = platform.requests.length;
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          geometry,
+          errors,
+          acknowledgements,
+        ),
+      );
+      await flushChrome(tester);
+      platform.layoutGate = replacement;
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(surface: '6'),
+          geometry,
+          errors,
+          acknowledgements,
+        ),
+      );
+      await flushChrome(tester);
+      first.complete();
+      await flushChrome(tester);
+      expect(acknowledgements, isEmpty);
+      expect(
         platform.requests
             .skip(baseline)
             .where((r) => r.$1 == 'setPreviewOccluded'),
-        isEmpty);
-    latest.complete();
-    await flushChrome(tester);
-    expect(acknowledgements, [17]);
-    expect(
+        isEmpty,
+      );
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(surface: '6', sequence: '11'),
+          geometry,
+          errors,
+          acknowledgements,
+        ),
+      );
+      replacement.complete();
+      await flushChrome(tester);
+      expect(acknowledgements, [17]);
+      expect(
         platform.requests
             .skip(baseline)
             .where((r) => r.$1 == 'setPreviewOccluded')
             .single
             .$2['occluded'],
-        false);
-    expect(errors, isEmpty);
-    await closeAtomic(tester, controller);
-  });
+        false,
+      );
+      expect(errors, isEmpty);
+      await closeAtomic(tester, controller);
+    },
+  );
 
   atomicTestWidgets(
-      'atomic ACK checks the full surface tuple even when revision and observation ID match',
-      (tester) async {
-    final controller = await atomicController(tester);
-    final errors = <Object>[], acknowledgements = <int>[];
-    final geometry = atomicGeometry();
-    await tester.pumpWidget(atomicView(
-        controller, atomicObservation(), geometry, errors, acknowledgements,
-        occluded: true, prepareOnly: true));
-    await flushChrome(tester);
-    final first = Completer<void>(), replacement = Completer<void>();
-    platform.layoutGate = first;
-    final baseline = platform.requests.length;
-    await tester.pumpWidget(atomicView(
-        controller, atomicObservation(), geometry, errors, acknowledgements));
-    await flushChrome(tester);
-    platform.layoutGate = replacement;
-    await tester.pumpWidget(atomicView(controller,
-        atomicObservation(surface: '6'), geometry, errors, acknowledgements));
-    await flushChrome(tester);
-    first.complete();
-    await flushChrome(tester);
-    expect(acknowledgements, isEmpty);
-    expect(
-        platform.requests
-            .skip(baseline)
-            .where((r) => r.$1 == 'setPreviewOccluded'),
-        isEmpty);
-    await tester.pumpWidget(atomicView(
-        controller,
-        atomicObservation(surface: '6', sequence: '11'),
-        geometry,
-        errors,
-        acknowledgements));
-    replacement.complete();
-    await flushChrome(tester);
-    expect(acknowledgements, [17]);
-    expect(
-        platform.requests
-            .skip(baseline)
-            .where((r) => r.$1 == 'setPreviewOccluded')
-            .single
-            .$2['occluded'],
-        false);
-    expect(errors, isEmpty);
-    await closeAtomic(tester, controller);
-  });
-
-  atomicTestWidgets(
-      'Windows same native signature survives a superseded geometry wait and applies exactly once',
-      (tester) async {
-    final controller = await atomicController(tester);
-    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-    final errors = <Object>[], acknowledgements = <int>[];
-    final geometry = atomicGeometry();
-    final native = <String, Object?>{
-      'schemaVersion': 1,
-      'title': '本地窗口',
-      'accessibilityLabels': {'more': '更多', 'close': '关闭小程序'}
-    };
-    await tester.pumpWidget(atomicView(
-        controller, atomicObservation(), geometry, errors, acknowledgements,
-        occluded: true, prepareOnly: true));
-    await flushChrome(tester);
-    final first = Completer<void>(), latest = Completer<void>();
-    platform.layoutGate = first;
-    final baseline = platform.requests.length;
-    await tester.pumpWidget(atomicView(
-        controller, atomicObservation(), geometry, errors, acknowledgements,
-        nativeChrome: native));
-    await flushChrome(tester);
-    platform.layoutGate = latest;
-    await tester.pumpWidget(atomicView(controller,
-        atomicObservation(sequence: '11'), geometry, errors, acknowledgements,
-        nativeChrome: {
-          ...native,
-          'accessibilityLabels': {'more': '更多', 'close': '关闭小程序'}
-        }));
-    await flushChrome(tester);
-    first.complete();
-    await flushChrome(tester);
-    expect(acknowledgements, isEmpty);
-    expect(
+    'Windows same native signature survives a superseded geometry wait and applies exactly once',
+    (tester) async {
+      final controller = await atomicController(tester);
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      final errors = <Object>[], acknowledgements = <int>[];
+      final geometry = atomicGeometry();
+      final native = <String, Object?>{
+        'schemaVersion': 1,
+        'title': '本地窗口',
+        'accessibilityLabels': {'more': '更多', 'close': '关闭小程序'},
+      };
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          geometry,
+          errors,
+          acknowledgements,
+          occluded: true,
+          prepareOnly: true,
+        ),
+      );
+      await flushChrome(tester);
+      final first = Completer<void>(), latest = Completer<void>();
+      platform.layoutGate = first;
+      final baseline = platform.requests.length;
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          geometry,
+          errors,
+          acknowledgements,
+          nativeChrome: native,
+        ),
+      );
+      await flushChrome(tester);
+      platform.layoutGate = latest;
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(sequence: '11'),
+          geometry,
+          errors,
+          acknowledgements,
+          nativeChrome: {
+            ...native,
+            'accessibilityLabels': {'more': '更多', 'close': '关闭小程序'},
+          },
+        ),
+      );
+      await flushChrome(tester);
+      first.complete();
+      await flushChrome(tester);
+      expect(acknowledgements, isEmpty);
+      expect(
         platform.requests.skip(baseline).where((r) => r.$1 == 'nativeChrome'),
         hasLength(1),
-        reason: 'metadata advances independently of stale geometry');
-    expect(
+        reason: 'metadata advances independently of stale geometry',
+      );
+      expect(
         platform.requests
             .skip(baseline)
             .where((r) => r.$1 == 'setPreviewOccluded'),
-        isEmpty);
-    latest.complete();
-    await flushChrome(tester);
-    final applied = platform.requests
-        .skip(baseline)
-        .where((r) => r.$1 == 'nativeChrome')
-        .single;
-    expect(applied.$2, {'id': controller.id, ...native});
-    expect(acknowledgements, [17]);
-    final operations =
-        platform.requests.skip(baseline).map((r) => r.$1).toList();
-    expect(operations.indexOf('nativeChrome'),
-        lessThan(operations.indexOf('setPreviewOccluded')));
-    expect(
+        isEmpty,
+      );
+      latest.complete();
+      await flushChrome(tester);
+      final applied = platform.requests
+          .skip(baseline)
+          .where((r) => r.$1 == 'nativeChrome')
+          .single;
+      expect(applied.$2, {'id': controller.id, ...native});
+      expect(acknowledgements, [17]);
+      final operations =
+          platform.requests.skip(baseline).map((r) => r.$1).toList();
+      expect(
+        operations.indexOf('nativeChrome'),
+        lessThan(operations.indexOf('setPreviewOccluded')),
+      );
+      expect(
         platform.requests
             .skip(baseline)
             .where((r) => r.$1 == 'setPreviewOccluded')
             .single
             .$2['occluded'],
-        false);
-    expect(errors, isEmpty);
-    await closeAtomic(tester, controller);
-  });
+        false,
+      );
+      expect(errors, isEmpty);
+      await closeAtomic(tester, controller);
+    },
+  );
 
   atomicTestWidgets(
     'atomic queued observation and nested chrome snapshots resist external mutation',
@@ -1809,8 +2052,15 @@ void main() {
       await controller.claimView(previousOwner);
       controller.releaseView(previousOwner, retired.future);
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(
-          controller, observation, atomicGeometry(), errors, acknowledgements));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+        ),
+      );
       platform.emit(controller.id, {
         'type': 'hostLayoutAccepted',
         'acceptedLayout': {
@@ -1843,11 +2093,25 @@ void main() {
       await controller.claimView(previousOwner);
       controller.releaseView(previousOwner, retired.future);
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(
-          controller, observation, atomicGeometry(), errors, acknowledgements));
-      await tester.pumpWidget(atomicView(
-          controller, observation, atomicGeometry(), errors, acknowledgements,
-          prepareOnly: true));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+        ),
+      );
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+          prepareOnly: true,
+        ),
+      );
       retired.complete();
       await flushChrome(tester);
       expect(platform.requests.where((r) => r.$1 == 'hostLayout'), isEmpty);
@@ -1868,9 +2132,17 @@ void main() {
         'observation': observation,
       });
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(
-          controller, observation, atomicGeometry(), errors, acknowledgements,
-          occluded: true, prepareOnly: true));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+          occluded: true,
+          prepareOnly: true,
+        ),
+      );
       await flushChrome(tester);
       platform.emit(controller.id, {
         'type': 'hostLayoutAccepted',
@@ -1887,15 +2159,25 @@ void main() {
         'title': 'Loaded project',
         'accessibilityLabels': {'more': 'More', 'close': 'Close'},
       };
-      await tester.pumpWidget(atomicView(controller, observation,
-          atomicGeometry(revision: 18), errors, acknowledgements,
-          nativeChrome: native, emitObservation: false));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          atomicGeometry(revision: 18),
+          errors,
+          acknowledgements,
+          nativeChrome: native,
+          emitObservation: false,
+        ),
+      );
       await flushChrome(tester);
       final requests = platform.requests.skip(baseline).toList();
       expect(requests.where((r) => r.$1 == 'hostLayout'), isEmpty);
       expect(requests.where((r) => r.$1 == 'setPreviewOccluded'), isEmpty);
-      expect(requests.where((r) => r.$1 == 'nativeChrome').single.$2,
-          {'id': controller.id, ...native});
+      expect(requests.where((r) => r.$1 == 'nativeChrome').single.$2, {
+        'id': controller.id,
+        ...native,
+      });
       expect(acknowledgements, isEmpty);
       expect(errors, isEmpty);
     },
@@ -1909,8 +2191,15 @@ void main() {
       final errors = <Object>[], acknowledgements = <int>[];
       final gate = Completer<void>();
       platform.layoutGate = gate;
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+        ),
+      );
       await flushChrome(tester);
       platform.emit(controller.id, {
         'type': 'hostLayoutObservation',
@@ -1921,7 +2210,9 @@ void main() {
       expect(acknowledgements, isEmpty);
       expect(errors, isEmpty);
       expect(
-          platform.requests.where((r) => r.$1 == 'hostLayout'), hasLength(1));
+        platform.requests.where((r) => r.$1 == 'hostLayout'),
+        hasLength(1),
+      );
     },
   );
 
@@ -1936,25 +2227,43 @@ void main() {
       await controller.claimView(previousOwner);
       controller.releaseView(previousOwner, retired.future);
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements,
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
           nativeChrome: {
             'title': 'Project',
-            'accessibilityLabels': {'more': 'More'}
-          }));
+            'accessibilityLabels': {'more': 'More'},
+          },
+        ),
+      );
       final latestMetadata = {
         'title': '项目',
-        'accessibilityLabels': {'more': '更多'}
+        'accessibilityLabels': {'more': '更多'},
       };
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements,
-          nativeChrome: latestMetadata));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+          nativeChrome: latestMetadata,
+        ),
+      );
       retired.complete();
       await flushChrome(tester);
       expect(
-          platform.requests.where((r) => r.$1 == 'hostLayout'), hasLength(1));
-      expect(platform.requests.where((r) => r.$1 == 'nativeChrome').single.$2,
-          {'id': controller.id, ...latestMetadata});
+        platform.requests.where((r) => r.$1 == 'hostLayout'),
+        hasLength(1),
+      );
+      expect(platform.requests.where((r) => r.$1 == 'nativeChrome').single.$2, {
+        'id': controller.id,
+        ...latestMetadata,
+      });
       expect(acknowledgements, [17]);
       expect(errors, isEmpty);
     },
@@ -1970,18 +2279,29 @@ void main() {
       await controller.claimView(previousOwner);
       controller.releaseView(previousOwner, retired.future);
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements));
-      await tester.pumpWidget(atomicView(
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+        ),
+      );
+      await tester.pumpWidget(
+        atomicView(
           controller,
           atomicObservation(sequence: '11'),
           atomicGeometry(revision: 18),
           errors,
-          acknowledgements));
+          acknowledgements,
+        ),
+      );
       retired.complete();
       await flushChrome(tester);
-      final request =
-          platform.requests.singleWhere((r) => r.$1 == 'hostLayout');
+      final request = platform.requests.singleWhere(
+        (r) => r.$1 == 'hostLayout',
+      );
       expect((request.$2['observation'] as Map)['observationId'], '11');
       expect(request.$2['layoutRevision'], '18');
       expect(acknowledgements, [18]);
@@ -1998,19 +2318,32 @@ void main() {
       platform.cancelLayout = true;
       platform.stateFailure = PlatformException(code: 'ERR_STATE_UNAVAILABLE');
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements,
-          nativeChrome: {'title': 'Latest title'}));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+          nativeChrome: {'title': 'Latest title'},
+        ),
+      );
       await flushChrome(tester);
       expect(errors, hasLength(1));
       expect(
-          errors.single,
-          isA<PlatformException>()
-              .having((error) => error.code, 'code', 'ERR_CANCELLED')
-              .having((error) => error.message, 'message',
-                  'fixture native observation superseded'));
+        errors.single,
+        isA<PlatformException>()
+            .having((error) => error.code, 'code', 'ERR_CANCELLED')
+            .having(
+              (error) => error.message,
+              'message',
+              'fixture native observation superseded',
+            ),
+      );
       expect(
-          platform.requests.where((r) => r.$1 == 'nativeChrome'), hasLength(1));
+        platform.requests.where((r) => r.$1 == 'nativeChrome'),
+        hasLength(1),
+      );
       expect(acknowledgements, isEmpty);
     },
   );
@@ -2025,9 +2358,16 @@ void main() {
       platform.layoutGate = layout;
       platform.closeGate = closing;
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements,
-          nativeChrome: {'title': 'Unsent title'}));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+          nativeChrome: {'title': 'Unsent title'},
+        ),
+      );
       await flushChrome(tester);
       final close = tester.runAsync(controller.close);
       expect(controller.isClosed, isFalse);
@@ -2054,9 +2394,16 @@ void main() {
       platform.stateGate = state;
       platform.closeGate = closing;
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements,
-          nativeChrome: {'title': 'Unsent title'}));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          atomicObservation(),
+          atomicGeometry(),
+          errors,
+          acknowledgements,
+          nativeChrome: {'title': 'Unsent title'},
+        ),
+      );
       await flushChrome(tester);
       expect(platform.requests.where((r) => r.$1 == 'state'), hasLength(1));
       final close = tester.runAsync(controller.close);
@@ -2082,12 +2429,21 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
       final observation = atomicObservation(), geometry = atomicGeometry();
       final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(
-          controller, observation, geometry, errors, acknowledgements,
-          occluded: true, prepareOnly: true));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          geometry,
+          errors,
+          acknowledgements,
+          occluded: true,
+          prepareOnly: true,
+        ),
+      );
       await flushChrome(tester);
-      await tester.pumpWidget(atomicView(
-          controller, observation, geometry, errors, acknowledgements));
+      await tester.pumpWidget(
+        atomicView(controller, observation, geometry, errors, acknowledgements),
+      );
       await flushChrome(tester);
       expect(acknowledgements, [17]);
       platform.emit(controller.id, {
@@ -2098,89 +2454,129 @@ void main() {
           'chrome': geometry,
         },
       });
-      await tester.pumpWidget(atomicView(
-          controller, observation, geometry, errors, acknowledgements,
-          occluded: true, emitObservation: false));
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          geometry,
+          errors,
+          acknowledgements,
+          occluded: true,
+          emitObservation: false,
+        ),
+      );
       await flushChrome(tester);
       final baseline = platform.requests.length;
-      await tester.pumpWidget(atomicView(
-          controller, observation, geometry, errors, acknowledgements,
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          geometry,
+          errors,
+          acknowledgements,
           emitObservation: false,
           nativeChrome: {
             'title': '新标题',
-            'accessibilityLabels': {'more': '更多'}
-          }));
+            'accessibilityLabels': {'more': '更多'},
+          },
+        ),
+      );
       await flushChrome(tester);
       final requests = platform.requests.skip(baseline);
       expect(requests.where((r) => r.$1 == 'hostLayout'), isEmpty);
       expect(requests.where((r) => r.$1 == 'observeHostLayout'), isEmpty);
       expect(requests.where((r) => r.$1 == 'nativeChrome'), hasLength(1));
       expect(
-          requests
-              .where((r) => r.$1 == 'setPreviewOccluded')
-              .single
-              .$2['occluded'],
-          false);
-      expect(acknowledgements, [17],
+        requests
+            .where((r) => r.$1 == 'setPreviewOccluded')
+            .single
+            .$2['occluded'],
+        false,
+      );
+      expect(
+          acknowledgements,
+          [
+            17,
+          ],
           reason: 'metadata never ACKs another layout');
       expect(errors, isEmpty);
     },
   );
 
   test(
-      'native layout receipts retain independent immutable full owner identities',
-      () async {
-    final controller = await WeappContainerController.create(
-        storageKey: null, atomicHostLayout: true);
-    try {
-      final observation = atomicObservation();
-      platform.emit(controller.id,
-          {'type': 'hostLayoutObservation', 'observation': observation});
-      (observation['windowMetrics'] as Map)['windowWidth'] = 1;
-      final queried = controller.pendingHostLayout!;
-      expect((queried['windowMetrics'] as Map)['windowWidth'], 390);
-      (queried['windowMetrics'] as Map)['windowWidth'] = 2;
-      expect(
+    'native layout receipts retain independent immutable full owner identities',
+    () async {
+      final controller = await WeappContainerController.create(
+        storageKey: null,
+        atomicHostLayout: true,
+      );
+      try {
+        final observation = atomicObservation();
+        platform.emit(controller.id, {
+          'type': 'hostLayoutObservation',
+          'observation': observation,
+        });
+        (observation['windowMetrics'] as Map)['windowWidth'] = 1;
+        final queried = controller.pendingHostLayout!;
+        expect((queried['windowMetrics'] as Map)['windowWidth'], 390);
+        (queried['windowMetrics'] as Map)['windowWidth'] = 2;
+        expect(
           (controller.pendingHostLayout!['windowMetrics']
               as Map)['windowWidth'],
-          390);
-      platform.emit(controller.id, {
-        'type': 'hostLayoutAccepted',
-        'acceptedLayout': {
-          ...atomicObservation(owner: '8'),
-          'layoutRevision': '17',
-          'chrome': atomicGeometry()
-        },
-      });
-      expect(controller.pendingHostLayout, isNotNull,
-          reason: 'foreign owner cannot consume this observation');
-      platform.emit(controller.id, {
-        'type': 'hostLayoutAccepted',
-        'acceptedLayout': {
+          390,
+        );
+        platform.emit(controller.id, {
+          'type': 'hostLayoutAccepted',
+          'acceptedLayout': {
+            ...atomicObservation(owner: '8'),
+            'layoutRevision': '17',
+            'chrome': atomicGeometry(),
+          },
+        });
+        expect(
+          controller.pendingHostLayout,
+          isNotNull,
+          reason: 'foreign owner cannot consume this observation',
+        );
+        platform.emit(controller.id, {
+          'type': 'hostLayoutAccepted',
+          'acceptedLayout': {
+            ...atomicObservation(),
+            'windowMetrics': {'windowWidth': 1, 'windowHeight': 700},
+            'layoutRevision': '17',
+            'chrome': atomicGeometry(),
+          },
+        });
+        expect(
+          controller.pendingHostLayout,
+          isNotNull,
+          reason: 'different metrics cannot consume the frozen observation',
+        );
+        final accepted = {
           ...atomicObservation(),
-          'windowMetrics': {'windowWidth': 1, 'windowHeight': 700},
           'layoutRevision': '17',
-          'chrome': atomicGeometry()
-        },
-      });
-      expect(controller.pendingHostLayout, isNotNull,
-          reason: 'different metrics cannot consume the frozen observation');
-      final accepted = {
-        ...atomicObservation(),
-        'layoutRevision': '17',
-        'chrome': atomicGeometry()
-      };
-      platform.emit(controller.id,
-          {'type': 'hostLayoutAccepted', 'acceptedLayout': accepted});
-      expect(controller.pendingHostLayout, isNull);
-      (accepted['chrome'] as Map)['revision'] = 99;
-      expect((controller.acceptedHostLayout!['chrome'] as Map)['revision'], 17);
-      (controller.acceptedHostLayout!['chrome'] as Map)['revision'] = 100;
-      expect((controller.acceptedHostLayout!['chrome'] as Map)['revision'], 17);
-    } finally {
-      await controller.close();
-    }
-  });
+          'chrome': atomicGeometry(),
+        };
+        platform.emit(controller.id, {
+          'type': 'hostLayoutAccepted',
+          'acceptedLayout': accepted,
+        });
+        expect(controller.pendingHostLayout, isNull);
+        (accepted['chrome'] as Map)['revision'] = 99;
+        expect(
+          (controller.acceptedHostLayout!['chrome'] as Map)['revision'],
+          17,
+        );
+        (controller.acceptedHostLayout!['chrome'] as Map)['revision'] = 100;
+        expect(
+          (controller.acceptedHostLayout!['chrome'] as Map)['revision'],
+          17,
+        );
+      } finally {
+        await controller.close();
+      }
+    },
+  );
 
   for (final field in [
     'schemaVersion',
@@ -2189,82 +2585,110 @@ void main() {
     'observationId',
     'sessionId',
     'pageId',
-    'windowMetrics'
+    'windowMetrics',
   ]) {
     atomicTestWidgets(
-        'queued geometry requires current native $field before dispatch',
-        (tester) async {
-      final controller = await atomicController(tester);
-      final platform = WeappContainerPlatform.instance as FakePlatform;
-      final retired = Completer<void>();
-      final previousOwner = Object();
-      await controller.claimView(previousOwner);
-      controller.releaseView(previousOwner, retired.future);
-      final errors = <Object>[], acknowledgements = <int>[];
-      await tester.pumpWidget(atomicView(controller, atomicObservation(),
-          atomicGeometry(), errors, acknowledgements));
-      final changed = atomicObservation();
-      changed[field] = switch (field) {
-        'schemaVersion' => 2,
-        'pageId' => 3,
-        'windowMetrics' => {'windowWidth': 391, 'windowHeight': 700},
-        _ => 'changed-' + field,
-      };
-      platform.emit(controller.id,
-          {'type': 'hostLayoutObservation', 'observation': changed});
-      retired.complete();
-      await flushChrome(tester);
-      expect(platform.requests.where((r) => r.$1 == 'hostLayout'), isEmpty);
-      expect(acknowledgements, isEmpty);
-      expect(errors, isEmpty);
-    });
+      'queued geometry requires current native $field before dispatch',
+      (tester) async {
+        final controller = await atomicController(tester);
+        final platform = WeappContainerPlatform.instance as FakePlatform;
+        final retired = Completer<void>();
+        final previousOwner = Object();
+        await controller.claimView(previousOwner);
+        controller.releaseView(previousOwner, retired.future);
+        final errors = <Object>[], acknowledgements = <int>[];
+        await tester.pumpWidget(
+          atomicView(
+            controller,
+            atomicObservation(),
+            atomicGeometry(),
+            errors,
+            acknowledgements,
+          ),
+        );
+        final changed = atomicObservation();
+        changed[field] = switch (field) {
+          'schemaVersion' => 2,
+          'pageId' => 3,
+          'windowMetrics' => {'windowWidth': 391, 'windowHeight': 700},
+          _ => 'changed-' + field,
+        };
+        platform.emit(controller.id, {
+          'type': 'hostLayoutObservation',
+          'observation': changed,
+        });
+        retired.complete();
+        await flushChrome(tester);
+        expect(platform.requests.where((r) => r.$1 == 'hostLayout'), isEmpty);
+        expect(acknowledgements, isEmpty);
+        expect(errors, isEmpty);
+      },
+    );
   }
 
   atomicTestWidgets(
-      'a foreign accepted receipt cannot restore an already covered preview',
-      (tester) async {
-    final controller = await atomicController(tester);
-    final platform = WeappContainerPlatform.instance as FakePlatform;
-    final observation = atomicObservation(), geometry = atomicGeometry();
-    final errors = <Object>[], acknowledgements = <int>[];
-    await tester.pumpWidget(atomicView(
-        controller, observation, geometry, errors, acknowledgements));
-    await flushChrome(tester);
-    expect(acknowledgements, [17]);
-    platform.emit(controller.id, {
-      'type': 'hostLayoutAccepted',
-      'acceptedLayout': {
-        ...observation,
-        'layoutRevision': '17',
-        'chrome': geometry
-      }
-    });
-    await tester.pumpWidget(atomicView(
-        controller, observation, geometry, errors, acknowledgements,
-        occluded: true, emitObservation: false));
-    await flushChrome(tester);
-    platform.emit(controller.id, {
-      'type': 'hostLayoutAccepted',
-      'acceptedLayout': {
-        ...observation,
-        'ownerId': '8',
-        'layoutRevision': '17',
-        'chrome': geometry
-      }
-    });
-    final baseline = platform.requests.length;
-    await tester.pumpWidget(atomicView(
-        controller, observation, geometry, errors, acknowledgements,
-        emitObservation: false));
-    await flushChrome(tester);
-    expect(
+    'a foreign accepted receipt cannot restore an already covered preview',
+    (tester) async {
+      final controller = await atomicController(tester);
+      final platform = WeappContainerPlatform.instance as FakePlatform;
+      final observation = atomicObservation(), geometry = atomicGeometry();
+      final errors = <Object>[], acknowledgements = <int>[];
+      await tester.pumpWidget(
+        atomicView(controller, observation, geometry, errors, acknowledgements),
+      );
+      await flushChrome(tester);
+      expect(acknowledgements, [17]);
+      platform.emit(controller.id, {
+        'type': 'hostLayoutAccepted',
+        'acceptedLayout': {
+          ...observation,
+          'layoutRevision': '17',
+          'chrome': geometry,
+        },
+      });
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          geometry,
+          errors,
+          acknowledgements,
+          occluded: true,
+          emitObservation: false,
+        ),
+      );
+      await flushChrome(tester);
+      platform.emit(controller.id, {
+        'type': 'hostLayoutAccepted',
+        'acceptedLayout': {
+          ...observation,
+          'ownerId': '8',
+          'layoutRevision': '17',
+          'chrome': geometry,
+        },
+      });
+      final baseline = platform.requests.length;
+      await tester.pumpWidget(
+        atomicView(
+          controller,
+          observation,
+          geometry,
+          errors,
+          acknowledgements,
+          emitObservation: false,
+        ),
+      );
+      await flushChrome(tester);
+      expect(
         platform.requests
             .skip(baseline)
             .where((r) => r.$1 == 'hostLayout' || r.$1 == 'setPreviewOccluded'),
-        isEmpty);
-    expect(acknowledgements, [17]);
-    expect(errors, isEmpty);
-  });
+        isEmpty,
+      );
+      expect(acknowledgements, [17]);
+      expect(errors, isEmpty);
+    },
+  );
 
   test('cancellation wins while asynchronous host work is pending', () async {
     final controller = await WeappContainerController.create(storageKey: null);

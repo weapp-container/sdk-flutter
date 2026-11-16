@@ -906,6 +906,13 @@ void Registry::invoke(const std::string &method, const Json &args,
         }
         e->config["devDiagnostics"] = args["devDiagnostics"];
       }
+      if (args.contains("compatibilityVersion")) {
+        if (!args["compatibilityVersion"].is_string() || args["compatibilityVersion"].get<std::string>().empty()) {
+          reply(Status::error("ERR_INVALID_ARGUMENT", "compatibilityVersion must be a nonempty string"), {});
+          return;
+        }
+        e->config["compatibilityVersion"] = args["compatibilityVersion"];
+      }
       if (args.contains("systemTabBar")) {
         if (!args["systemTabBar"].is_boolean()) {
           reply(Status::error("ERR_INVALID_ARGUMENT", "systemTabBar must be a boolean"), {});

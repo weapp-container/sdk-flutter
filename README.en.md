@@ -193,6 +193,7 @@ Same-size layout updates, folding, and rotation preserve the session but invalid
 ## Sessions, storage and host capabilities
 
 - Use a stable application/account identity for `storageKey`; pass `null` explicitly for memory-only storage.
+- Pass `compatibilityVersion: '0.0.1'` when selecting an SDK compatibility profile. The default profile targets WeChat base library `3.17.4`; `0.0.0` remains available for regression against the historical `3.17.3` behavior. Unknown versions are rejected, and this value is separate from the container package release.
 - Controllers outlive Widgets. Temporary View detach preserves the session, and only one View may attach to a Controller at a time.
 - Set `WeappContainerView(foreground: false, ...)` when hiding a mounted feature. The Widget forwards application lifecycle changes.
 - When finished with a session, cancel its event subscription and await `close()`. Unmounting a Widget does not close its Controller. Retain ownership and handle retries if closing fails.

@@ -193,6 +193,7 @@ iOS 的完整窗口快照统一由原生 SDK 的 `captureWindowMetrics()` 读取
 ## 会话、存储和宿主能力
 
 - 用稳定的应用/账号标识作为 `storageKey`；传 `null` 显式选择纯内存存储。
+- 可在创建时传入 `compatibilityVersion: '0.0.1'` 选择 SDK 兼容配置。默认 profile 对应 WeChat base library `3.17.4`；`0.0.0` 仍可选择以回归 `3.17.3` 历史行为，未知版本会被拒绝。该值与容器包发布版本分离。
 - Controller 独立于 Widget 存活。临时卸载 View 可保留会话，同一 Controller 同时只能绑定一个 View。
 - 页面隐藏但仍挂载时，设置 `WeappContainerView(foreground: false, ...)`；Widget 负责转发应用生命周期。
 - 不再复用会话时，取消事件订阅并等待 `close()` 完成。卸载 Widget 本身不会关闭 Controller；关闭失败需要由宿主保留引用并处理重试。

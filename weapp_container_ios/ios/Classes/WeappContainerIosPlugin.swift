@@ -475,6 +475,10 @@ import UIKit
             var configuration: WeappContainerConfiguration
             if args["storageKey"] is NSNull { configuration = .init(storage: .memoryOnly) }
             else { let key = try string(args, "storageKey"); guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw fail("Empty storage key") }; configuration = .init(storageKey: key) }
+            if let value = args["compatibilityVersion"] {
+                guard let version = value as? String, !version.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw fail("compatibilityVersion must be a nonempty string") }
+                configuration.compatibilityVersion = version
+            }
             if let value = args["gpuRequired"] {
                 guard let required = value as? Bool, required else { throw fail("iOS native preview requires gpuRequired=true") }
                 configuration.gpuRequired = required

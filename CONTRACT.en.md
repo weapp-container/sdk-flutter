@@ -92,6 +92,8 @@ behavior. This setting never proves that a frame has been presented.
 It defaults to false and does not change ordinary production session traces.
 Adapters forward diagnostic events through their existing owner-thread event stream.
 
+`compatibilityVersion` selects the guest-visible SDK compatibility profile. The default `0.0.1` profile targets the WeChat base-library `3.17.4` baseline, while `0.0.0` remains available for the historical `3.17.3` behavior; unknown versions are rejected during native creation. It is separate from the container package release, and switching requires a new Session.
+
 Classification is shared with the simulator. A fully validated WXML/WXSS/static
 asset edit can preserve the live session, page data, page stack, storage and
 timers. Candidate view/layout preparation runs before acceptance. JS/module,

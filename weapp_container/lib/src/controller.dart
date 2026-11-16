@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:weapp_container_platform_interface/weapp_container_platform_interface.dart';
+
 import 'host_layout.dart';
 
 class WeappContainerEvent {
@@ -13,8 +15,12 @@ class WeappContainerEvent {
 }
 
 class WeappHostError implements Exception {
-  const WeappHostError(this.code, this.message,
-      {this.retryable = false, this.details = const {}});
+  const WeappHostError(
+    this.code,
+    this.message, {
+    this.retryable = false,
+    this.details = const {},
+  });
   final String code;
   final String message;
   final bool retryable;
@@ -23,7 +29,7 @@ class WeappHostError implements Exception {
         'code': code,
         'message': message,
         'retryable': retryable,
-        'details': details
+        'details': details,
       };
 }
 
@@ -46,8 +52,15 @@ class WeappCancellationToken {
 }
 
 class WeappHostCall {
-  WeappHostCall._(this.id, this.method, this.payload, this.deadlineNsDecimal,
-      this.cancellation, this.context, this.cancelToken);
+  WeappHostCall._(
+    this.id,
+    this.method,
+    this.payload,
+    this.deadlineNsDecimal,
+    this.cancellation,
+    this.context,
+    this.cancelToken,
+  );
   final String id;
   final String method;
   final Object? payload;
@@ -65,7 +78,9 @@ class WeappHostCall {
 
 typedef WeappHostMethod = FutureOr<Object?> Function(WeappHostCall call);
 typedef WeappAccountCleanup = FutureOr<void> Function(
-    String operationId, WeappCancellationToken cancellation);
+  String operationId,
+  WeappCancellationToken cancellation,
+);
 
 class WeappWxRequestPaymentOptions {
   const WeappWxRequestPaymentOptions({
@@ -90,20 +105,27 @@ class WeappWxRequestPaymentOptions {
   static WeappWxRequestPaymentOptions fromPayload(Object? payload) {
     if (payload is! Map) {
       throw const WeappHostError(
-          'invalid_request', 'wx.requestPayment options are required');
+        'invalid_request',
+        'wx.requestPayment options are required',
+      );
     }
     String required(String name) {
       final value = payload[name];
       if (value is! String || value.trim().isEmpty) {
         throw WeappHostError(
-            'invalid_request', 'wx.requestPayment requires non-empty $name');
+          'invalid_request',
+          'wx.requestPayment requires non-empty $name',
+        );
       }
       return value;
     }
+
     final signType = required('signType');
     if (!const {'MD5', 'HMAC-SHA256', 'RSA'}.contains(signType)) {
-      throw const WeappHostError('invalid_request',
-          'wx.requestPayment signType must be MD5, HMAC-SHA256, or RSA');
+      throw const WeappHostError(
+        'invalid_request',
+        'wx.requestPayment signType must be MD5, HMAC-SHA256, or RSA',
+      );
     }
     return WeappWxRequestPaymentOptions(
       timeStamp: required('timeStamp'),
@@ -116,23 +138,26 @@ class WeappWxRequestPaymentOptions {
 }
 
 typedef WeappWxRequestPaymentHandler = FutureOr<void> Function(
-    WeappWxRequestPaymentOptions options, WeappHostCall call);
+  WeappWxRequestPaymentOptions options,
+  WeappHostCall call,
+);
 
 /// Capture from native state before asynchronous snapshot work begins.
 /// This owner context does not require a pending API call.
 class WeappHostSnapshotContext {
-  WeappHostSnapshotContext(
-      {required Map<String, Object?> application,
-      required Map<String, Object?> account,
-      required this.sessionId})
-      : application = Map.unmodifiable(_copy(application)),
+  WeappHostSnapshotContext({
+    required Map<String, Object?> application,
+    required Map<String, Object?> account,
+    required this.sessionId,
+  })  : application = Map.unmodifiable(_copy(application)),
         account = Map.unmodifiable(_copy(account));
   factory WeappHostSnapshotContext.fromState(Map<String, Object?> state) {
     final owner = state['hostServicesState'] as Map;
     return WeappHostSnapshotContext(
-        application: Map<String, Object?>.from(owner['application'] as Map),
-        account: Map<String, Object?>.from(owner['account'] as Map),
-        sessionId: state['sessionId'] as String);
+      application: Map<String, Object?>.from(owner['application'] as Map),
+      account: Map<String, Object?>.from(owner['account'] as Map),
+      sessionId: state['sessionId'] as String,
+    );
   }
   final Map<String, Object?> application, account;
   final String sessionId;
@@ -147,8 +172,10 @@ class WeappHostSnapshotContext {
 
 /// Explicit iOS Wi-Fi capabilities; the OS still verifies signed entitlements.
 class WeappWifiConfiguration {
-  const WeappWifiConfiguration(
-      {required this.connectToNetworks, required this.readCurrentNetwork});
+  const WeappWifiConfiguration({
+    required this.connectToNetworks,
+    required this.readCurrentNetwork,
+  });
   final bool connectToNetworks;
   final bool readCurrentNetwork;
   Map<String, Object?> toMap() => {
@@ -159,19 +186,20 @@ class WeappWifiConfiguration {
 
 /// Explicit iOS tag technologies; CoreNFC verifies the signed entitlement.
 class WeappNfcConfiguration {
-  const WeappNfcConfiguration(
-      {this.ndef = true,
-      this.isoDep = false,
-      this.mifareUltralight = false,
-      this.nfcF = false,
-      this.nfcV = false});
+  const WeappNfcConfiguration({
+    this.ndef = true,
+    this.isoDep = false,
+    this.mifareUltralight = false,
+    this.nfcF = false,
+    this.nfcV = false,
+  });
   final bool ndef, isoDep, mifareUltralight, nfcF, nfcV;
   Map<String, Object?> toMap() => {
         'ndef': ndef,
         'isoDep': isoDep,
         'mifareUltralight': mifareUltralight,
         'nfcF': nfcF,
-        'nfcV': nfcV
+        'nfcV': nfcV,
       };
 }
 
@@ -179,70 +207,82 @@ class WeappNfcConfiguration {
 /// storage and release native resources. Detaching a widget keeps its JS isolate.
 class WeappContainerController {
   WeappContainerController._(this.id, this._platform, this.atomicHostLayout) {
-    _subscription =
-        _platform.events.where((value) => value['id'] == id).listen((value) {
-      final event =
-          WeappContainerEvent(Map<String, Object?>.from(value['event'] as Map));
-      if (event.type == 'hostLayoutObservation' &&
-          event.fields['observation'] is Map) {
-        _pendingHostLayout = _layoutCopy(event.fields['observation'] as Map);
-        _lastHostLayoutObservation = _layoutCopy(_pendingHostLayout!);
-      } else if (event.type == 'hostLayoutAccepted') {
-        final accepted = event.fields['acceptedLayout'];
-        if (accepted is Map) {
-          _acceptedHostLayout = _layoutCopy(accepted);
-          if (const [
-                'schemaVersion',
-                'ownerId',
-                'surfaceGeneration',
-                'observationId'
-              ].every((key) => accepted[key] == _pendingHostLayout?[key]) &&
-              _layoutEqual(accepted['windowMetrics'],
-                  _pendingHostLayout?['windowMetrics'])) {
-            _pendingHostLayout = null;
+    _subscription = _platform.events.where((value) => value['id'] == id).listen(
+      (value) {
+        final event = WeappContainerEvent(
+          Map<String, Object?>.from(value['event'] as Map),
+        );
+        if (event.type == 'hostLayoutObservation' &&
+            event.fields['observation'] is Map) {
+          _pendingHostLayout = _layoutCopy(event.fields['observation'] as Map);
+          _lastHostLayoutObservation = _layoutCopy(_pendingHostLayout!);
+        } else if (event.type == 'hostLayoutAccepted') {
+          final accepted = event.fields['acceptedLayout'];
+          if (accepted is Map) {
+            _acceptedHostLayout = _layoutCopy(accepted);
+            if (const [
+                  'schemaVersion',
+                  'ownerId',
+                  'surfaceGeneration',
+                  'observationId',
+                ].every((key) => accepted[key] == _pendingHostLayout?[key]) &&
+                _layoutEqual(
+                  accepted['windowMetrics'],
+                  _pendingHostLayout?['windowMetrics'],
+                )) {
+              _pendingHostLayout = null;
+            }
           }
         }
-      }
-      if (event.type == 'hostCall') {
-        unawaited(_hostCall(event.fields));
-      } else if (event.type == 'accountCleanupRequired') {
-        if (!_closed) {
-          final task = _cleanupAccount(event.fields['operationId'] as String);
-          _cleanupTasks.add(task);
-          unawaited(task.whenComplete(() => _cleanupTasks.remove(task)));
-        }
-      } else if (event.type == 'accountCleanupCancelled') {
-        if (_cleanupOperationId == event.fields['operationId']) {
+        if (event.type == 'hostCall') {
+          unawaited(_hostCall(event.fields));
+        } else if (event.type == 'accountCleanupRequired') {
+          if (!_closed) {
+            final task = _cleanupAccount(event.fields['operationId'] as String);
+            _cleanupTasks.add(task);
+            unawaited(task.whenComplete(() => _cleanupTasks.remove(task)));
+          }
+        } else if (event.type == 'accountCleanupCancelled') {
+          if (_cleanupOperationId == event.fields['operationId']) {
+            _cleanupCancellation?._cancel();
+          }
+        } else if (event.type == 'hostCallCancelled') {
+          _calls.remove(event.fields['callId'])?.cancellation._cancel();
+        } else if (event.type == 'accountSwitch' &&
+            (event.fields['receipt'] as Map?)?['phase'] == 'revoking') {
           _cleanupCancellation?._cancel();
+          for (final call in _calls.values) {
+            call.cancellation._cancel();
+          }
+          _calls.clear();
+          _acceptedHostLayout = null;
+          _pendingHostLayout = null;
         }
-      } else if (event.type == 'hostCallCancelled') {
-        _calls.remove(event.fields['callId'])?.cancellation._cancel();
-      } else if (event.type == 'accountSwitch' &&
-          (event.fields['receipt'] as Map?)?['phase'] == 'revoking') {
-        _cleanupCancellation?._cancel();
-        for (final call in _calls.values) {
-          call.cancellation._cancel();
-        }
-        _calls.clear();
-        _acceptedHostLayout = null;
-        _pendingHostLayout = null;
-      }
-      _events.add(event);
-    }, onError: _events.addError);
+        _events.add(event);
+      },
+      onError: _events.addError,
+    );
   }
-  static Future<WeappContainerController> create(
-      {required String? storageKey,
-      bool? gpuRequired,
-      bool? devDiagnostics,
-      bool atomicHostLayout = false,
-      bool systemTabBar = false}) async {
+  static Future<WeappContainerController> create({
+    required String? storageKey,
+    String? compatibilityVersion,
+    bool? gpuRequired,
+    bool? devDiagnostics,
+    bool atomicHostLayout = false,
+    bool systemTabBar = false,
+  }) async {
     if (storageKey != null && storageKey.trim().isEmpty)
       throw ArgumentError.value(
-          storageKey, 'storageKey', 'Must be nonblank, or null for memory');
+        storageKey,
+        'storageKey',
+        'Must be nonblank, or null for memory',
+      );
     final platform = WeappContainerPlatform.instance;
     await platform.initialize();
     final result = await platform.invoke<Map>('create', {
       'storageKey': storageKey,
+      if (compatibilityVersion != null)
+        'compatibilityVersion': compatibilityVersion,
       if (gpuRequired != null) 'gpuRequired': gpuRequired,
       if (devDiagnostics != null) 'devDiagnostics': devDiagnostics,
       if (systemTabBar) 'systemTabBar': true,
@@ -250,7 +290,10 @@ class WeappContainerController {
         'hostLayout': {'protocolVersion': '1.0', 'atomic': true},
     });
     return WeappContainerController._(
-        result!['id'] as int, platform, atomicHostLayout);
+      result!['id'] as int,
+      platform,
+      atomicHostLayout,
+    );
   }
 
   final int id;
@@ -263,13 +306,17 @@ class WeappContainerController {
   bool _layoutEqual(Object? left, Object? right) {
     if (left is Map && right is Map) {
       return left.length == right.length &&
-          left.keys.every((key) =>
-              right.containsKey(key) && _layoutEqual(left[key], right[key]));
+          left.keys.every(
+            (key) =>
+                right.containsKey(key) && _layoutEqual(left[key], right[key]),
+          );
     }
     if (left is List && right is List) {
       return left.length == right.length &&
-          List.generate(left.length, (index) => index)
-              .every((index) => _layoutEqual(left[index], right[index]));
+          List.generate(
+            left.length,
+            (index) => index,
+          ).every((index) => _layoutEqual(left[index], right[index]));
     }
     return left == right;
   }
@@ -320,8 +367,10 @@ class WeappContainerController {
     return () => _closeListeners.remove(listener);
   }
 
-  Future<T?> _invoke<T>(String method,
-      [Map<String, Object?> arguments = const {}]) {
+  Future<T?> _invoke<T>(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) {
     if (_closed || _closeRequested)
       return Future.error(StateError('Session is closing or closed'));
     return _platform.invoke<T>(method, {'id': id, ...arguments});
@@ -356,7 +405,8 @@ class WeappContainerController {
   /// complete only after its terminal callback. Server-side order confirmation
   /// remains the host's responsibility.
   Future<void> installWxRequestPayment(
-      WeappWxRequestPaymentHandler handler) async {
+    WeappWxRequestPaymentHandler handler,
+  ) async {
     await registerApiHandler('wx.requestPayment', (call) async {
       final options = WeappWxRequestPaymentOptions.fromPayload(call.payload);
       await handler(options, call);
@@ -389,13 +439,15 @@ class WeappContainerController {
           _closeRequested;
       Object? failure;
       if (!retired())
-        await Future.wait(_cleanupHandlers.toList().map((handler) async {
-          try {
-            await handler(operationId, cancellation);
-          } catch (error) {
-            failure ??= error;
-          }
-        }));
+        await Future.wait(
+          _cleanupHandlers.toList().map((handler) async {
+            try {
+              await handler(operationId, cancellation);
+            } catch (error) {
+              failure ??= error;
+            }
+          }),
+        );
       try {
         // Retirement still owes the exact native transport its real terminal.
         // This bypasses the business-command gate while close is waiting.
@@ -406,8 +458,8 @@ class WeappContainerController {
           if (failure != null && !retired())
             'error': {
               'code': 'ERR_ACCOUNT_CLEANUP',
-              'message': failure.toString()
-            }
+              'message': failure.toString(),
+            },
         });
       } catch (error, stack) {
         if (!_closed && !_closeRequested) _events.addError(error, stack);
@@ -418,24 +470,27 @@ class WeappContainerController {
         }
       }
     }();
-    _cleanupTail =
-        task.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _cleanupTail = task.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
     return task;
   }
 
   /// Install OS-backed adapters; native permissions remain separately authorized.
-  Future<void> installNativeDeviceApis(
-          {bool bluetooth = true,
-          List<String> allowedNetworkOrigins = const [],
-          bool allowLoopbackForDevelopment = false,
-          List<String> allowedMediaOrigins = const [],
-          bool nfc = false,
-          bool enableWifi = false,
-          WeappWifiConfiguration? wifiConfiguration,
-          WeappNfcConfiguration? nfcConfiguration,
-          String linuxDesktopId = '',
-          bool linuxBluetoothExclusive = false,
-          bool dedicatedAudioSession = false}) =>
+  Future<void> installNativeDeviceApis({
+    bool bluetooth = true,
+    List<String> allowedNetworkOrigins = const [],
+    bool allowLoopbackForDevelopment = false,
+    List<String> allowedMediaOrigins = const [],
+    bool nfc = false,
+    bool enableWifi = false,
+    WeappWifiConfiguration? wifiConfiguration,
+    WeappNfcConfiguration? nfcConfiguration,
+    String linuxDesktopId = '',
+    bool linuxBluetoothExclusive = false,
+    bool dedicatedAudioSession = false,
+  }) =>
       _invoke<void>('installNativeDeviceApis', {
         'bluetooth': bluetooth,
         'allowedNetworkOrigins': List<String>.from(allowedNetworkOrigins),
@@ -459,36 +514,55 @@ class WeappContainerController {
   Future<void> migrateLegacyStorage(String sourceKey) =>
       _invoke<void>('migrateLegacyStorage', {'sourceKey': sourceKey});
   Future<Map<String, Object?>> deleteAccountData(String principalId) async =>
-      Map<String, Object?>.from((await _invoke<Map>(
-          'deleteAccountData', {'principalId': principalId}))!);
+      Map<String, Object?>.from(
+        (await _invoke<Map>('deleteAccountData', {
+          'principalId': principalId,
+        }))!,
+      );
   Future<void> emitHostApiEvent(Map<String, Object?> event) =>
       _invoke<void>('hostApiEvent', _layoutCopy(event));
   Future<Map<String, Object?>> submitHostComponentFrame(
-          Map<String, Object?> frame) async =>
+    Map<String, Object?> frame,
+  ) async =>
       Map<String, Object?>.from(
-          (await _invoke<Map>('hostComponentFrame', frame))!);
+        (await _invoke<Map>('hostComponentFrame', frame))!,
+      );
   Future<void> emitHostComponentEvent(Map<String, Object?> event) =>
       _invoke<void>('hostComponentEvent', _layoutCopy(event));
   Future<void> authorizePhoneButton(String nodeId) =>
       _invoke<void>('authorizePhoneButton', {'nodeId': nodeId});
   Future<void> prepareAccountHostServiceSnapshots(
-          String operationId, Map<String, Object?> values) =>
-      _invoke<void>('prepareAccountHostServiceSnapshots',
-          {'operationId': operationId, 'values': _layoutCopy(values)});
-  Future<void> updateHostServiceSnapshots(Map<String, Object?> values,
-          {WeappHostSnapshotContext? context}) =>
+    String operationId,
+    Map<String, Object?> values,
+  ) =>
+      _invoke<void>('prepareAccountHostServiceSnapshots', {
+        'operationId': operationId,
+        'values': _layoutCopy(values),
+      });
+  Future<void> updateHostServiceSnapshots(
+    Map<String, Object?> values, {
+    WeappHostSnapshotContext? context,
+  }) =>
       _invoke<void>('updateHostServiceSnapshots', {
         'values': _layoutCopy(values),
         if (context != null) 'context': context.toMap(),
       });
-  Future<Map<String, Object?>> switchAccount(Map<String, Object?> account,
-          {Map<String, Object?> launches = const {}}) async =>
-      Map<String, Object?>.from((await _invoke<Map>(
-          'switchAccount', {'account': account, 'launches': launches}))!);
-  Future<Map<String, Object?>?> queryAccountSwitch(
-      {String? operationId}) async {
-    final value = await _invoke<Map>('queryAccountSwitch',
-        {if (operationId != null) 'operationId': operationId});
+  Future<Map<String, Object?>> switchAccount(
+    Map<String, Object?> account, {
+    Map<String, Object?> launches = const {},
+  }) async =>
+      Map<String, Object?>.from(
+        (await _invoke<Map>('switchAccount', {
+          'account': account,
+          'launches': launches,
+        }))!,
+      );
+  Future<Map<String, Object?>?> queryAccountSwitch({
+    String? operationId,
+  }) async {
+    final value = await _invoke<Map>('queryAccountSwitch', {
+      if (operationId != null) 'operationId': operationId,
+    });
     return value == null ? null : Map<String, Object?>.from(value);
   }
 
@@ -500,30 +574,46 @@ class WeappContainerController {
       _invoke<void>('cancelAccountSwitch', {'operationId': operationId});
   Future<Map<String, Object?>> createHostBinary(List<int> bytes) async =>
       Map<String, Object?>.from(
-          (await _invoke<Map>('createHostBinary', {'bytes': bytes}))!);
-  Future<List<int>> readHostBinary(String handle,
-          {int offset = 0, required int length}) async =>
-      List<int>.from((await _invoke<List>('readHostBinary',
-          {'id': handle, 'offset': offset, 'length': length}))!);
+        (await _invoke<Map>('createHostBinary', {'bytes': bytes}))!,
+      );
+  Future<List<int>> readHostBinary(
+    String handle, {
+    int offset = 0,
+    required int length,
+  }) async =>
+      List<int>.from(
+        (await _invoke<List>('readHostBinary', {
+          'id': handle,
+          'offset': offset,
+          'length': length,
+        }))!,
+      );
   Future<void> retainHostBinary(String handle) =>
       _invoke<void>('retainHostBinary', {'id': handle});
 
   /// Read only the asset of an exact live API call; requires apiResourceChunks 1.0.
-  Future<Map<String, Object?>> readHostApiResource(Map<String, Object?> context,
-          {int offset = 0, required int length}) async =>
-      Map<String, Object?>.from((await _invoke<Map>('hostApiResource', {
-        'context': _layoutCopy(context),
-        'offset': offset,
-        'length': length
-      }))!);
+  Future<Map<String, Object?>> readHostApiResource(
+    Map<String, Object?> context, {
+    int offset = 0,
+    required int length,
+  }) async =>
+      Map<String, Object?>.from(
+        (await _invoke<Map>('hostApiResource', {
+          'context': _layoutCopy(context),
+          'offset': offset,
+          'length': length,
+        }))!,
+      );
   Future<void> releaseHostBinary(String handle) =>
       _invoke<void>('releaseHostBinary', {'id': handle});
 
-  Future<void> load(String packPath,
-      {String? route,
-      Map<String, Object?> options = const {},
-      Map<String, Object?>? initialHostChrome,
-      Map<String, Object?>? initialHostLayout}) {
+  Future<void> load(
+    String packPath, {
+    String? route,
+    Map<String, Object?> options = const {},
+    Map<String, Object?>? initialHostChrome,
+    Map<String, Object?>? initialHostLayout,
+  }) {
     _loadRequested = true;
     return _invoke<void>('load', {
       'packPath': packPath,
@@ -536,19 +626,23 @@ class WeappContainerController {
 
   /// Apply a verified immutable development pack. A returned startup/frame
   /// result is separate from the native GPU presentation receipt.
-  Future<Map<String, Object?>> applyDevPack(String packPath,
-      {String? route,
-      Map<String, Object?> options = const {},
-      Map<String, Object?>? initialHostChrome,
-      Map<String, Object?>? initialHostLayout}) async {
+  Future<Map<String, Object?>> applyDevPack(
+    String packPath, {
+    String? route,
+    Map<String, Object?> options = const {},
+    Map<String, Object?>? initialHostChrome,
+    Map<String, Object?>? initialHostLayout,
+  }) async {
     _loadRequested = true;
-    return Map<String, Object?>.from((await _invoke<Map>('applyDevPack', {
-      'packPath': packPath,
-      if (route != null) 'route': route,
-      'options': options,
-      if (initialHostChrome != null) 'initialHostChrome': initialHostChrome,
-      if (initialHostLayout != null) 'initialHostLayout': initialHostLayout,
-    }))!);
+    return Map<String, Object?>.from(
+      (await _invoke<Map>('applyDevPack', {
+        'packPath': packPath,
+        if (route != null) 'route': route,
+        'options': options,
+        if (initialHostChrome != null) 'initialHostChrome': initialHostChrome,
+        if (initialHostLayout != null) 'initialHostLayout': initialHostLayout,
+      }))!,
+    );
   }
 
   Future<Map<String, Object?>> devState() async =>
@@ -557,42 +651,63 @@ class WeappContainerController {
   /// Clear and flush this project's wx storage; page memory is unchanged.
   Future<void> clearDevStorage() => _invoke<void>('clearDevStorage');
 
-  Future<void> navigate(String route,
-          {Map<String, Object?> query = const {}, bool replace = false}) =>
-      _invoke<void>(
-          'navigate', {'route': route, 'query': query, 'replace': replace});
+  Future<void> navigate(
+    String route, {
+    Map<String, Object?> query = const {},
+    bool replace = false,
+  }) =>
+      _invoke<void>('navigate', {
+        'route': route,
+        'query': query,
+        'replace': replace,
+      });
   Future<void> back() => _invoke<void>('back');
   Future<void> switchTab(String route) =>
       _invoke<void>('switchTab', {'route': route});
 
   /// Parse verified host presentation configuration without executing guest JS.
   /// This preflight is independent of native view measurement and load authority.
-  Future<Map<String, Object?>> inspectPackChrome(String packPath,
-          {String? route}) async =>
-      Map<String, Object?>.from((await _invoke<Map>('inspectPackChrome', {
-        'packPath': packPath,
-        if (route != null) 'route': route,
-      }))!);
+  Future<Map<String, Object?>> inspectPackChrome(
+    String packPath, {
+    String? route,
+  }) async =>
+      Map<String, Object?>.from(
+        (await _invoke<Map>('inspectPackChrome', {
+          'packPath': packPath,
+          if (route != null) 'route': route,
+        }))!,
+      );
 
   /// Publish measured Flutter client-window logical rectangles. The platform
   /// adapter converts their origin to the actual native screen before receipt;
   /// the native view remains the viewport/display metric owner.
   Future<void> updateHostChrome(Map<String, Object?> geometry) => _invoke<void>(
-      'hostChrome', {...geometry, 'coordinateSpace': 'flutterClient'});
+        'hostChrome',
+        {...geometry, 'coordinateSpace': 'flutterClient'},
+      );
 
   /// Transform a prospective layout without mutating the accepted runtime.
   Future<Map<String, Object?>> prepareHostChrome(
-          Map<String, Object?> geometry) async =>
-      Map<String, Object?>.from((await _invoke<Map>('prepareHostChrome',
-          {...geometry, 'coordinateSpace': 'flutterClient'}))!);
+    Map<String, Object?> geometry,
+  ) async =>
+      Map<String, Object?>.from(
+        (await _invoke<Map>('prepareHostChrome', {
+          ...geometry,
+          'coordinateSpace': 'flutterClient',
+        }))!,
+      );
 
   /// Correlated SDK command. Opaque owner/revision values remain strings.
-  Future<Map<String, Object?>> command(String operation,
-          [Map<String, Object?> payload = const {}]) async =>
-      Map<String, Object?>.from((await _invoke<Map>('command', {
-        'operation': operation,
-        'payload': payload,
-      }))!);
+  Future<Map<String, Object?>> command(
+    String operation, [
+    Map<String, Object?> payload = const {},
+  ]) async =>
+      Map<String, Object?>.from(
+        (await _invoke<Map>('command', {
+          'operation': operation,
+          'payload': payload,
+        }))!,
+      );
 
   Future<Map<String, Object?>> beginDevPackAttempt(
     String packPath, {
@@ -624,14 +739,16 @@ class WeappContainerController {
   }
 
   Future<Map<String, Object?>> queryDevPackAttempt(
-          Map<String, Object?> receipt) =>
+    Map<String, Object?> receipt,
+  ) =>
       command('queryDevPackAttempt', {
         'ownerId': receipt['ownerId'],
         'attemptId': receipt['attemptId'],
       });
 
   Future<Map<String, Object?>> cancelDevPackAttempt(
-          Map<String, Object?> receipt) =>
+    Map<String, Object?> receipt,
+  ) =>
       command('cancelDevPackAttempt', {
         'ownerId': receipt['ownerId'],
         'attemptId': receipt['attemptId'],
@@ -661,16 +778,18 @@ class WeappContainerController {
     required String layoutRevision,
     Map<String, Object?>? restartAttempt,
   }) async =>
-      Map<String, Object?>.from((await _invoke<Map>('prepareHostLayout', {
-        'observation': observation,
-        'chrome': chrome,
-        'layoutRevision': layoutRevision,
-        'coordinateSpace': 'flutterClient',
-        // This is only a measurement claim. Native code verifies the current
-        // owner journal and health; it never grants input or presentation.
-        if (restartAttempt != null)
-          'restartAttempt': _layoutCopy(restartAttempt),
-      }))!);
+      Map<String, Object?>.from(
+        (await _invoke<Map>('prepareHostLayout', {
+          'observation': observation,
+          'chrome': chrome,
+          'layoutRevision': layoutRevision,
+          'coordinateSpace': 'flutterClient',
+          // This is only a measurement claim. Native code verifies the current
+          // owner journal and health; it never grants input or presentation.
+          if (restartAttempt != null)
+            'restartAttempt': _layoutCopy(restartAttempt),
+        }))!,
+      );
 
   Future<void> updateHostLayout({
     required Map<String, Object?> observation,
@@ -729,13 +848,15 @@ class WeappContainerController {
       if (_cleanupHandlers.isNotEmpty) {
         final cancellation = WeappCancellationToken();
         Object? failure;
-        await Future.wait(_cleanupHandlers.toList().map((handler) async {
-          try {
-            await handler('close:$id', cancellation);
-          } catch (error) {
-            failure ??= error;
-          }
-        }));
+        await Future.wait(
+          _cleanupHandlers.toList().map((handler) async {
+            try {
+              await handler('close:$id', cancellation);
+            } catch (error) {
+              failure ??= error;
+            }
+          }),
+        );
         if (failure != null) throw failure!;
       }
       await _platform.invoke<void>('close', {'id': id});
@@ -756,23 +877,27 @@ class WeappContainerController {
   Future<void> _hostCall(Map<String, Object?> event) async {
     final callId = event['callId'] as String;
     final call = WeappHostCall._(
-        callId,
-        event['method'] as String,
-        event['payload'],
-        event['deadlineNs']?.toString(),
-        WeappCancellationToken(),
-        event['context'] is Map
-            ? Map<String, Object?>.unmodifiable(
-                _layoutCopy(event['context'] as Map))
-            : null,
-        event['cancelToken'] as String?);
+      callId,
+      event['method'] as String,
+      event['payload'],
+      event['deadlineNs']?.toString(),
+      WeappCancellationToken(),
+      event['context'] is Map
+          ? Map<String, Object?>.unmodifiable(
+              _layoutCopy(event['context'] as Map),
+            )
+          : null,
+      event['cancelToken'] as String?,
+    );
     _calls[callId] = call;
     Map<String, Object?> completion;
     try {
       final method = _apiHandlers[call.method] ?? _methods[call.method];
       if (method == null)
         throw const WeappHostError(
-            'unsupported', 'Host method is not registered');
+          'unsupported',
+          'Host method is not registered',
+        );
       completion = {'result': await method(call)};
     } catch (error) {
       final failure = error is WeappHostError
@@ -788,8 +913,10 @@ class WeappContainerController {
         completion.containsKey('result');
     if (!retained) _calls.remove(callId);
     try {
-      await _invoke<void>(
-          'completeHostCall', {'callId': callId, ...completion});
+      await _invoke<void>('completeHostCall', {
+        'callId': callId,
+        ...completion,
+      });
     } on PlatformException catch (error, stack) {
       // Native cancellation can win after the Dart handler has completed.
       if (error.code != 'cancelled' &&
