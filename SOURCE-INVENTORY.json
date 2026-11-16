@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.1",
-  "sourceFilesSha256": "2b97489a91b8bd6971aef7e8d34f9d914265f9703269236bf7ea9566bfb31c90",
-  "review": "Expose typed standard payment registration for Flutter hosts.",
+  "sourceFilesSha256": "83ed0cdd0978fe9e97de9b17c4179072b63664b154bbdc8d51ee56a3002a7dab",
+  "review": "Review Flutter controller and native adapter support for guest SDK compatibility profiles.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -65,14 +65,14 @@
     },
     {
       "path": "CONTRACT.en.md",
-      "sha256": "4a4bb10b7a802074cce5bc2ca697c5a3348f7f9d0d5763201b2af12087eac825",
-      "size": 13996,
+      "sha256": "e710c0de5d8e28ea017b429c3509caef5da8d4bec20a6a5fd6a431f117979621",
+      "size": 14365,
       "mode": "100644"
     },
     {
       "path": "CONTRACT.md",
-      "sha256": "d3d1542a903a5ce1c4d6616943adef473cbe9b7dba9ce62bd0b42112c6e7e316",
-      "size": 13236,
+      "sha256": "d4e0aed4006aae4ebc1f4bd37ae31d494eb356a0885c7dfcce311a506c25c3b9",
+      "size": 13531,
       "mode": "100644"
     },
     {
@@ -113,20 +113,20 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "6204a2c5a0e9c09b95478cd7b5064c5280a2568c0a5b18406fe53af6a4818c28",
-      "size": 16365,
+      "sha256": "5f74a6e4ad663f54aef0a00be9109ff8b100223d64515600748723aee8ccad84",
+      "size": 16684,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "8166600f54d83b038a2878f1dbb7b45be05d7ea07750c65faf6bbea4f0056937",
-      "size": 14899,
+      "sha256": "8017c78cc6d4166a3ce2c39590bc768af1cb825f359d65efc6abfc80e5055a8f",
+      "size": 15155,
       "mode": "100644"
     },
     {
       "path": "documentation.json",
-      "sha256": "2efa5820a9766de3ca47f7417b549fcbcf48d86ec3888de72ec627b68e7d79cb",
-      "size": 14796,
+      "sha256": "9893f8b760b368a897e85463a28599275253c2d5a43a13084c1f4db447c81230",
+      "size": 14673,
       "mode": "100644"
     },
     {
@@ -269,8 +269,8 @@
     },
     {
       "path": "native_desktop/src/registry.cpp",
-      "sha256": "6513d09f48e7ccc5257ddbe90bfd4fd53a00f28763681fd3be05b33e0f5e925b",
-      "size": 63036,
+      "sha256": "0fa5a649cb524aa3a28e981e24007360182d73544d394a49a84738d00c25ca66",
+      "size": 63423,
       "mode": "100644"
     },
     {
@@ -665,8 +665,8 @@
     },
     {
       "path": "weapp_container/lib/src/controller.dart",
-      "sha256": "cd34b19682e59d141d0badb76d9b93a6df7afc0c810eb3b1c95c963b55daec86",
-      "size": 33177,
+      "sha256": "940397a705cc15780a73bf93f74aa326e98adf4d96754423d9cee6007d437319",
+      "size": 34083,
       "mode": "100644"
     },
     {
@@ -701,8 +701,8 @@
     },
     {
       "path": "weapp_container/test/controller_test.dart",
-      "sha256": "1b1c929c26711789e71a11501dd38dbe18a0d072a32d9a4685940318a5d3e97a",
-      "size": 91045,
+      "sha256": "0cd65b13d89316723e2def176c441f768334b465a5574572481bba1ea643fcca",
+      "size": 96336,
       "mode": "100644"
     },
     {
@@ -827,8 +827,8 @@
     },
     {
       "path": "weapp_container_android/android/src/main/kotlin/dev/weapp/container/flutter/WeappContainerAndroidPlugin.kt",
-      "sha256": "97f66c4e571011e76650678cf48ccb3b96be8c4b465ac1f9adc6be21447c38de",
-      "size": 36548,
+      "sha256": "14fc08ad559ac3afc7c592bc95a86baa1e49bc3ab42efe77f9470410b08e1a4f",
+      "size": 36800,
       "mode": "100644"
     },
     {
@@ -899,8 +899,8 @@
     },
     {
       "path": "weapp_container_ios/ios/Classes/WeappContainerIosPlugin.swift",
-      "sha256": "1879615bd70eec10080a2cae3eb2b96ffa039f6ba4a18e904b7af6bbc3c5ce23",
-      "size": 60851,
+      "sha256": "931a07564bc9d24ca588e330ff1e027b3103569e36b85192a4dc478b7a4649b6",
+      "size": 61173,
       "mode": "100644"
     },
     {
