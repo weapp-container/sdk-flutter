@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "repository": "weapp-container/sdk-flutter",
+  "defaultLocale": "zh-CN",
+  "locales": [
+    "zh-CN",
+    "en"
+  ],
+  "pages": [
+    {
+      "id": "CONTRACT",
+      "zh": "CONTRACT.md",
+      "en": "CONTRACT.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "CONTRACT.md"
+      },
+      "reviewedChineseSummary": "SDK 协议 v1",
+      "reviewedChineseSha256": "7d27c85b312814da4f854c57158434dd2d13c6002950e84cd16fe97cb529d38c",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "OPEN_SOURCE",
+      "zh": "OPEN_SOURCE.md",
+      "en": "OPEN_SOURCE.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "OPEN_SOURCE.md"
+      },
+      "reviewedChineseSummary": "开源运行时集成",
+      "reviewedChineseSha256": "253d2545971cb8d03ebea4859913da305b00e0c902bdad63b5f643f32eaec77b",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "PUBLIC-RELEASE",
+      "zh": "PUBLIC-RELEASE.md",
+      "en": "PUBLIC-RELEASE.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "PUBLIC-RELEASE.md"
+      },
+      "reviewedChineseSummary": "公开预览发行 0.1.0-preview.7.1",
+      "reviewedChineseSha256": "c7b792c8a0ee4f8a771985cc0b15f4b20567e241f23219846286829d2da051c7",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "README",
+      "zh": "README.md",
+      "en": "README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "README.md"
+      },
+      "reviewedChineseSummary": "Weapp Container Flutter SDK",
+      "reviewedChineseSha256": "1562ef090bd8697a4bb17feedad5a77019b1bd18184c177103bf32ea7e4c72cb",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "example/README",
+      "zh": "example/README.md",
+      "en": "example/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "example/README.md"
+      },
+      "reviewedChineseSummary": "Flutter SDK 消费者",
+      "reviewedChineseSha256": "b559f5da3a8e3f29673e1e425d43321eaae3d39459ec170c4cb00954eaf77467",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "native_desktop/README",
+      "zh": "native_desktop/README.md",
+      "en": "native_desktop/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "native_desktop/README.md"
+      },
+      "reviewedChineseSummary": "Flutter 桌面原生支持",
+      "reviewedChineseSha256": "71d605df92d9da50596e3e8a67e52652b560a740b1089dcc9edc3f62c5d39cf0",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "native_desktop/tests/host-lifecycle",
+      "zh": "native_desktop/tests/host-lifecycle.md",
+      "en": "native_desktop/tests/host-lifecycle.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "native_desktop/tests/host-lifecycle.md"
+      },
+      "reviewedChineseSummary": "公共 Flutter 宿主生命周期验证",
+      "reviewedChineseSha256": "34909829b187007c943febcb21349bf6c51ff225da02c663cbc95e44493bd374",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "tools/documentation/README",
+      "zh": "tools/documentation/README.md",
+      "en": "tools/documentation/README.en.md",
+      "section": "tools",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "tools/documentation/README.md"
+      },
+      "reviewedChineseSummary": "双语文档维护",
+      "reviewedChineseSha256": "6c0d12dd12a6cd4a1076e912f2a09d959772638769da314e76d1708cc7c5a64e",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container/CHANGELOG",
+      "zh": "weapp_container/CHANGELOG.md",
+      "en": "weapp_container/CHANGELOG.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container/CHANGELOG.md"
+      },
+      "reviewedChineseSummary": "0.1.0-preview.7.1",
+      "reviewedChineseSha256": "e38446cf0c48fa2bdace4b571f6d917491312ecfd0a295eb0ae10608ec6f9095",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container/README",
+      "zh": "weapp_container/README.md",
+      "en": "weapp_container/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container/README.md"
+      },
+      "reviewedChineseSummary": "Weapp Container Flutter SDK",
+      "reviewedChineseSha256": "d733b1f724882402647863974f3e4f00f4b9b1d8053858e5e104536f4223a7a1",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_android/CHANGELOG",
+      "zh": "weapp_container_android/CHANGELOG.md",
+      "en": "weapp_container_android/CHANGELOG.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_android/CHANGELOG.md"
+      },
+      "reviewedChineseSummary": "0.1.0-preview.7.1",
+      "reviewedChineseSha256": "3f501eeca973ad0ae077e17dbf8e3d77a6f13f8c392985e57659e32f85e0a7fe",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_android/README",
+      "zh": "weapp_container_android/README.md",
+      "en": "weapp_container_android/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_android/README.md"
+      },
+      "reviewedChineseSummary": "Weapp 容器 Android 实现",
+      "reviewedChineseSha256": "1c91482a8737916d0dfba692c5a74310df26b8d69440e2d1e5fe260e88b4f341",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_ios/CHANGELOG",
+      "zh": "weapp_container_ios/CHANGELOG.md",
+      "en": "weapp_container_ios/CHANGELOG.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_ios/CHANGELOG.md"
+      },
+      "reviewedChineseSummary": "0.1.0-preview.7.1",
+      "reviewedChineseSha256": "6157a9754bf8daada19ea0b7695e6dc105140a7f5e40ec29553d2f15c67b8e06",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_ios/README",
+      "zh": "weapp_container_ios/README.md",
+      "en": "weapp_container_ios/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_ios/README.md"
+      },
+      "reviewedChineseSummary": "Weapp 容器 iOS 实现",
+      "reviewedChineseSha256": "244b6f667eefe8bfb2ebeae064506d3d0cbaa9318da157c4fa39cc5abb54d009",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_linux/CHANGELOG",
+      "zh": "weapp_container_linux/CHANGELOG.md",
+      "en": "weapp_container_linux/CHANGELOG.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_linux/CHANGELOG.md"
+      },
+      "reviewedChineseSummary": "0.1.0-preview.7.1",
+      "reviewedChineseSha256": "67ac569b77bfe8987cab1fbb672303d9b2620be7c24df1157772b33b821be23f",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_linux/README",
+      "zh": "weapp_container_linux/README.md",
+      "en": "weapp_container_linux/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_linux/README.md"
+      },
+      "reviewedChineseSummary": "weapp_container_linux",
+      "reviewedChineseSha256": "d37756e431e3ae27c1a441962ac488a69b2481d0b48d324950792da6aeab634f",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_macos/CHANGELOG",
+      "zh": "weapp_container_macos/CHANGELOG.md",
+      "en": "weapp_container_macos/CHANGELOG.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_macos/CHANGELOG.md"
+      },
+      "reviewedChineseSummary": "0.1.0-preview.7.1",
+      "reviewedChineseSha256": "5a234a3bfb3f2000aab5d70727cc952c0b0507c1bba61a93dd50a9e6737b1845",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_macos/README",
+      "zh": "weapp_container_macos/README.md",
+      "en": "weapp_container_macos/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_macos/README.md"
+      },
+      "reviewedChineseSummary": "weapp_container_macos",
+      "reviewedChineseSha256": "7de4f72fbfc85907445e9b39615471453f43072cca068510015d2cc249a28b72",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_platform_interface/CHANGELOG",
+      "zh": "weapp_container_platform_interface/CHANGELOG.md",
+      "en": "weapp_container_platform_interface/CHANGELOG.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_platform_interface/CHANGELOG.md"
+      },
+      "reviewedChineseSummary": "0.1.0-preview.7.1",
+      "reviewedChineseSha256": "27502c32c0010214ef228f0e05d3642cefb724fdfa1695c0b1ec3698047f056c",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_platform_interface/README",
+      "zh": "weapp_container_platform_interface/README.md",
+      "en": "weapp_container_platform_interface/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_platform_interface/README.md"
+      },
+      "reviewedChineseSummary": "小程序容器平台接口",
+      "reviewedChineseSha256": "bb95d579fdfb3f1b8fb1cbcecde199ba05f85507a485428b18133486c909680d",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_windows/CHANGELOG",
+      "zh": "weapp_container_windows/CHANGELOG.md",
+      "en": "weapp_container_windows/CHANGELOG.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_windows/CHANGELOG.md"
+      },
+      "reviewedChineseSummary": "0.1.0-preview.7.1",
+      "reviewedChineseSha256": "f23d3ab4694a7a9d98b3c679be7db9fe1f047ebda420d5cdda11136ac61472b3",
+      "legacyHeadingIds": []
+    },
+    {
+      "id": "weapp_container_windows/README",
+      "zh": "weapp_container_windows/README.md",
+      "en": "weapp_container_windows/README.en.md",
+      "section": "overview",
+      "source": {
+        "repository": "weapp-container/sdk-flutter",
+        "path": "weapp_container_windows/README.md"
+      },
+      "reviewedChineseSummary": "weapp_container_windows",
+      "reviewedChineseSha256": "0cbbdf38865dbcdc2bcb2e346c89cbc0d1dd3ec39032b137acb2c522d16eab05",
+      "legacyHeadingIds": []
+    }
+  ],
+  "excluded": [],
+  "assets": []
+}

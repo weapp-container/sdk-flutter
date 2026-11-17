@@ -1,0 +1,4 @@
+windows/native_shared/
+windows/vendor/
+.dart_tool/
+pubspec.lock

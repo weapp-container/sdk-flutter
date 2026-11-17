@@ -1,0 +1,4 @@
+linux/native_shared/
+linux/vendor/
+.dart_tool/
+pubspec.lock

@@ -1,0 +1,27 @@
+cmake_minimum_required(VERSION 3.14)
+project(weapp_container_windows LANGUAGES CXX)
+set(PLUGIN_NAME "weapp_container_windows_plugin")
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
+  message(FATAL_ERROR "The public preview supports x86_64 on this platform")
+endif()
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/runtime.cmake")
+  message(FATAL_ERROR "Use the staged pub.dev package; tools/package-public.mjs generates the reviewed runtime pin")
+endif()
+include("${CMAKE_CURRENT_SOURCE_DIR}/runtime.cmake")
+find_package(WeappContainerDesktop CONFIG REQUIRED
+  PATHS "${NATIVE_ROOT}/lib/cmake/WeappContainerDesktop" NO_DEFAULT_PATH)
+add_library(${PLUGIN_NAME} SHARED weapp_container_windows_plugin.cpp native_shared/src/registry.cpp)
+apply_standard_settings(${PLUGIN_NAME})
+set_target_properties(${PLUGIN_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+target_compile_features(${PLUGIN_NAME} PRIVATE cxx_std_17)
+target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL NOMINMAX)
+target_include_directories(${PLUGIN_NAME} INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(${PLUGIN_NAME} PRIVATE native_shared/include native_shared/third_party "${NATIVE_ROOT}/include")
+target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin WeappContainer::Desktop)
+# The device wrapper imports TaskDialogIndirect from Common Controls v6.
+# Flutter links the wrapper into this plugin DLL, while the final runner EXE
+# owns the process activation context. Propagate the dependency to that EXE.
+if(MSVC)
+  target_link_options(${PLUGIN_NAME} INTERFACE "/MANIFESTDEPENDENCY:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+endif()
+set(weapp_container_windows_bundled_libraries "$<TARGET_FILE:WeappContainer::Core>" PARENT_SCOPE)
