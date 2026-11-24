@@ -3,25 +3,45 @@
 
 **简体中文** · [English](README.en.md)
 
-当前主分支准备 preview.7 公开发行；只有对应版本在注册源发布后才使用公开安装入口。安装、平台要求与状态见 [SDK 首页](../README.md)。下方源码说明使用 preview.7；从 SDK 首页给出的精确提交构建，并使用同版本运行库。旧锁只用于历史兼容，当前准备工具默认读取版本化的 preview.7 公开锁。
+此应用通过 path dependency 使用同仓库的 `../weapp_container`，并从 `assets/portable-pack` 加载示例 pack。公开 Flutter SDK 为 `0.1.0-preview.7.1`，仍是预览版。pub.dev 安装方式和平台状态见 [SDK README](../README.md)；Apple 平台的原生归档限制见[公开发行状态](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.md)。
 
+## 运行示例
 
-该应用程序消耗同级 `packages/weapp_container` 分发包。
-移动分发包时需保持 `consumer` 和 `packages` 一同存在。无需进行 Rust 代码检出或 Rust 编译器。请使用 Flutter 3.47.7 稳定版本以及针对目标平台的常规原生开发工具。
+在 `example/` 目录执行以下命令：
 
 ```sh
+flutter create --platforms=android,ios,macos,linux,windows .
 flutter pub get
 flutter analyze lib
 flutter run -d <device-id>
 ```
 
-对于 Android，需安装平台 SDK 35 和 36、NDK 27.1.12297006 以及 CMake 3.22.1。应用及其原生插件模块将使用该 NDK。Gradle 包装器锁定版本为 9.4.1 并验证其分发校验和。使用以下命令构建两个支持的 ABIs：
+Android 工程生成后，在 `android/app/build.gradle.kts` 的 `defaultConfig` 中设置 `minSdk = 26`。这是 `weapp_container_android` 的最低支持版本；`tools/package.mjs` 生成的分发工程会自动写入该值。
+
+示例覆盖原生 View、点击和滚动、导航、消息、宿主方法、前后台状态、失败重载、持久化重开及重复关闭。运行结果显示在屏幕上，并写入应用支持目录中的 `sdk-flutter-report.json`。
+
+需要生成或刷新测试 pack 及其 `fixture-index.json` 时，在 `example/` 目录执行：
+
+```sh
+node shared/make-fixture.mjs --out assets/portable-pack
+```
+
+可选的 C ABI fixture 检查需要运行库、pack 和报告路径：
+
+```sh
+python3 shared/verify-fixture.py <shared-library> assets/portable-pack <report-path>
+```
+
+## 平台构建
+
+仓库工作流固定使用 Flutter 3.47.7。Android 构建需要 Android SDK 35 和 36、NDK `27.1.12297006`、CMake 3.22.1；使用以下命令构建 arm64 与 x86_64：
 
 ```sh
 flutter build apk --debug --target-platform android-arm64,android-x64
 ```
 
-iOS 要求 iOS 16 或更高版本；macOS 要求 macOS 12 或更高版本。请参考同级分发包 `distribution.json` 中的打包目标。若目标被阻塞，则必须先获取其原生 SDK 产物才能进行构建；本预览版本不包含 Windows 二进制文件。
+iOS 最低部署目标为 iOS 16，macOS 最低为 macOS 12。当前预览版中，iOS/macOS Podspec 引用的独立 SDK 归档不可用，需按[源码构建指南](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-source-build.md)准备对应原生 SDK。Linux 与 Windows 使用 Desktop CMake 归档，并需要目标系统工具链。每个目标的构建、模拟器和设备验收分别记录。
 
-应用显示一个受限的原生小程序视图。点击其第一个按钮，然后滚动列表以启动其余生命周期、导航、Unicode、宿主方法、重新挂载、重新加载以及持久存储检查。结果将显示在屏幕上，并保存在应用支持目录中的 `sdk-flutter-report.json` 文件中。
-自动化运行器和测试用例生成维护在源码独立仓库的 `tools/*-smoke.mjs` 和 `native_desktop/tests` 中。
+## 维护位置
+
+Flutter example 位于本仓库的 `example/`。共享 fixture 生成器位于 `example/shared/`；原生 Desktop consumer 与其自动化位于 `native_desktop/`。

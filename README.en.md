@@ -5,13 +5,11 @@
 <a id="公开发行候选preview7"></a>
 ## Public distribution candidate: preview.7
 
-The current core builder and these source examples use preview.7. Core runtime, iOS, Desktop and public CocoaPods Specs downloads are available; npm, Maven Central and pub.dev publication is incomplete. Check the [release status](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.en.md) before using installation commands. Match wrapper and runtime versions. Source availability, package publication, compilation and device acceptance are recorded separately.
+The Flutter package, platform interface and all five native platform packages at `0.1.0-preview.7.1` are published on pub.dev. This is still a prerelease, with no stable version available. Android Maven and Linux/Windows Desktop archives are anonymously downloadable. The iOS/macOS CocoaPods specifications reference unavailable standalone SDK archives, so public Apple-platform builds are not yet usable. Check the [SDK release status](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.en.md) for platform boundaries.
 
 Version: `0.1.0-preview.7.1`；C ABI `1`。
 
-Publication status: platform interface `.7.1` is public ([pub.dev](https://pub.dev/packages/weapp_container_platform_interface/versions/0.1.0-preview.7.1)). Staging run `43490236246` and publication run `43490337704` passed; the anonymously downloaded archive SHA-256 is `c3eabcc357977df5d440f12a6a22adf58a09263e95ceb589a77773550c0a0a36`. First-time Linux/Windows package uploads were rejected by pub.dev (`Only users are allowed to upload new packages`); Android/iOS/macOS plugins and the main package wait for their native registry dependencies and must publish in interface -> platform plugin -> main-package order. The main-package installation below becomes available after its dependencies are published.
-
-Each package uses GitHub OIDC with tags matching `<package>-v<version>`. Complete `package-pub.yml` at the same clean commit before pushing a tag. The publication workflow selects that commit's successful staging artifact, validates it, then freezes and uploads the same archive. To resume an unpublished package manually, use `tools/publish-public.mjs --distribution /absolute/staging --package <name> --execute`; existing public versions are always rejected.
+The seven public packages are `weapp_container`, `weapp_container_platform_interface`, `weapp_container_android`, `weapp_container_ios`, `weapp_container_macos`, `weapp_container_linux`, and `weapp_container_windows`. The main package selects the corresponding plugin for each platform. Registry availability does not imply that every native target has passed a build or device test.
 
 ```yaml
 dependencies:
@@ -31,7 +29,7 @@ source 'https://cdn.cocoapods.org/'
 
 Linux / Windows CMake downloads a fixed Desktop archive and verifies SHA-256. For offline builds, prefetch the exact archive and set `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` to its extracted directory. Each platform package includes its bridge sources, headers and licenses. Normal application installation requires no Node preparation command or sibling repository.
 
-Remaining first-time package publication is being prepared; registry and device validation results are recorded separately. Historical private locks remain unchanged.
+Published archives include bridge sources and licenses. iOS/macOS remain blocked by missing standalone SDK archives referenced by their Podspecs. Linux/Windows consume the Desktop SDK tarballs in the core preview release. Source-build and target-validation steps follow below.
 
 <a id="已复核的源码构建版本"></a>
 ### Reviewed source-build checkout
@@ -48,7 +46,7 @@ git checkout d115f7d3ea6f5d7df2e3fe4cef38607ca248dccf
 
 Embed a mini-program container in a Flutter application. Android and iOS use native Views; desktop platforms use Flutter external textures. One Dart Controller handles local packs, navigation, messages and session ownership.
 
-Reviewed source example version: `0.1.0-preview.7.1`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. The platform interface is public; the `.7.1` main and remaining platform packages are not published on pub.dev yet.
+Reviewed source example version: `0.1.0-preview.7.1`; native ABI: `1`. This repository contains the Apache-2.0 integration layer. The runtime is a separately authorized binary dependency. All seven Flutter packages are published on pub.dev. Native builds and device acceptance remain recorded per target platform.
 
 <a id="从当前源码开始"></a>
 ## Start from current source
@@ -63,7 +61,7 @@ pnpm install --frozen-lockfile
 node sdk/contract/fixtures/make-acceptance-pack.mjs --out artifacts/hello-pack
 ```
 
-Follow the [source build guide](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-source-build.en.md) to prepare the target runtime and notices, then use this SDK's packaging tools. Platform toolchains remain prerequisites. Public source does not imply that prebuilt packages are available from a public registry. Native mini-program directories and existing framework builds can be packaged independently; weapp-vite is optional.
+Follow the [source build guide](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-source-build.en.md) to prepare the target runtime and notices, then use this SDK's packaging tools. Platform toolchains remain prerequisites. A version on pub.dev does not imply that every native archive referenced by that target is downloadable; see the release notes above for platform status. Native mini-program directories and existing framework builds can be packaged independently; weapp-vite is optional.
 
 The remaining sections describe standalone SDK installation, views, and lifecycle. Commands using `prepare-runtime` or `prepare-native` select the explicit archive path and require a reviewed matching manifest. Historical default locks may be unavailable; see the migration section at the end.
 
@@ -109,19 +107,18 @@ Preparation verifies the exact version, ABI, architecture, size, and SHA-256 aga
 <a id="2-生成分发包并运行示例"></a>
 ## 2. Build a distribution and run the example
 
-Run from the core checkout root. Its pinned SDK submodule must be committed and pass source inventory verification:
+The example app is in the SDK checkout's `example/` directory and uses the sibling `weapp_container` package through a path dependency:
 
 ```sh
-pnpm sdk:build:flutter -- --platform android --flutter /absolute/flutter/bin/flutter \
-  --manifest artifacts/local-release/manifest.json \
-  --out /absolute/new-flutter-distribution
-cd /absolute/new-flutter-distribution/consumer
+cd sdk/flutter/example
+flutter pub get
+flutter analyze lib
 flutter run -d DEVICE_ID
 ```
 
-The output contains `packages/`, `consumer/`, `distribution.json` and `consumer.json`. The example includes an authored test pack for taps, scrolling, navigation, messages, storage and session recreation. Keep `packages/` and `consumer/` together when moving the distribution.
+After generating the Android project, set `minSdk = 26` inside `defaultConfig` in `android/app/build.gradle.kts`. This is the minimum supported version for `weapp_container_android`; projects generated by `tools/package.mjs` receive this value automatically.
 
-By default the script prepares the example, resolves dependencies and runs static analysis. Add `--platform android`, `ios`, `macos`, `linux` or `windows` to build one client. Building requires its platform toolchain and an available native SDK.
+The example includes an authored test pack for taps, scrolling, navigation, messages, storage and session recreation. Android, iOS, macOS, Windows, and Linux builds require the corresponding platform toolchain and an available native SDK. See the [release status](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.en.md) for public package coordinates and target availability.
 
 The Android example uses NDK `27.1.12297006`, CMake `3.22.1` and only the two supported ABIs:
 
@@ -132,7 +129,7 @@ flutter build apk --debug --target-platform android-arm64,android-x64
 <a id="3-接入你的-flutter-应用"></a>
 ## 3. Add the SDK to your Flutter application
 
-Reference the generated distribution in your application's `pubspec.yaml`. The seven federated packages use relative dependencies, so keep the whole `packages/` directory:
+The example's seven federated packages use relative dependencies. When distributing them locally, keep the whole `packages/` directory:
 
 ```yaml
 dependencies:

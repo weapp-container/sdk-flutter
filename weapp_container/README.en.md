@@ -3,27 +3,22 @@
 
 [简体中文](README.md) · **English**
 
-Version: `0.1.0-preview.7.0`; C ABI `1`.
+Version: `0.1.0-preview.7.1`; C ABI `1`.
 
 ```yaml
 dependencies:
-  weapp_container: 0.1.0-preview.7.0
+  weapp_container: 0.1.0-preview.7.1
 ```
 
 ```sh
 flutter pub get
 ```
 
-Android API 26+; iOS 16+; macOS 12+ universal; Linux / Windows x86_64. Flutter 3.22+ / Dart 3.3+. Android uses Maven Central. iOS and macOS use public CocoaPods specifications; add both sources to each Apple Podfile:
-
-```ruby
-source 'https://github.com/weapp-container/Specs.git'
-source 'https://cdn.cocoapods.org/'
-```
+Android API 26+; iOS 16+; macOS 12+ universal; Linux / Windows x86_64. Flutter 3.22+ / Dart 3.3+. Android uses Maven Central. The standalone iOS CocoaPods archive is not published. For iOS, download the iOS SDK tarball from the core prerelease and override `WeappContainer` with its local Podspec path in the app Podfile. The standalone Desktop CocoaPods archive is also unavailable, so the public Pod path cannot currently build macOS apps.
 
 Linux / Windows CMake downloads a fixed Desktop archive and verifies SHA-256. For offline builds, prefetch the exact archive and set `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` to its extracted directory. Each platform package includes its bridge sources, headers and licenses. Normal application installation requires no Node preparation command or sibling repository.
 
-First public publication is being prepared; registry and device validation results are recorded separately. Historical private locks remain unchanged.
+`0.1.0-preview.7.1` is published on pub.dev. Native builds and device validation remain recorded per target platform. Historical private locks remain unchanged.
 
 Create a Controller and register host methods and event listeners before the first `load`. Run this in your page or route's session owner, outside `build()`:
 

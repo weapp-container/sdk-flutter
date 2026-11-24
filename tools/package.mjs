@@ -138,10 +138,6 @@ writeFileSync(join(consumer, 'pubspec.yaml'), yaml);
 const fixture = join(consumer, 'assets/portable-pack');
 if (existsSync(fixture)) rmSync(fixture, { recursive: true });
 const integrity = makeFixture(root, fixture);
-const files = [];
-function scan(directory, prefix = '') { for (const item of readdirSync(directory, { withFileTypes: true })) { const name = `${prefix}${item.name}`; if (item.isDirectory()) scan(join(directory, item.name), `${name}/`); else files.push(name); } }
-scan(fixture);
-writeFileSync(join(consumer, 'assets/fixture-index.json'), JSON.stringify(files.sort()));
 const androidGradle = join(consumer, 'android/app/build.gradle.kts');
 if (existsSync(androidGradle)) {
   let content = readFileSync(androidGradle, 'utf8').replace('minSdk = flutter.minSdkVersion', 'minSdk = 26');

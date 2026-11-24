@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.1",
-  "sourceFilesSha256": "13350b526539ac67168801957ca6cc22c6477da869fc5424dd44de547ea363f1",
-  "review": "Review generic host API registration and lifecycle boundaries.",
+  "sourceFilesSha256": "83168b5e0081c00f972be2c0fc71dad7a524f8607bee8571105165a09f9d3aeb",
+  "review": "Refresh inventory after Flutter example Android setup documentation",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -113,32 +113,32 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "dcc111e2fcc61e2e2e3319e655a6b6a6a6dfd6a3cc5467768bd1717a04d8afc2",
-      "size": 16694,
+      "sha256": "c4de5ccae3ec8dc093f1a5551bd78b57c6593d1bf9a0060233de8935523480e7",
+      "size": 16109,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "1562ef090bd8697a4bb17feedad5a77019b1bd18184c177103bf32ea7e4c72cb",
-      "size": 15161,
+      "sha256": "69b90fd31efa7af63f1d38f962e639151b39c6657795d61844d550bae5f9b82c",
+      "size": 14642,
       "mode": "100644"
     },
     {
       "path": "documentation.json",
-      "sha256": "014af2450c6429f0cbde9268ef529e6b586e9f59a6d3e8f0c94ae1e6a4f75f99",
-      "size": 14677,
+      "sha256": "7a7ad821f8cbed42820ed944775295ead82e8f9331179e87ba5a7c1d0f372e91",
+      "size": 11115,
       "mode": "100644"
     },
     {
       "path": "example/README.en.md",
-      "sha256": "37b3a8284b617efcbbe66fa169b7a152f94da125460a259279f02d731c6d1aaa",
-      "size": 1936,
+      "sha256": "2ce875eaeb1202bdb6493fc81adebe3532e7909188d65a7065183080d334d0a0",
+      "size": 2586,
       "mode": "100644"
     },
     {
       "path": "example/README.md",
-      "sha256": "b559f5da3a8e3f29673e1e425d43321eaae3d39459ec170c4cb00954eaf77467",
-      "size": 1902,
+      "sha256": "d999f3c30e328ad480dfe16d2047de6a196a16ce4cbfea96ea42e06a67fa0939",
+      "size": 2388,
       "mode": "100644"
     },
     {
@@ -179,8 +179,8 @@
     },
     {
       "path": "example/shared/make-fixture.mjs",
-      "sha256": "e8f5c580b9aa228b8b3c8f0f11ddec03f79b427ab21ad0a7af068744ce39d7f0",
-      "size": 9727,
+      "sha256": "4606e85ef80dd431da51aef55c03da98f28800e420c8c9d1e16ee2dccbfd3f8b",
+      "size": 10235,
       "mode": "100644"
     },
     {
@@ -551,8 +551,8 @@
     },
     {
       "path": "tools/package.mjs",
-      "sha256": "f491b9cf56a0a82373e3d4d1ad19fd276f97abf92d92e57fe3c4c9eb6fba0b72",
-      "size": 18347,
+      "sha256": "769ae813288d52d155da80a6a36ee2f89386ef794171de23648987e29f84a62b",
+      "size": 17979,
       "mode": "100644"
     },
     {
@@ -641,14 +641,14 @@
     },
     {
       "path": "weapp_container/README.en.md",
-      "sha256": "779f4702e390a504605f25ee42cb7bd2dfa4d5245d4c765db1e80745726f563a",
-      "size": 10432,
+      "sha256": "64a2272062cfc556194ca3239f163545c60d40dfbd4685c80226b2c572d83f01",
+      "size": 10564,
       "mode": "100644"
     },
     {
       "path": "weapp_container/README.md",
-      "sha256": "d733b1f724882402647863974f3e4f00f4b9b1d8053858e5e104536f4223a7a1",
-      "size": 9829,
+      "sha256": "26754def91296fe7e20ff10c7fdab8e5ff352329b6777c79f98b99d1f85d2001",
+      "size": 9917,
       "mode": "100644"
     },
     {
@@ -773,20 +773,20 @@
     },
     {
       "path": "weapp_container_android/README.en.md",
-      "sha256": "08d3a328bd59dd4dbe8b6f0126696b8037a34ebdb2660a1d192282b3cf9eae5c",
+      "sha256": "eac8abbf8f210629dd0b64130080ef3ee07e403f7206cc51c815bdd0d658a89c",
       "size": 899,
       "mode": "100644"
     },
     {
       "path": "weapp_container_android/README.md",
-      "sha256": "1c91482a8737916d0dfba692c5a74310df26b8d69440e2d1e5fe260e88b4f341",
+      "sha256": "fa5d864f5d475b715bf07c48c43e268e592e328417b4a83db2cdd6e60e834a13",
       "size": 800,
       "mode": "100644"
     },
     {
       "path": "weapp_container_android/android/build.gradle",
-      "sha256": "6761cb4695ee56b4ae38bda3a9c57ee47af62d5b5fcad6a355d4449e520ae9f9",
-      "size": 1168,
+      "sha256": "70335574486676f6562f233fb93288d5b183cf8204bd958344863717d4b4ed82",
+      "size": 1169,
       "mode": "100644"
     },
     {
@@ -875,14 +875,14 @@
     },
     {
       "path": "weapp_container_ios/README.en.md",
-      "sha256": "b84636234ef7856c272096dbb857c07fe4ad5eae6254d3894ec4a5e65bb04b35",
-      "size": 1002,
+      "sha256": "ab6a52f2dc1847fa30fc23d3b39660d06c9a34f4c71d093a33a319adccfa582e",
+      "size": 1022,
       "mode": "100644"
     },
     {
       "path": "weapp_container_ios/README.md",
-      "sha256": "244b6f667eefe8bfb2ebeae064506d3d0cbaa9318da157c4fa39cc5abb54d009",
-      "size": 895,
+      "sha256": "9f4b78d05a49931d409905cf2f0c4187709d895b4334f33770359ceae792d7cf",
+      "size": 897,
       "mode": "100644"
     },
     {
@@ -1007,14 +1007,14 @@
     },
     {
       "path": "weapp_container_macos/README.en.md",
-      "sha256": "25ae5cecdfde6a189536a9df61eb5bfbc4887b54dc2bf092af9835dc6faff998",
-      "size": 500,
+      "sha256": "f790dcff1278f70ac4a553a00a75a181f22c39db51dc14140da135bad5b2d7cc",
+      "size": 644,
       "mode": "100644"
     },
     {
       "path": "weapp_container_macos/README.md",
-      "sha256": "7de4f72fbfc85907445e9b39615471453f43072cca068510015d2cc249a28b72",
-      "size": 401,
+      "sha256": "e0ebcf845914b90e27cdf77c1a6fa94dafe370122264024719e7b27fdbdaedba",
+      "size": 410,
       "mode": "100644"
     },
     {

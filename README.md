@@ -5,13 +5,11 @@
 <a id="public-distribution-candidate-preview7"></a>
 ## 公开发行候选：preview.7
 
-当前核心构建器与本页源码示例均使用 preview.7。核心运行库、iOS、Desktop 及公开 CocoaPods Specs 已提供下载；npm、Maven Central 和 pub.dev 尚未全部发布。使用安装命令前先核对[发布状态](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.md)，不要混用不同版本的包装层与运行库。源码公开、包发布、编译通过和设备验收分别记录。
+`0.1.0-preview.7.1` 的 Flutter 主包、platform interface 和五个原生平台包均已发布到 pub.dev。当前仍是预览版，没有稳定版。Android Maven 与 Linux/Windows Desktop 归档可匿名获取；iOS/macOS CocoaPods 规格引用的独立 SDK 归档仍不可用，不能据此宣称 Apple 平台公开构建可用。请按[SDK 发行状态](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.md)核对平台边界。
 
 版本 / Version: `0.1.0-preview.7.1`；C ABI `1`。
 
-发布状态：platform interface `.7.1` 已公开（[pub.dev](https://pub.dev/packages/weapp_container_platform_interface/versions/0.1.0-preview.7.1)）。staging run `43490236246` 与发布 run `43490337704` 通过，匿名归档 SHA-256 为 `c3eabcc357977df5d440f12a6a22adf58a09263e95ceb589a77773550c0a0a36`。Linux/Windows 首次包上传被 pub.dev 拒绝（`Only users are allowed to upload new packages`）；Android/iOS/macOS 插件和主包需等原生注册源依赖公开后按 interface -> 平台插件 -> 主包顺序发布。以下主包安装方式在全部依赖发布后可用。
-
-每个包都使用 GitHub OIDC，标签格式为 `<package>-v<version>`。推送标签前，须在同一干净提交完成 `package-pub.yml`；发布工作流只读取该提交的成功 staging 产物，验证后冻结并上传同一归档。手动续发未发布包时可使用 `tools/publish-public.mjs --distribution /absolute/staging --package <包名> --execute`，已公开版本始终拒绝重发。
+七个公开包分别为 `weapp_container`、`weapp_container_platform_interface`、`weapp_container_android`、`weapp_container_ios`、`weapp_container_macos`、`weapp_container_linux` 和 `weapp_container_windows`。主包依赖按目标平台选择对应插件；注册源可下载不代表每个原生目标都已完成构建或设备验收。
 
 ```yaml
 dependencies:
@@ -31,7 +29,7 @@ source 'https://cdn.cocoapods.org/'
 
 Linux / Windows 的 CMake 下载固定 Desktop 归档并验证 SHA-256。离线构建需预先获取精确归档，将 `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` 设为解压目录。各平台包包含桥接源码、头文件和许可，普通应用安装无需 Node 准备命令或兄弟仓库。
 
-其余包的首次公开发行仍在准备；注册源发布和设备验证分别记录，历史私有锁保持原样。
+安装归档包含桥接源码和许可。iOS/macOS 当前受制于 Podspec 指向的独立 SDK 归档缺失；Linux/Windows 使用核心 preview release 中的 Desktop SDK tarball。源码构建与目标验证步骤见下文。
 
 <a id="reviewed-source-build-checkout"></a>
 ### 已复核的源码构建版本
@@ -48,7 +46,7 @@ git checkout d115f7d3ea6f5d7df2e3fe4cef38607ca248dccf
 
 在 Flutter 应用中嵌入小程序容器。Android、iOS 使用原生 View，桌面端使用 Flutter 外部纹理；同一个 Dart Controller 负责加载本地 pack、导航、收发消息和管理会话。
 
-已复核源码示例版本：`0.1.0-preview.7.1`，原生 ABI：`1`。本仓库提供 Apache-2.0 许可的接入层，运行库从公开核心源码构建，或使用另行核验的配套归档。platform interface 已发布；`.7.1` 主包和其余平台包尚未发布到 pub.dev。
+已复核源码示例版本：`0.1.0-preview.7.1`，原生 ABI：`1`。本仓库提供 Apache-2.0 许可的接入层，运行库从公开核心源码构建，或使用另行核验的配套归档。七个 Flutter 包均已发布到 pub.dev，原生构建和设备验收仍按目标平台分别记录。
 
 <a id="start-from-current-source"></a>
 ## 从当前源码开始
@@ -63,7 +61,7 @@ pnpm install --frozen-lockfile
 node sdk/contract/fixtures/make-acceptance-pack.mjs --out artifacts/hello-pack
 ```
 
-随后按[源码构建说明](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-source-build.md)准备目标平台的运行库和 notices，再用本仓库的构建工具生成接入包。平台工具链仍是必要依赖；源码公开不表示公共包仓库已有可下载的二进制。已有原生小程序或框架构建产物可以由独立 portable pack 工具打包，不要求 weapp-vite。
+随后按[源码构建说明](https://github.com/weapp-container/weapp-container/blob/main/docs/sdk-source-build.md)准备目标平台的运行库和 notices，再用本仓库的构建工具生成接入包。平台工具链仍是必要依赖；pub.dev 上有对应版本不代表该目标引用的原生归档也都可下载，平台状态见上方发行说明。已有原生小程序或框架构建产物可以由独立 portable pack 工具打包，不要求 weapp-vite。
 
 下面保留独立 SDK 的安装、视图与生命周期说明。涉及 `prepare-runtime` / `prepare-native` 的命令属于显式归档路径，必须使用核验过的配套 manifest；历史默认锁可能无法下载，详见文末说明。
 
@@ -109,19 +107,18 @@ node sdk/flutter/tools/prepare-native.mjs --platform linux --arch x86_64 \
 <a id="2-build-a-distribution-and-run-the-example"></a>
 ## 2. 生成分发包并运行示例
 
-在核心仓库根目录执行；固定的 SDK 子模块须已提交并通过源码清单校验：
+示例应用位于 SDK checkout 的 `example/`，通过 path dependency 使用同仓库的 `weapp_container` 包：
 
 ```sh
-pnpm sdk:build:flutter -- --platform android --flutter /absolute/flutter/bin/flutter \
-  --manifest artifacts/local-release/manifest.json \
-  --out /absolute/new-flutter-distribution
-cd /absolute/new-flutter-distribution/consumer
+cd sdk/flutter/example
+flutter pub get
+flutter analyze lib
 flutter run -d DEVICE_ID
 ```
 
-输出包括 `packages/`、`consumer/`、`distribution.json` 和 `consumer.json`。示例包含本仓库生成的测试 pack，可体验点击、滚动、导航、消息、存储和会话重建。移动分发目录时，保留 `packages/` 与 `consumer/` 的相对关系。
+Android 工程生成后，在 `android/app/build.gradle.kts` 的 `defaultConfig` 中设置 `minSdk = 26`。这是 `weapp_container_android` 的最低支持版本；`tools/package.mjs` 生成的分发工程会自动写入该值。
 
-脚本默认准备示例、解析依赖并执行静态分析；追加 `--platform android`、`ios`、`macos`、`linux` 或 `windows` 可构建指定客户端。构建需要对应平台工具链和可用的原生 SDK。
+示例包含测试 pack，可体验点击、滚动、导航、消息、存储和会话重建。Android、iOS、macOS、Windows 或 Linux 构建需要对应平台工具链与可用的原生 SDK。公开 package 的安装坐标和目标可用性见[发行状态](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.md)。
 
 Android 示例使用 NDK `27.1.12297006`、CMake `3.22.1`，仅包含两个受支持的 ABI：
 
@@ -132,7 +129,7 @@ flutter build apk --debug --target-platform android-arm64,android-x64
 <a id="3-add-the-sdk-to-your-flutter-application"></a>
 ## 3. 接入你的 Flutter 应用
 
-在应用的 `pubspec.yaml` 中引用生成的分发包。七个 federated packages 之间存在相对路径依赖，请保留整个 `packages/` 目录：
+在本地示例中，七个 federated packages 之间通过相对路径依赖。将它们作为本地 package 分发时，请保留整个 `packages/` 目录：
 
 ```yaml
 dependencies:

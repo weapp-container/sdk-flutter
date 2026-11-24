@@ -3,27 +3,22 @@
 
 **简体中文** · [English](README.en.md)
 
-版本： `0.1.0-preview.7.0`；C ABI `1`。
+版本： `0.1.0-preview.7.1`；C ABI `1`。
 
 ```yaml
 dependencies:
-  weapp_container: 0.1.0-preview.7.0
+  weapp_container: 0.1.0-preview.7.1
 ```
 
 ```sh
 flutter pub get
 ```
 
-Android API 26+；iOS 16+；macOS 12+ universal；Linux / Windows x86_64。Flutter 3.22+ / Dart 3.3+。Android 通过 Maven Central 获取依赖；iOS 和 macOS 使用公开 CocoaPods Specs，请在对应 Podfile 中添加两个源：
-
-```ruby
-source 'https://github.com/weapp-container/Specs.git'
-source 'https://cdn.cocoapods.org/'
-```
+Android API 26+；iOS 16+；macOS 12+ universal；Linux / Windows x86_64。Flutter 3.22+ / Dart 3.3+。Android 通过 Maven Central 获取依赖。iOS 的独立 CocoaPods 归档尚未发布，可从核心 prerelease 获取 iOS SDK tarball，并在应用 Podfile 以本地路径覆盖 `WeappContainer` 依赖。macOS 的独立 Desktop CocoaPods 归档尚未发布，不能按公开 Pod 路径完成构建。
 
 Linux / Windows 通过 CMake 下载固定版本的 Desktop 归档并校验 SHA-256。离线构建时，提前下载并校验该归档，将 `FETCHCONTENT_SOURCE_DIR_WEAPP_CONTAINER_RUNTIME` 指向解压目录。每个平台包包含桥接源码、头文件和许可，普通安装无需 Node 准备命令或兄弟仓库。
 
-首次公开发布正在准备中；注册源发布和设备验证结果分别记录，历史私有锁文件保留原样。
+`0.1.0-preview.7.1` 已发布到 pub.dev。原生构建和设备验证结果按目标平台分别记录，历史私有锁文件保留原样。
 
 先创建 Controller，并在首次 `load` 前注册宿主方法和事件。以下代码由页面或路由的会话管理逻辑执行，不放在 `build()` 中：
 

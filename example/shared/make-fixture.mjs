@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -111,6 +111,17 @@ Page({
   if (document) { document.wxmlAst = `sha256:${templateHash}`; manifest.viewCompilation.documents.push({ ...document, documentId: 'pages/detail/index.wxml' }); }
   manifest.integrity.root = ''; manifest.integrity.root = sha(canonical(manifest));
   writeFileSync(resolve(destination, 'manifest.json'), canonical(manifest));
+  const files = [];
+  function scan(directory, prefix = '') {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = `${prefix}${entry.name}`;
+      if (entry.isDirectory()) scan(resolve(directory, entry.name), `${path}/`);
+      else files.push(path);
+    }
+  }
+  scan(destination);
+  // Keep the asset index beside the pack so Flutter can stage every file.
+  writeFileSync(resolve(destination, '..', 'fixture-index.json'), JSON.stringify(files.sort()));
   return manifest.integrity.root;
 }
 
