@@ -55,8 +55,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "README.md"
       },
-      "reviewedChineseSummary": "已复核 Flutter SDK 安装、fixture 生成、平台工程生成、示例验收和平台发行边界。",
-      "reviewedChineseSha256": "8f2a3dfb71d06bc0892d252d31adc80990d02d0e40124e629bed2f39b6e1be77",
+      "reviewedChineseSummary": "普通 Flutter 应用使用 pub.dev 依赖，平台限制和历史归档维护流程已明确",
+      "reviewedChineseSha256": "91ee3022e32b89b4a99d198c9fbaa1fdf25f42e3a3b68e2baf1e239c524c3715",
       "legacyHeadingIds": []
     },
     {
