@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.1",
-  "sourceFilesSha256": "7954958509b50ad76756cfa627a99e3cce98e031be2f4114756154cf378da65e",
-  "review": "Record stable and preview publication channel behavior in the release tooling",
+  "sourceFilesSha256": "7053e0f6bb4fdc8d2bbef7ede4355cb50a3efbc5ed438d5a159a823aa8ed5467",
+  "review": "Refresh Flutter example setup and generated fixture instructions for the public SDK consumer.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -113,32 +113,38 @@
     },
     {
       "path": "README.en.md",
-      "sha256": "c4de5ccae3ec8dc093f1a5551bd78b57c6593d1bf9a0060233de8935523480e7",
-      "size": 16109,
+      "sha256": "35f97c03579ed9c1960b25ff41485c1809397a186e7e025ea22c620dd9a57b0d",
+      "size": 16842,
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "sha256": "69b90fd31efa7af63f1d38f962e639151b39c6657795d61844d550bae5f9b82c",
-      "size": 14642,
+      "sha256": "8f2a3dfb71d06bc0892d252d31adc80990d02d0e40124e629bed2f39b6e1be77",
+      "size": 15345,
       "mode": "100644"
     },
     {
       "path": "documentation.json",
-      "sha256": "7a7ad821f8cbed42820ed944775295ead82e8f9331179e87ba5a7c1d0f372e91",
-      "size": 11115,
+      "sha256": "e2b530ee44d40cd623e07d639d87177cc16c48b880c92aa2223bd14ae7e87037",
+      "size": 11130,
+      "mode": "100644"
+    },
+    {
+      "path": "example/.gitignore",
+      "sha256": "ede897ece19cc41ee9d9972f12b2f66665d079d4d00db294595270c8f8682517",
+      "size": 123,
       "mode": "100644"
     },
     {
       "path": "example/README.en.md",
-      "sha256": "2ce875eaeb1202bdb6493fc81adebe3532e7909188d65a7065183080d334d0a0",
-      "size": 2586,
+      "sha256": "f56d0677a3bc6f09b9487bb76f3904f100066a656c0ee4ea7388eb864c0afda7",
+      "size": 3091,
       "mode": "100644"
     },
     {
       "path": "example/README.md",
-      "sha256": "d999f3c30e328ad480dfe16d2047de6a196a16ce4cbfea96ea42e06a67fa0939",
-      "size": 2388,
+      "sha256": "ebc2d52b980efd38c0a9a8fbab19a77eba7277c8bbd280b3a104b882d7230895",
+      "size": 2869,
       "mode": "100644"
     },
     {

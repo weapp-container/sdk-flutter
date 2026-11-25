@@ -55,8 +55,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "README.md"
       },
-      "reviewedChineseSummary": "已复核 Flutter SDK 安装、示例运行、Android minSdk、生命周期和平台发行边界。",
-      "reviewedChineseSha256": "69b90fd31efa7af63f1d38f962e639151b39c6657795d61844d550bae5f9b82c",
+      "reviewedChineseSummary": "已复核 Flutter SDK 安装、fixture 生成、平台工程生成、示例验收和平台发行边界。",
+      "reviewedChineseSha256": "8f2a3dfb71d06bc0892d252d31adc80990d02d0e40124e629bed2f39b6e1be77",
       "legacyHeadingIds": []
     },
     {
@@ -68,8 +68,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "example/README.md"
       },
-      "reviewedChineseSummary": "已复核 Flutter SDK 示例的生成、Android minSdk、fixture、运行和验证说明。",
-      "reviewedChineseSha256": "d999f3c30e328ad480dfe16d2047de6a196a16ce4cbfea96ea42e06a67fa0939",
+      "reviewedChineseSummary": "已复核 Flutter SDK 示例的 fixture 生成、平台工程生成、运行和报告验收说明。",
+      "reviewedChineseSha256": "ebc2d52b980efd38c0a9a8fbab19a77eba7277c8bbd280b3a104b882d7230895",
       "legacyHeadingIds": []
     },
     {

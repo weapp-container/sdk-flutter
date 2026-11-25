@@ -1,0 +1,13 @@
+.metadata
+.idea/
+*.iml
+
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+
+/assets/fixture-index.json
+/assets/portable-pack/

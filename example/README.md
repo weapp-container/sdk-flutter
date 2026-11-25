@@ -10,17 +10,21 @@
 在 `example/` 目录执行以下命令：
 
 ```sh
-flutter create --platforms=android,ios,macos,linux,windows .
+# Generate the example pack, then add the platform project folders.
+node shared/make-fixture.mjs --out assets/portable-pack
+flutter create --empty --platforms=android,ios,macos,linux,windows .
 flutter pub get
 flutter analyze lib
 flutter run -d <device-id>
 ```
 
-Android 工程生成后，在 `android/app/build.gradle.kts` 的 `defaultConfig` 中设置 `minSdk = 26`。这是 `weapp_container_android` 的最低支持版本；`tools/package.mjs` 生成的分发工程会自动写入该值。
+`make-fixture.mjs` 会生成 `assets/fixture-index.json` 和应用需要的 portable pack。资源和平台目录由示例 `.gitignore` 排除，重新克隆后需要再次执行这两个生成步骤。只构建一个目标时，将 `flutter create --platforms` 改为对应的平台名称。
+
+Android 工程生成后，在 `android/app/build.gradle.kts` 的 `defaultConfig` 中将 `minSdk = flutter.minSdkVersion` 替换为 `minSdk = 26`。这是 `weapp_container_android` 的最低支持版本；`tools/package.mjs` 生成的分发工程会自动写入该值。
 
 示例覆盖原生 View、点击和滚动、导航、消息、宿主方法、前后台状态、失败重载、持久化重开及重复关闭。运行结果显示在屏幕上，并写入应用支持目录中的 `sdk-flutter-report.json`。
 
-需要生成或刷新测试 pack 及其 `fixture-index.json` 时，在 `example/` 目录执行：
+修改 fixture 后需要刷新测试 pack 及其 `fixture-index.json` 时，在 `example/` 目录重新执行：
 
 ```sh
 node shared/make-fixture.mjs --out assets/portable-pack
