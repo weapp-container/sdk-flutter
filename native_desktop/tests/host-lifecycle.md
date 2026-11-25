@@ -14,7 +14,7 @@
    `distribution.json` 和平台构建收据。
 2. 将其 `consumer` 和同级文件 `packages` 复制到一个新的证据目录中。保留其相对路径结构，并排除生成的
    `build`、`.dart_tool` 和平台目录 `ephemeral`。禁止直接修改原分发版本。
-3. 仅替换已克隆的 `consumer/lib/main.dart` 为
+3. 仅替换证据目录中的 `consumer/lib/main.dart` 为
    `host_lifecycle_consumer.dart`。保持其资源和 `pubspec.yaml` 不变。
 4. 使用固定版本的 Flutter 3.47.7，运行 `flutter pub get --offline`、`flutter analyze lib --no-pub` 和相应的调试构建。记录分发版本哈希、验证工具哈希、包源码哈希、工具链版本修订号，以及生成可执行文件的哈希值。若测试修复方案，应明确标注包补丁，而非以旧清单作为其身份标识。
 
@@ -46,7 +46,7 @@
 <a id="linux-x11-automation"></a>
 ## Linux X11 自动化
 
-`run-public-linux.mjs` 会将指定的发行版克隆到新目录中，记录源码和二进制哈希值，使用固定工具链进行构建，并启动其自己的 Xvfb 显示。其输入运行器仅选择属于子进程的窗口，等待 GTK 映射，聚焦该窗口，并使用真实的 XTest 指针输入。正常关闭会发送 `WM_DELETE_WINDOW`；强制清理会导致运行失败。
+`run-public-linux.mjs` 会将指定的发行版复制到新目录中，记录源码和二进制哈希值，使用固定工具链进行构建，并启动其自己的 Xvfb 显示。其输入运行器仅选择属于子进程的窗口，等待 GTK 映射，聚焦该窗口，并使用真实的 XTest 指针输入。正常关闭会发送 `WM_DELETE_WINDOW`；强制清理会导致运行失败。
 
 ```sh
 node native_desktop/tests/run-public-linux.mjs \

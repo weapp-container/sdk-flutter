@@ -18,7 +18,7 @@ covers mini-program navigation, so it does not replace this harness.
 2. Copy its `consumer` and sibling `packages` into a new evidence directory. Keep
    their relative layout and exclude generated `build`, `.dart_tool`, and platform
    `ephemeral` directories. Do not modify the prepared distribution in place.
-3. Replace only the cloned `consumer/lib/main.dart` with
+3. Replace only `consumer/lib/main.dart` in the evidence directory with
    `host_lifecycle_consumer.dart`. Keep its assets and `pubspec.yaml` unchanged.
 4. With pinned Flutter 3.47.7, run `flutter pub get --offline`,
    `flutter analyze lib --no-pub`, and the appropriate debug build. Record the
@@ -85,7 +85,7 @@ coverage but is not an actual Flutter hot restart.
 <a id="linux-x11-自动化"></a>
 ## Linux X11 automation
 
-`run-public-linux.mjs` clones the specified distribution into a new directory,
+`run-public-linux.mjs` copies the specified distribution into a new directory,
 records source and binary hashes, builds with the pinned toolchain, and starts its
 own Xvfb display. Its input runner selects only the window belonging to the child
 process, waits for GTK mapping, focuses it, and uses real XTest pointer input.

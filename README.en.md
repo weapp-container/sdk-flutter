@@ -100,7 +100,7 @@ After generating the Android project, replace `minSdk = flutter.minSdkVersion` w
 
 The example includes an authored test pack for taps, scrolling, navigation, messages, storage and session recreation. Android, iOS, macOS, Windows, and Linux builds require the corresponding platform toolchain and an available native SDK. See the [release status](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.en.md) for public package coordinates and target availability.
 
-`make-fixture.mjs` creates `assets/fixture-index.json` and the portable pack used by the example. The example `.gitignore` excludes generated assets and platform folders, so generate them again after a fresh clone. For one target only, replace `flutter create --platforms` with the platform you need. After launch, wait for `ready-for-input`, complete the tap, scroll, and session-reopen checks shown by the app, and inspect `sdk-flutter-report.json` in the application-support directory.
+`make-fixture.mjs` creates `assets/fixture-index.json` and the portable pack used by the example. The example `.gitignore` excludes generated assets and platform folders, so generate them before the first launch from the example directory. For one target only, replace `flutter create --platforms` with the platform you need. After launch, wait for `ready-for-input`, complete the tap, scroll, and session-reopen checks shown by the app, and inspect `sdk-flutter-report.json` in the application-support directory.
 
 The Android example uses NDK `27.1.12297006`, CMake `3.22.1` and only the two supported ABIs:
 

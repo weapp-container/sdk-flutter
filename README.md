@@ -100,7 +100,7 @@ Android 工程生成后，在 `android/app/build.gradle.kts` 的 `defaultConfig`
 
 示例包含测试 pack，可体验点击、滚动、导航、消息、存储和会话重建。Android、iOS、macOS、Windows 或 Linux 构建需要对应平台工具链与可用的原生 SDK。公开 package 的安装坐标和目标可用性见[发行状态](https://github.com/weapp-container/weapp-container/blob/main/docs/public-sdk-release.md)。
 
-`make-fixture.mjs` 会生成 `assets/fixture-index.json` 和示例使用的 portable pack；示例 `.gitignore` 会排除平台目录和生成资源，干净 checkout 或重新克隆后需再次生成。只运行单个平台时，可将 `flutter create --platforms` 改成目标平台。启动后等待状态进入 `ready-for-input`，按屏幕提示完成点击、滚动和会话重开检查，结果会写入应用支持目录的 `sdk-flutter-report.json`。
+`make-fixture.mjs` 会生成 `assets/fixture-index.json` 和示例使用的 portable pack；示例 `.gitignore` 会排除平台目录和生成资源，首次使用示例目录时需先执行生成步骤。只运行单个平台时，可将 `flutter create --platforms` 改成目标平台。启动后等待状态进入 `ready-for-input`，按屏幕提示完成点击、滚动和会话重开检查，结果会写入应用支持目录的 `sdk-flutter-report.json`。
 
 Android 示例使用 NDK `27.1.12297006`、CMake `3.22.1`，仅包含两个受支持的 ABI：
 

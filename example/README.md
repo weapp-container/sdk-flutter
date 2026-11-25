@@ -18,7 +18,7 @@ flutter analyze lib
 flutter run -d <device-id>
 ```
 
-`make-fixture.mjs` 会生成 `assets/fixture-index.json` 和应用需要的 portable pack。资源和平台目录由示例 `.gitignore` 排除，重新克隆后需要再次执行这两个生成步骤。只构建一个目标时，将 `flutter create --platforms` 改为对应的平台名称。
+`make-fixture.mjs` 会生成 `assets/fixture-index.json` 和应用需要的 portable pack。资源和平台目录由示例 `.gitignore` 排除，首次使用示例目录时需要先执行这两个生成步骤。只构建一个目标时，将 `flutter create --platforms` 改为对应的平台名称。
 
 Android 工程生成后，在 `android/app/build.gradle.kts` 的 `defaultConfig` 中将 `minSdk = flutter.minSdkVersion` 替换为 `minSdk = 26`。这是 `weapp_container_android` 的最低支持版本；`tools/package.mjs` 生成的分发工程会自动写入该值。
 

@@ -55,8 +55,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "README.md"
       },
-      "reviewedChineseSummary": "普通 Flutter 应用使用 pub.dev 依赖，平台限制和历史归档维护流程已明确",
-      "reviewedChineseSha256": "91ee3022e32b89b4a99d198c9fbaa1fdf25f42e3a3b68e2baf1e239c524c3715",
+      "reviewedChineseSummary": "普通 Flutter 应用使用 pub.dev 依赖，平台限制、示例生成与维护流程已明确",
+      "reviewedChineseSha256": "d6a871a8164bcd5a6f66b475b4aea7a2971ea32362f1d1184d3d74140709c994",
       "legacyHeadingIds": []
     },
     {
@@ -69,7 +69,7 @@
         "path": "example/README.md"
       },
       "reviewedChineseSummary": "已复核 Flutter SDK 示例的 fixture 生成、平台工程生成、运行和报告验收说明。",
-      "reviewedChineseSha256": "ebc2d52b980efd38c0a9a8fbab19a77eba7277c8bbd280b3a104b882d7230895",
+      "reviewedChineseSha256": "6439451d105c1ff67a8ee39f499d40f9457a8eb25680366235b7355535d7f61d",
       "legacyHeadingIds": []
     },
     {
@@ -94,8 +94,8 @@
         "repository": "weapp-container/sdk-flutter",
         "path": "native_desktop/tests/host-lifecycle.md"
       },
-      "reviewedChineseSummary": "公共 Flutter 宿主生命周期验证",
-      "reviewedChineseSha256": "34909829b187007c943febcb21349bf6c51ff225da02c663cbc95e44493bd374",
+      "reviewedChineseSummary": "公共 Flutter 宿主生命周期验证及 Linux X11 自动化说明已复核。",
+      "reviewedChineseSha256": "24276de92f3184f1f5c0e92b165b9e8caa01c2bd9521e6c0afceedac9c0d8bf6",
       "legacyHeadingIds": []
     },
     {
