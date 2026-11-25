@@ -46,6 +46,7 @@ class _AcceptanceState extends State<Acceptance> {
   int taps = 0;
   bool timer = false;
   double scroll = 0;
+  Timer? inputQuietTimer;
   Map<String, Object?> get report => {
     'schemaVersion': 1,
     'stage': stage,
@@ -170,17 +171,33 @@ class _AcceptanceState extends State<Acceptance> {
       if (message['kind'] == 'scroll')
         scroll = (message['scrollTop'] as num).toDouble();
       if (mounted) setState(() {});
-      if (stage == 'ready-for-input' &&
-          taps > 0 &&
-          timer &&
-          scroll > 0 &&
-          !verifying) {
-        verifying = true;
-        unawaited(verify().catchError(fail));
-      }
+      scheduleVerification();
     } catch (error, stack) {
       fail(error, stack);
     }
+  }
+
+  void scheduleVerification() {
+    if (stage != 'ready-for-input' ||
+        taps == 0 ||
+        !timer ||
+        scroll <= 0 ||
+        verifying) {
+      return;
+    }
+    inputQuietTimer?.cancel();
+    inputQuietTimer = Timer(const Duration(milliseconds: 750), () {
+      if (!mounted ||
+          stage != 'ready-for-input' ||
+          taps == 0 ||
+          !timer ||
+          scroll <= 0 ||
+          verifying) {
+        return;
+      }
+      verifying = true;
+      unawaited(verify().catchError(fail));
+    });
   }
 
   Future<void> verify() async {
@@ -317,6 +334,7 @@ class _AcceptanceState extends State<Acceptance> {
 
   @override
   void dispose() {
+    inputQuietTimer?.cancel();
     unawaited(subscription?.cancel());
     unawaited(controller?.close());
     super.dispose();
