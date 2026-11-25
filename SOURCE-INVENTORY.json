@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "sdkVersion": "0.1.0-preview.7.1",
-  "sourceFilesSha256": "7053e0f6bb4fdc8d2bbef7ede4355cb50a3efbc5ed438d5a159a823aa8ed5467",
-  "review": "Refresh Flutter example setup and generated fixture instructions for the public SDK consumer.",
+  "sourceFilesSha256": "b9a33c2a9b612179e16397f0a2b81bf4fcb079929965c73f36dae50342024114",
+  "review": "Wait for Flutter consumer input to settle before acceptance verification.",
   "scope": "Current reviewed SDK wrapper source bytes only; this inventory is not build, artifact, device or parity acceptance evidence.",
   "historicalOrigin": {
     "path": "ORIGIN.json",
@@ -173,8 +173,8 @@
     },
     {
       "path": "example/lib/main.dart",
-      "sha256": "11a2478834f5193f2b38bc7d909abc2d4f3b1f7aa53f4f3496045e48296b5777",
-      "size": 11652,
+      "sha256": "cfe141631fbddf01b7d0fd02c2f7a717ad878bf86e3d7fdf25e924db0660532a",
+      "size": 12060,
       "mode": "100644"
     },
     {
